@@ -1,0 +1,35 @@
+This documentation was done for debian 9 
+
+>wget -q -O - http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key | apt-key add -
+>sh -c 'echo deb http://pkg.jenkins-ci.org/debian binary/ > /etc/apt/sources.list.d/jenkins.list'
+>apt-get update
+>apt-get install jenkins
+
+jenkins will run as a service
+
+localhost:8080 open in browser
+
+follow the steps to enter the initial admin password 
+>less /var/lib/jenkins/secrets/initialAdminPassword
+copy password and paste it into the browser
+
+install recommended plugins + the ones you want to use:
+e.g
+Build Timeout
+Conditional BuildStep
+Email Extension Plugin
+Flexible Publish Plugin
+GitHub Branch Source Plugin
+Gradle Plugin
+MSBuild Plugin
+Pipeline
+Pipeline: GitHub Groovy Libraries
+SSH Slaves plugin
+Subversion Plug-in
+Timestamper
+Workspace Cleanup Plugin
+Multiple SCMs
+
+this linux master can also run build jobs
+
+label this master as linux build machine 

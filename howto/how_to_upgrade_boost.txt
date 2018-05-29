@@ -1,0 +1,30 @@
+updating the boost package on windows
+support only Visual Studio 15 (14.0) and 17 (14.1) 
+
+1. update the binaries 
+ - download the binaries of the version you want from sourceforge
+	e.g. boost_1_66_0-bin-msvc-all-32-64.7z
+ - extract the binaries for Visual Studio 15 (14.0) and 17 (14.1) for x64 and x86 to the respective folders at:
+	sys-libs\binaries\windows\vc14\x64\boost-python
+	sys-libs\binaries\windows\vc14\x86\boost-python
+	sys-libs\binaries\windows\vc141\x64\boost-python
+	sys-libs\binaries\windows\vc141\x86\boost-python
+2. install new boost package
+ - download the boost package and unpack it to a folder next to your monica checkout
+ - name the folder boost
+ - this should be your folder structure
+	<somefolder> 
+		|_ monica
+		|_ sys-lib
+		|_ util
+		|_ monica-parameters
+		|_ boost
+			|_ boost
+			|_ doc
+			|_ lib
+			|_ ...
+
+
+
+Note: After renaming the folder to boost, you can see which version you installed by opening boost/index.html.
+
