@@ -70,9 +70,10 @@ pipeline {
                         }
                     }
                 }
+                // compile project
                 script {
-                    
-                    def returnValueBuild = bat returnStatus: true, script: 'msbuild monica/project-files/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
+                    bat script: 'monica/update_solution.cmd'
+                    def returnValueBuild = bat returnStatus: true, script: 'msbuild monica/_cmake_win32/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
                     if (returnValueBuild != 0)
                     {
                         currentBuild.result = 'FAILURE'
