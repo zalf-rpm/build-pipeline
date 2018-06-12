@@ -70,9 +70,15 @@ pipeline {
                         }
                     }
                 }
+                // compile project
                 script {
-                    
-                    def returnValueBuild = bat returnStatus: true, script: 'msbuild monica/project-files/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
+                    dir('monica') {
+                    bat script: '''if not exist _cmake_win32 mkdir _cmake_win32
+                                    cd _cmake_win32
+                                    cmake -G "Visual Studio 15" ..
+                                    cd ..'''
+                    }
+                    def returnValueBuild = bat returnStatus: true, script: 'msbuild monica/_cmake_win32/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
                     if (returnValueBuild != 0)
                     {
                         currentBuild.result = 'FAILURE'
