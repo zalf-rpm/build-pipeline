@@ -1,7 +1,7 @@
 #!/bin/sh
 cd ../../
 
-if [ -d "$vcpkg" ]; then
+if [ -d vcpkg ]; then
   # check if vcpkg exists and is a valid git clone
   cd vcpkg
   if [! git rev-parse --is-inside-work-tree]; then
@@ -10,7 +10,7 @@ if [ -d "$vcpkg" ]; then
   fi
 fi
 
-if [ ! -d "$vcpkg" ]; then
+if [ ! -d vcpkg ]; then
     # if v
     git clone https://github.com/Microsoft/vcpkg.git
     cd vcpkg
