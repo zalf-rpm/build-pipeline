@@ -12,83 +12,89 @@ pipeline {
       name: 'CLEAN_WORKSPACE')
   }
   stages {   
-      stage('parallel stage') {
-        parallel {
-            stage('BuildLinux') {
-            // build it on a debian linux node 
-            agent { label 'debian' }
-            steps {
-                // git checkout and optional cleanup
-                doGitCheckout(params.CLEAN_WORKSPACE)
-                script {
-                    if ( !fileExists('boost') )
-                    {
-                        def returnValueSymlink = sh returnStatus: true, script: 'ln -s ../../boost boost '
-                        if (returnValueSymlink != 0)
-                        {
-                            currentBuild.result = 'FAILURE'
+        stage('parallel stage') {
+            parallel {
+                stage('BuildLinux') {
+                    // build it on a debian linux node 
+                    agent { label 'debian' }
+                    steps {
+                        // git checkout and optional cleanup
+                        doGitCheckout(params.CLEAN_WORKSPACE)
+                        // create vcpkg package directory 
+                        doVcpkgCheckout()   
+                        script {
+                            if ( !fileExists('boost') )
+                            {
+                                def returnValueSymlink = sh returnStatus: true, script: 'ln -s ../../boost boost '
+                                if (returnValueSymlink != 0)
+                                {
+                                    currentBuild.result = 'FAILURE'
+                                }
+                            }
+                        }
+                        // create cmake project in folder monica/_cmake_linux
+                        script {
+                            dir('monica')
+                            {
+                                sh returnStatus: true, script: 'sh update_linux.sh'
+                            }
+                        }
+                        // compile project
+                        script {
+                            dir('monica/_cmake_linux')
+                            {
+                                def returnValueMake = sh returnStatus: true, script: 'make'
+                                if (returnValueMake != 0)
+                                {
+                                    currentBuild.result = 'FAILURE'
+                                }
+                            }
                         }
                     }
                 }
-                // create cmake project in folder _cmake_linux
-                script {
-                    sh returnStatus: true, script: 'mkdir -p _cmake_linux'
-                    dir('_cmake_linux')
-                    {
-                        def returnValueCmake = sh returnStatus: true, script: 'cmake ../monica'
-                        if (returnValueCmake != 0)
-                        {
-                            currentBuild.result = 'FAILURE'
+                // build on windows node
+                stage('BuildWindows') {
+                    agent { label 'windows' }
+                    steps {
+                        // git checkout and optional cleanup
+                        doGitCheckout(params.CLEAN_WORKSPACE)
+                        // create vcpkg package directory 
+                        doVcpkgCheckout()               
+                        script {
+                            if ( !fileExists('boost') )
+                            {
+                                // create symlink to boost
+                                def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
+                                if (returnValueSymlink != 0)
+                                {
+                                    currentBuild.result = 'FAILURE'
+                                }
+                            }
                         }
-                    }
-                }
-                // compile project
-                script {
-                    dir('_cmake_linux')
-                    {
-                        def returnValueMake = sh returnStatus: true, script: 'make'
-                        if (returnValueMake != 0)
-                        {
-                            currentBuild.result = 'FAILURE'
+                        // create cmake project in folder monica/_cmake_win32 and monica/_cmake_win64
+                        script {
+                            dir('monica')
+                            {
+                                bat returnStatus: true, script: 'call update_solution.cmd'
+                                bat returnStatus: true, script: 'call update_solution_x64.cmd'
+                            }
+                        }
+                        // compile project
+                        script {
+                            dir('monica') {
+                                def returnValueBuild32 = bat returnStatus: true, script: 'msbuild monica/_cmake_win32/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
+                                def returnValueBuild64 = bat returnStatus: true, script: 'msbuild monica/_cmake_win64/monica.sln /p:Configuration=Release /p:Platform=\"x64\"'
+                                if (returnValueBuild32 != 0 || returnValueBuild64 != 0)
+                                {
+                                    currentBuild.result = 'FAILURE'
+                                }
+                            }
                         }
                     }
                 }
             }
-            }
-    
-            stage('BuildWindows') {
-            agent { label 'windows' }
-            steps {
-                doGitCheckout(params.CLEAN_WORKSPACE)
-                script {
-                    if ( !fileExists('boost') )
-                    {
-                        def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
-                        if (returnValueSymlink != 0)
-                        {
-                            currentBuild.result = 'FAILURE'
-                        }
-                    }
-                }
-                // compile project
-                script {
-                    dir('monica') {
-                    bat script: '''if not exist _cmake_win32 mkdir _cmake_win32
-                                    cd _cmake_win32
-                                    cmake -G "Visual Studio 15" ..
-                                    cd ..'''
-                    }
-                    def returnValueBuild = bat returnStatus: true, script: 'msbuild monica/_cmake_win32/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
-                    if (returnValueBuild != 0)
-                    {
-                        currentBuild.result = 'FAILURE'
-                    }
-                }
-            }
-            }
-      }
+        }
     }
-  }
 }
 
 def doGitCheckout(cleanWorkspace) {
@@ -98,6 +104,11 @@ def doGitCheckout(cleanWorkspace) {
     deleteDir()
   }
   // Get code from a GitHub repository
+  checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
+    doGenerateSubmoduleConfigurations: false, 
+    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'build-pipeline']], 
+    submoduleCfg: [], 
+    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/build-pipeline.git']]])
   checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
     doGenerateSubmoduleConfigurations: false, 
     extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica']], 
@@ -113,4 +124,20 @@ def doGitCheckout(cleanWorkspace) {
     extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'sys-libs']], 
     submoduleCfg: [], 
     userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/sys-libs']]])
+}
+
+def doVcpkgCheckout()
+{
+    if (isUnix())
+    {
+        dir('build-pipeline/buildscripts') {
+            sh returnStatus: true, script: 'sh ./linux-prepare-vcpkg.sh'
+        }
+    }
+    else
+    {
+        dir('build-pipeline/buildscripts') {
+            bat returnStatus:true, script: 'call window-prepare-vcpkg.bat'
+        }
+    }
 }
