@@ -82,8 +82,8 @@ pipeline {
                         // compile project
                         script {
                             dir('monica') {
-                                def returnValueBuild32 = bat returnStatus: true, script: 'msbuild monica/_cmake_win32/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
-                                def returnValueBuild64 = bat returnStatus: true, script: 'msbuild monica/_cmake_win64/monica.sln /p:Configuration=Release /p:Platform=\"x64\"'
+                                def returnValueBuild32 = bat returnStatus: true, script: 'msbuild _cmake_win32/monica.sln /p:Configuration=Release /p:Platform=\"Win32\"'
+                                def returnValueBuild64 = bat returnStatus: true, script: 'msbuild _cmake_win64/monica.sln /p:Configuration=Release /p:Platform=\"x64\"'
                                 if (returnValueBuild32 != 0 || returnValueBuild64 != 0)
                                 {
                                     currentBuild.result = 'FAILURE'
