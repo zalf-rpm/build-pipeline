@@ -1,15 +1,22 @@
 pipeline {
   agent none
   parameters {
-    choice(choices: ['PATCH', 'MINOR', 'MAYOR', 'NONE'], 
+    choice(choices: ['NONE', 'PATCH', 'MINOR', 'MAYOR'], 
     description: '''increase semanic version number (<mayor>.<minor>.<patch>) (1.2.34)
 - increment patch version if backwards compatible big fixes are introduced
 - increment minor version if new backwards compatible functionality is introduced to the public API
 - increment major version if any backwards incompatible changes are introduced to the public API''', 
       name: 'INCREASE_VERSION')
-    booleanParam(defaultValue: true, 
-      description: 'cleanup workspace and do a clean build', 
-      name: 'CLEAN_WORKSPACE')
+    choice(choices: ['CLEAN_GIT_CHECKOUT', 'NO_CLEANUP', 'CLEANUP_WORKSPACE'], 
+    description: '''
+CLEAN_GIT_CHECKOUT - will remove the checkout and build folders and build a new version
+NO_CLEANUP - quick and dirty! rebuild. Do a git pull and rebuild.
+CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take long!''', 
+      name: 'CLEANUP')
+
+    //booleanParam(defaultValue: false, 
+      //description: 'cleanup workspace and do a clean build', 
+      //name: 'CLEAN_GIT_CHECKOUT')
   }
   stages {   
         stage('parallel stage') {
@@ -18,10 +25,11 @@ pipeline {
                     // build it on a debian linux node 
                     agent { label 'debian' }
                     steps {
+                        cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
                         // git checkout and optional cleanup
-                        doGitCheckout(params.CLEAN_WORKSPACE)
+                        doGitCheckout(params.CLEANUP == 'CLEAN_GIT_CHECKOUT')
                         // create vcpkg package directory 
-                        doVcpkgCheckout()   
+                        doVcpkgCheckout()            
                         script {
                             if ( !fileExists('boost') )
                             {
@@ -56,8 +64,9 @@ pipeline {
                 stage('BuildWindows') {
                     agent { label 'windows' }
                     steps {
+                        cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
                         // git checkout and optional cleanup
-                        doGitCheckout(params.CLEAN_WORKSPACE)
+                        doGitCheckout(params.CLEANUP == 'CLEAN_GIT_CHECKOUT')
                         // create vcpkg package directory 
                         doVcpkgCheckout()               
                         script {
@@ -96,13 +105,37 @@ pipeline {
         }
     }
 }
+def cleanUpAll(cleanWorkspace) {
+    if (cleanWorkspace)
+    {
+        deleteDir()
+    }
+}
 
 def doGitCheckout(cleanWorkspace) {
-  // cleanup workspace
-  if (cleanWorkspace)
-  {
-    deleteDir()
-  }
+    // cleanup workspace
+    if (cleanWorkspace) { 
+        if ( fileExists('build-pipeline') ) {
+            dir('build-pipeline') {
+                deleteDir()
+            }
+        }
+        if ( fileExists('monica') ) {
+            dir('monica') {
+                deleteDir()
+            }
+        }
+        if ( fileExists('util') ) {
+            dir('util') {
+                deleteDir()
+            }
+        }
+        if ( fileExists('sys-libs') ) {
+            dir('sys-libs') {
+                deleteDir()
+            }
+        }
+    }
   // Get code from a GitHub repository
   checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
     doGenerateSubmoduleConfigurations: false, 
