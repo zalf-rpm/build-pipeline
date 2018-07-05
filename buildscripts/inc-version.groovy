@@ -13,7 +13,7 @@ pipeline {
     booleanParam(defaultValue: true, 
       description: 'tag build in git', 
       name: 'TAG_BUILD')
-    stringParam(defaultValue: 'automatic version increased by jenkins', 
+    string(defaultValue: 'automatic version increased by jenkins', 
       description: '(optional) enter your tag message if you increased the build version', 
       name: 'TAG_MESSAGE') 
   }
@@ -22,57 +22,69 @@ pipeline {
         agent any
             steps {
                 script {
-                    def varIncrementParameters = ""
-                    def tagMessage = ""
-                    if (params.INCREASE_VERSION == 'PATCH')
+                    // checkout monica
+                    checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica']], 
+                        submoduleCfg: [], 
+                        userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/monica.git']]])
+                    // checkout build script
+                    checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'build-pipeline']], 
+                        submoduleCfg: [], 
+                        userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/build-pipeline.git']]])        
+                    
+                    def versionStr = incrementVersionFile(params.INCREASE_VERSION, "monica/src/resource/version.h")
+                    SendMailToRequestor()
+                    if (params.TAG_BUILD)
                     {
-                        varIncrementParameters = "false false true "
-                    } else if (params.INCREASE_VERSION == 'MINOR')
-                    {
-                        varIncrementParameters = "false true false "
-                    } else if (params.INCREASE_VERSION == 'MAYOR')
-                    {
-                        varIncrementParameters = "true false false "
+                        createGitTag(versionStr, params.TAG_MESSAGE)
                     }
-                    if (varIncrementParameters != "")
-                    {
-                        // checkout monica
-                        checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-                            doGenerateSubmoduleConfigurations: false, 
-                            extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica']], 
-                            submoduleCfg: [], 
-                            userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/monica.git']]])
-                        // checkout build script
-                        checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-                            doGenerateSubmoduleConfigurations: false, 
-                            extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'build-pipeline']], 
-                            submoduleCfg: [], 
-                            userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/build-pipeline.git']]])        
-                        
-                        def versionStr = ""
-                        if (isUnix())
-                        { 
-                            versionStr = sh returnStdout: true, script: "python build-pipeline/buildscripts/incrementversion.py monica/src/resource/version.h $varIncrementParameters"
-                        }
-                        else
-                        {
-                            versionStr = bat returnStdout: true, script: "python build-pipeline/buildscripts/incrementversion.py monica/src/resource/version.h $varIncrementParameters"
-                        }
-                        if (params.TAG_BUILD)
-                        {
-                            createGitTag(versionStr, params.TAG_MESSAGE)
-                        }
-                    }
+                    
                 }
             }
         }
     }
 }
+def SendMailToRequestor()
+{
+    emailext attachLog: true, body: '$DEFAULT_CONTENT', subject: '$DEFAULT_SUBJECT', recipientProviders: [requestor()]
+}
+
+def incrementVersionFile(increaseVersion, filename)
+{
+    def varIncrementParameters = "false false false "
+    def tagMessage = ""
+    def versionStr = ""
+
+    if (increaseVersion == 'PATCH')
+    {
+        varIncrementParameters = "false false true "
+    } else if (increaseVersion == 'MINOR')
+    {
+        varIncrementParameters = "false true false "
+    } else if (increaseVersion == 'MAYOR')
+    {
+        varIncrementParameters = "true false false "
+    }  
+        
+    if (isUnix())
+    { 
+        versionStr = sh returnStdout: true, script: "python build-pipeline/buildscripts/incrementversion.py $filename $varIncrementParameters"
+    }
+    else
+    {
+        versionStr = bat returnStdout: true, script: "python build-pipeline/buildscripts/incrementversion.py $filename $varIncrementParameters"
+    }
+    return versionStr
+}
+
 
 def createGitTag(versionString, message)
 {
     result = false
-    if (versionStr != "")
+    if (versionString != "")
     {
         if (isUnix())
         { 
@@ -81,7 +93,7 @@ def createGitTag(versionString, message)
         }
         else
         {
-            result = returnStatus: true, script: "echo tag -a $versionString -m $message"
+            result = bat returnStatus: true, script: "echo tag -a $versionString -m $message"
             //bat returnStatus: true, script: "git tag -a $versionString -m $message"
         }        
     }
