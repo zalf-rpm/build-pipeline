@@ -55,3 +55,5 @@ def createGitTag(versionString, message)
     }
     return result
 }
+
+return this
