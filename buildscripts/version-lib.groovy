@@ -1,3 +1,18 @@
+// Workaround deleteDir() is not always working properly
+def deleteDirectory(directory)
+{
+    returnStdout = ""
+    if (isUnix())
+    {
+        returnStdout = sh returnStdout: true, script: "rm -rf \"$directory\""
+    }
+    else
+    {
+        returnStdout = bat returnStdout: true, script: "rmdir /s /q \"$directory\""
+    }
+    print(returnStdout)
+}
+
 def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credentialsId)
 {
     dir(gitCheckoutFolder)
