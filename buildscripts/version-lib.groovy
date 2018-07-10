@@ -1,11 +1,14 @@
-def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder)
+def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credentialsId)
 {
     dir(gitCheckoutFolder)
     {
-        String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
-        print("Commited: ready to push")
-        print(out)
-        //sh returnStdout: true, script: 'git push origin master'      
+        sshagent([credentialsId]) 
+        {
+            String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
+            print("Commited: ready to push")
+            print(out)
+            //sh returnStdout: true, script: 'git push origin master'      
+        }
     }
 }
 
@@ -38,7 +41,7 @@ def incrementVersionFile(increaseVersion, filename)
 }
 
 
-def createGitTag(versionString, message)
+def createGitTag(versionString, message, credentialsId)
 {
     result = false
     if (versionString != "")
@@ -47,12 +50,18 @@ def createGitTag(versionString, message)
         if (isUnix())
         { 
             //result = sh returnStatus: true, script: "echo tag -a $versionString -m $message"
-            result = sh returnStatus: true, script: "git tag -a $versionString -m $message"
+            sshagent([credentialsId]) 
+            {
+                result = sh returnStatus: true, script: "git tag -a $versionString -m $message"
+            }
         }
         else
         {
             //result = bat returnStatus: true, script: "echo tag -a $versionString -m $message"
-            result =bat returnStatus: true, script: "git tag -a $versionString -m $message"
+            sshagent([credentialsId]) 
+            {
+                result = bat returnStatus: true, script: "git tag -a $versionString -m $message"
+            }
         }        
     }
     return result
