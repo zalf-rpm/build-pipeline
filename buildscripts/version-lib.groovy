@@ -82,6 +82,19 @@ def getVersionNumber(filename)
     return versionStr 
 }
 
+def getFullVersionNumber(filename)
+{
+    if (isUnix())
+    { 
+        versionStr = sh returnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename"
+    }
+    else
+    {
+        versionStr = bat rreturnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename"
+    }
+    return versionStr 
+}
+
 
 def createGitTag(versionString, message, credentialsId)
 {
