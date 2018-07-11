@@ -43,3 +43,4 @@ elif (buildNumberOnly):
     print("{}".format(versionBuildLine))
 else:
     print("{}.{}.{}.{}".format(versionMayorLine, versionMinorLine, versionRevisionLine, versionBuildLine))
+sys.stdout.flush()

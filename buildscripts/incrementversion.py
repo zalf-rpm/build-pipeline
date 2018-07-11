@@ -67,3 +67,4 @@ remove(oldPath)
 move(newPath, oldPath)
 #return only one version line to be used by jenkins pipeline script 
 print("{}.{}.{}.{}".format(versionMayorLine, versionMinorLine, versionRevisionLine, versionBuildLine))
+sys.stdout.flush()
