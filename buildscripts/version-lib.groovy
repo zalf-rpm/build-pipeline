@@ -58,6 +58,7 @@ def incrementVersionFile(increaseVersion, filename)
 
 def getBuildNumber(filename)
 {
+    def versionStr = ""
     if (isUnix())
     { 
         versionStr = sh returnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename -build"
@@ -71,6 +72,7 @@ def getBuildNumber(filename)
 
 def getVersionNumber(filename)
 {
+    def versionStr = ""
     if (isUnix())
     { 
         versionStr = sh returnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename -semantic"
@@ -84,6 +86,7 @@ def getVersionNumber(filename)
 
 def getFullVersionNumber(filename)
 {
+    def versionStr = ""
     if (isUnix())
     { 
         versionStr = sh returnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename"
@@ -98,7 +101,7 @@ def getFullVersionNumber(filename)
 
 def createGitTag(versionString, message, credentialsId)
 {
-    result = false
+    def result = false
     if (versionString != "")
     {
         print(versionString)
