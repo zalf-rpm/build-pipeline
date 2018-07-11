@@ -64,7 +64,7 @@ def getBuildNumber(filename)
     }
     else
     {
-        versionStr = bat rreturnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename -build"
+        versionStr = bat returnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename -build"
     }
     return versionStr 
 }
@@ -77,7 +77,7 @@ def getVersionNumber(filename)
     }
     else
     {
-        versionStr = bat rreturnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename -semantic"
+        versionStr = bat returnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename -semantic"
     }
     return versionStr 
 }
@@ -90,7 +90,7 @@ def getFullVersionNumber(filename)
     }
     else
     {
-        versionStr = bat rreturnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename"
+        versionStr = bat returnStdout: true, script: "python build-pipeline/buildscripts/echoversion.py $filename"
     }
     return versionStr 
 }
