@@ -1,10 +1,12 @@
 #!/bin/sh
 
 VERSION_NUMBER=$1
-ARTIFACT_FOLDER = "artifact/monica$VERSION_NUMBER" 
-DEPLOY_FOLDER = "deployartefact"
+MONICA_NAME="monica_$VERSION_NUMBER" 
+ARTIFACT_ROOT="artifact"
+ARTIFACT_FOLDER="$ARTIFACT_ROOT/$MONICA_NAME" 
+DEPLOY_FOLDER="deployartefact"
 rm -rf $DEPLOY_FOLDER
-rm -rf $artifact
+rm -rf $ARTIFACT_ROOT
 mkdir -p $ARTIFACT_FOLDER
 mkdir -p $DEPLOY_FOLDER
 cd monica/_cmake_linux
@@ -19,5 +21,5 @@ cp -af monica-zmq-proxy ../../$ARTIFACT_FOLDER
 cp -af monica-zmq-server ../../$ARTIFACT_FOLDER
 
 cd ../../artifact
-tar -cvpzf ../deployartefact/monica$VERSION_NUMBER.tar.gz monica$VERSION_NUMBER --overwrite                   
+tar -cvpzf ../deployartefact/$MONICA_NAME.tar.gz $MONICA_NAME --overwrite                   
 cd ..
