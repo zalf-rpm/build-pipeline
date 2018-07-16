@@ -17,7 +17,7 @@ NO_CLEANUP - quick and dirty! rebuild. Do a git pull and rebuild. This is for te
 CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take long!''', 
       name: 'CLEANUP')
     // create a git tag
-    booleanParam(defaultValue: true, 
+    booleanParam(defaultValue: false, 
       description: 'tag build in git', 
       name: 'TAG_BUILD')
     // add a nice message to the git tag
