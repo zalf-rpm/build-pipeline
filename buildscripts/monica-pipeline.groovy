@@ -37,18 +37,18 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         doGitCheckout(params.CLEANUP == 'CLEAN_GIT_CHECKOUT')
                         // create vcpkg package directory 
                         doVcpkgCheckout()            
-                        script 
-                        {
-                            // create a symlink to the boost folder installed in jenkins
-                            if ( !fileExists('boost') )
-                            {
-                                def returnValueSymlink = sh returnStatus: true, script: 'ln -s ../../boost boost '
-                                if (returnValueSymlink != 0)
-                                {
-                                    currentBuild.result = 'FAILURE'
-                                }
-                            }
-                        }
+                        // script 
+                        // {
+                        //     // create a symlink to the boost folder installed in jenkins
+                        //     if ( !fileExists('boost') )
+                        //     {
+                        //         def returnValueSymlink = sh returnStatus: true, script: 'ln -s ../../boost boost '
+                        //         if (returnValueSymlink != 0)
+                        //         {
+                        //             currentBuild.result = 'FAILURE'
+                        //         }
+                        //     }
+                        // }
                         // increase build version, but do not commit it, this will happen later, if the build is successfull
                         script
                         {
