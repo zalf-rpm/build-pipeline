@@ -1,0 +1,8 @@
+#!/bin/sh
+
+VERSION_FOLDER=$1
+BUILD_FOLDER=$2
+UNSTASH_FOLDER="tostorage"
+MOUNTED_ARCHIV="/mnt/archiv/md/code/archiv"
+mkdir -p $MOUNTED_ARCHIV/$VERSION_FOLDER/$BUILD_FOLDER
+cp -a /tostorage/. $MOUNTED_ARCHIV/$VERSION_FOLDER/$BUILD_FOLDER
