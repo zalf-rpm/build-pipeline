@@ -24,6 +24,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
     string(defaultValue: 'automatic version increased by jenkins', 
       description: '(optional) enter your tag message if you increased the build version', 
       name: 'TAG_MESSAGE') 
+    // upload to archive
+    booleanParam(defaultValue: false, 
+      description: 'upload to archive', 
+      name: 'UPLOAD_TO_ARCHIV')
   }
   stages {   
         stage('parallel stage') {
@@ -34,7 +38,16 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     steps {
                         cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
                         // git checkout and optional cleanup
-                        doGitCheckout(params.CLEANUP == 'CLEAN_GIT_CHECKOUT')
+                        script 
+                        {
+                            boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
+                            checkoutGitRepository('build-pipeline', doCleanupFirst)
+                            checkoutGitRepository('monica', doCleanupFirst)
+                            checkoutGitRepository('util', doCleanupFirst)
+                            checkoutGitRepository('sys-libs', doCleanupFirst)                            
+                        }
+
+
                         // create vcpkg package directory 
                         doVcpkgCheckout()            
                         // script 
@@ -88,6 +101,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         // if will be stored to jenkins master and can be retrieved by other jobs, or downloaded from jenkins job website
                         success 
                         {
+                            dir('deployartefact')
+                            {
+                                stash includes: '*.tar.gz', name: 'linux_executables'                                
+                            }
                             archiveArtifacts artifacts: 'deployartefact/*.tar.gz', fingerprint: true
                         }
                     }
@@ -97,9 +114,19 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     agent { label 'windows' }
                     steps 
                     {
-                        cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
-                        // git checkout and optional cleanup
-                        doGitCheckout(params.CLEANUP == 'CLEAN_GIT_CHECKOUT')
+                        script
+                        {
+                            boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
+
+                            cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
+                            // git checkout and optional cleanup
+                            checkoutGitRepository('build-pipeline', doCleanupFirst)
+                            checkoutGitRepository('monica', doCleanupFirst)
+                            checkoutGitRepository('util', doCleanupFirst)
+                            checkoutGitRepository('sys-libs', doCleanupFirst)
+                            checkoutGitRepository('monica-parameters', doCleanupFirst)                            
+                        }
+
                         // create vcpkg package directory 
                         doVcpkgCheckout()               
                         script 
@@ -162,6 +189,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         // archivate installer 
                         success 
                         {
+                            dir('monica/installer')
+                            {
+                               stash includes: '*.exe', name: 'win_installer'                             
+                            }
                             archiveArtifacts artifacts: 'monica/installer/*.exe', fingerprint: true
                         }
                     }
@@ -181,38 +212,54 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 //cleanup workspace
                 script 
                 {
-                    if (params.CLEANUP == 'CLEAN_GIT_CHECKOUT' || params.CLEANUP == 'CLEANUP_WORKSPACE') { 
-                        if ( fileExists('build-pipeline') ) 
-                        {
-                            deleteDirectory('build-pipeline')
-                        }
-                        if ( fileExists('monica') ) 
-                        {
-                            deleteDirectory('monica')
-                        }
-                    }
+                    boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
+                    // checkout version in monica
+                    checkoutGitRepository('monica', doCleanupFirst)
+                    // checkout build script
+                    checkoutGitRepository('build-pipeline', doCleanupFirst)
                 }
-                // checkout monica
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-                    doGenerateSubmoduleConfigurations: false, 
-                    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica']], 
-                    submoduleCfg: [], 
-                    credentialsId: 'zalffpmbuild',
-                    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/monica.git']]])
-                // checkout build script
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-                    doGenerateSubmoduleConfigurations: false, 
-                    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'build-pipeline']], 
-                    submoduleCfg: [], 
-                    credentialsId: 'zalffpmbuild',
-                    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/build-pipeline.git']]])      
-
                 // increase version, commit + push to git, <optional> create tag 
                 increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild')                 
             }                
         }
+        stage('archiving')
+        {
+            agent { label 'debian' }
+            when 
+            {
+                expression { currentBuild.result != 'FAILURE' && params.UPLOAD_TO_ARCHIV }
+            }
+            steps 
+            { 
+                script 
+                {
+                    // checkout pipeline scripts and monica version
+                    boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
+                    checkoutGitRepository('monica', doCleanupFirst)
+                    checkoutGitRepository('build-pipeline', doCleanupFirst)
+                    def storageFolder = 'tostorage'
+                    def archivFolder = "../../archiv" // this should be a mounted folder
+                    sh "rm -rf $storageFolder"
+                    sh "mkdir -p $storageFolder"
+                    dir(storageFolder)
+                    {
+                        unstash 'win_installer'
+                        unstash 'linux_executables'
+                    }  
+
+                    def buildFolder = 'monica_' + getFullVersionNumber()
+                    def versionFolder = "workversion"
+                    if (params.INCREASE_VERSION != 'NONE')
+                    {
+                        versionFolder = 'monica_' + getVersionNumber()
+                    }
+                    sh "sh build-pipeline/buildscripts/move-artifacts-to-archive.sh $versionFolder $buildFolder $storageFolder $archivFolder"                    
+                }          
+            }
+        }
     }
 }
+
 // get build number from version.h 
 def getBuildNumber()
 {
@@ -267,57 +314,22 @@ def cleanUpAll(cleanWorkspace)
     }
 }
 
-def doGitCheckout(cleanWorkspace)
+// checkout git repository 
+def checkoutGitRepository(repositoryName, cleanWorkspace)
 {
     // cleanup workspace
     if (cleanWorkspace) { 
-        if ( fileExists('build-pipeline') ) {
-            deleteDirectory('build-pipeline')
-        }
-        if ( fileExists('monica') ) {
-            deleteDirectory('monica')
-        }
-        if ( fileExists('util') ) {
-            deleteDirectory('util')
-        }
-        if ( fileExists('sys-libs') ) {
-            deleteDirectory('sys-libs')
-        }
-        if ( fileExists('monica-parameters') ) {
-            deleteDirectory('monica-parameters')
+        if ( fileExists("$repositoryName") ) {
+            deleteDirectory("$repositoryName")
         }
     }
-  // Get code from a GitHub repository
-  checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
+
+    checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
     doGenerateSubmoduleConfigurations: false, 
-    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'build-pipeline']], 
+    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "$repositoryName"]], 
     submoduleCfg: [], 
     credentialsId: 'zalffpmbuild',
-    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/build-pipeline.git']]])
-  checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-    doGenerateSubmoduleConfigurations: false, 
-    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica']], 
-    submoduleCfg: [], 
-    credentialsId: 'zalffpmbuild',
-    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/monica.git']]])
-  checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-    doGenerateSubmoduleConfigurations: false, 
-    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'util']], 
-    submoduleCfg: [], 
-    credentialsId: 'zalffpmbuild',
-    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/util.git']]])
-  checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-    doGenerateSubmoduleConfigurations: false, 
-    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'sys-libs']], 
-    submoduleCfg: [], 
-    credentialsId: 'zalffpmbuild',
-    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/sys-libs']]])
-  checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
-    doGenerateSubmoduleConfigurations: false, 
-    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica-parameters']], 
-    submoduleCfg: [], 
-    credentialsId: 'zalffpmbuild',
-    userRemoteConfigs: [[url: 'https://github.com/zalf-rpm/monica-parameters']]])
+    userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName"]]])
 }
 
 // checkout vcpkg
