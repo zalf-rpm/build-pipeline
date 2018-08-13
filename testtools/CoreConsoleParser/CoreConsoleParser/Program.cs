@@ -63,7 +63,6 @@ namespace CoreConsoleParser
 
                 if (!success)
                 {
-                    Console.ReadKey();// remove
                     Environment.Exit(1);
                 }
             }
@@ -73,11 +72,9 @@ namespace CoreConsoleParser
                 if (refChapters == null) Console.WriteLine("Failed to open '{0}'", referenceFilename);
                 if (testChapters == null) Console.WriteLine("Failed to open '{0}'", toTestFilename);
 
-                Console.ReadKey(); // remove
                 Environment.Exit(3);
             }
             Console.WriteLine("No significant changes detected");
-            Console.ReadKey();// remove
             return 0;
         }
     }
