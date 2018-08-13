@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CoreConsoleParser": {
+      "commandName": "Project",
+      "commandLineArgs": "-ref C:\\zalf-rpm\\monica\\installer\\Hohenfinow2\\python\\out\\ref.csv -totest C:\\zalf-rpm\\monica\\installer\\Hohenfinow2\\python\\out\\1.csv"
+    }
+  }
+}
