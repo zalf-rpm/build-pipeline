@@ -1,0 +1,4 @@
+.vscode/
+testtools/CoreConsoleParser/.vscode/
+testtools/CoreConsoleParser/CoreConsoleParser/obj/
+testtools/CoreConsoleParser/CoreConsoleParser/bin/
