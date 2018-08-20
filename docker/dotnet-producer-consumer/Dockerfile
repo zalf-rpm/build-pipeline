@@ -18,6 +18,7 @@ RUN apt-get install -y apt-utils
 RUN apt-get install -y libboost-all-dev
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y python-pip python-dev build-essential
 
+ARG EXECUTABLE_SOURCE=monica/_cmake_linux
 ENV MONICA_RUN /run/monica
 ENV MONICA_HOME /home/monica
 ENV MONICA_PARAMETERS ${MONICA_HOME}/monica-parameters
@@ -26,7 +27,6 @@ ENV PYTHONPATH ${MONICA_RUN}
 ENV MONICA_RESOURCE monica
 ENV MONICA_PARAMETER_RESOURCE monica-parameters
 ENV UTIL_RESOURCE util
-ENV EXE_RESOURCE ${MONICA_RESOURCE}/_cmake_linux
 ENV LINKED_MONICA_SERVICE "localhost"
 
 RUN mkdir -p ${MONICA_RUN}/sqlite-db
@@ -47,14 +47,14 @@ COPY --from=build-env /CoreConsoleParser/out ${MONICA_HOME}/testing/
 COPY ${MONICA_RESOURCE}/installer/testing/testreference.csv ${MONICA_HOME}/testing/
 
 # copy executables 
-COPY ${EXE_RESOURCE}/monica ${MONICA_RUN}
-COPY ${EXE_RESOURCE}/monica-run ${MONICA_RUN}
-COPY ${EXE_RESOURCE}/monica-zmq-control-send ${MONICA_RUN}
-COPY ${EXE_RESOURCE}/monica-zmq-run ${MONICA_RUN}
-COPY ${EXE_RESOURCE}/monica_python.so ${MONICA_RUN}
-COPY ${EXE_RESOURCE}/monica-zmq-control ${MONICA_RUN}
-COPY ${EXE_RESOURCE}/monica-zmq-proxy ${MONICA_RUN}
-COPY ${EXE_RESOURCE}/monica-zmq-server ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica-run ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica-zmq-control-send ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica-zmq-run ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica_python.so ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica-zmq-control ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica-zmq-proxy ${MONICA_RUN}
+COPY ${EXECUTABLE_SOURCE}/monica-zmq-server ${MONICA_RUN}
 
 COPY ${MONICA_RESOURCE}/src/python/monica_io.py ${MONICA_RUN}
 COPY ${MONICA_RESOURCE}/src/python/ascii_io.py ${MONICA_RUN}
