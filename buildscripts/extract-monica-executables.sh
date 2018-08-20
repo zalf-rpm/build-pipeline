@@ -1,6 +1,8 @@
 #!/bin/bash
-MONICA_EXECUTABLES="monica-executables"
-cd artifact/deployartefact
+# paramenter: <source path> <extraction path>  
+MONICA_EXECUTABLES=$2
+ARTIFACT_PATH=$1
+cd $ARTIFACT_PATH
 rm -rf ../../$MONICA_EXECUTABLES
 mkdir -p ../../$MONICA_EXECUTABLES
 for file in monica_*.tar.gz; do
