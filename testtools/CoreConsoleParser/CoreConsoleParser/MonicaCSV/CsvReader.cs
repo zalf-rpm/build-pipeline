@@ -10,6 +10,12 @@ namespace CoreConsoleParser.MonicaCSV
         {
             error = string.Empty;
             List<CsvChapter> chapters = null;
+            if (!File.Exists(filename))
+            {
+                error += string.Format("Error File not found: '{0}'", filename); 
+                return null;
+            }
+
             using (StreamReader reader = new StreamReader(filename))
             {
                 chapters = new List<CsvChapter>();
