@@ -36,7 +36,7 @@ pipeline {
                     clusterImage.withRun('--env monica_instances=1') { c ->
                         testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
                             sh "echo linked ${c.id}"
-                            sh "build-pipeline/docker/test-producer-consumer/start_producer_consumer.sh"
+                            sh "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
                         }
                     }                        
                 }                     
