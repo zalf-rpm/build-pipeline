@@ -101,6 +101,6 @@ COPY ${MONICA_RESOURCE}/installer/Hohenfinow2/python/site-soil-profile-from-db.j
 
 RUN pip install zmq
 
-COPY ./build-pipeline/docker/test-producer-consumer/start_producer_consumer.sh /start.sh
+COPY ./build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh /start.sh
 
 CMD ["./start.sh"]
