@@ -25,7 +25,7 @@ pipeline {
                 sh "sh build-pipeline/buildscripts/extract-monica-executables.sh $env.ARTIFACT_PATH/deployartefact $env.EXECUTABLE_SOURCE"
 
                 script {
-                    def VERSION_NUMBER = getVersion("artifact/deployartefact"); 
+                    def VERSION_NUMBER = getVersion("$env.ARTIFACT_PATH/deployartefact"); 
                     def dockerfilePathMonica = './monica'
 
                     def clusterImage = docker.build("monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
