@@ -74,6 +74,7 @@ namespace CoreConsoleParser
 
                 Environment.Exit(3);
             }
+            Environment.Exit(1);// test for jenkins failue script
             Console.WriteLine("No significant changes detected");
             return 0;
         }
