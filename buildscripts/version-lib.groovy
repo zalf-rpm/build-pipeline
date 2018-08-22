@@ -17,7 +17,7 @@ def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credent
 {
     dir(gitCheckoutFolder)
     {
-        sshagent([credentialsId]) 
+        sshagent (credentials: [credentialsId])
         {
             String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
             print("Commited: ready to push")
