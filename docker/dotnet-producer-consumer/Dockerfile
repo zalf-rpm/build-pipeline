@@ -44,8 +44,10 @@ RUN mkdir -p ${MONICA_HOME}/testing
 
 # copy test programm
 COPY --from=build-env /CoreConsoleParser/out ${MONICA_HOME}/testing/
-RUN chmod +x $MONICA_HOME/testing/CoreConsoleParser
+RUN chmod a+x ${MONICA_HOME}/testing/CoreConsoleParser
 COPY ${MONICA_RESOURCE}/installer/testing/testreference.csv ${MONICA_HOME}/testing/
+RUN touch ${MONICA_HOME}/testing/1.csv
+RUN chmod a+w ${MONICA_HOME}/testing/1.csv
 
 # copy executables 
 COPY ${EXECUTABLE_SOURCE}/monica ${MONICA_RUN}
