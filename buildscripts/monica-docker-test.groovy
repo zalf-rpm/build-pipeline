@@ -33,12 +33,16 @@ pipeline {
                     def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
                     def testImage = docker.build("dotnet-producer-consumer:$VERSION_NUMBER", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
 
+                    def status = 1
                     clusterImage.withRun('--env monica_instances=1') { c ->
                         testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
                             sh "echo linked ${c.id}"
-                            sh "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
+                            status = sh returnStatus: true, script: "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
                         }
-                    }                        
+                    }                
+                    if (status != 0) {
+                        currentBuild.result = 'FAILURE'
+                    }        
                 }                     
             }
         }
