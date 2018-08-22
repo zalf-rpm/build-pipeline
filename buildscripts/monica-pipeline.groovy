@@ -201,6 +201,9 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
         }
         stage('commitVersion')
         {
+            // has to be executed on linux, because this step is using sshagent, 
+            // which need some libs (Apache Tomcat Native libraries) to run - which I'm to lazy to install :P 
+            agent { label 'debian' }
             //this only happens if build was successfull
             agent any
             when 
