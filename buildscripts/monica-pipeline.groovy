@@ -205,7 +205,6 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
             // which need some libs (Apache Tomcat Native libraries) to run - which I'm to lazy to install :P 
             agent { label 'debian' }
             //this only happens if build was successfull
-            agent any
             when 
             {
                 expression { currentBuild.result != 'FAILURE' }
