@@ -89,7 +89,7 @@ def createGitTag(versionString, message, credentialsId, gitCheckoutFolder, autho
                 {
                     sh "git config --global user.name \"$author\""
                     sh "git config --global user.email $authorEmail"
-                    result = sh returnStatus: true, script: "git tag -a $versionString -m $message"
+                    result = sh returnStatus: true, script: "git tag -a $versionString -m \"$message\""
                 }
             }
             else
@@ -99,7 +99,7 @@ def createGitTag(versionString, message, credentialsId, gitCheckoutFolder, autho
                 {
                     bat "git config --global user.name \"$author\""
                     bat "git config --global user.email $authorEmail"
-                    result = bat returnStatus: true, script: "git tag -a $versionString -m $message"
+                    result = bat returnStatus: true, script: "git tag -a $versionString -m \"$message\""
                 }
             }        
         }
