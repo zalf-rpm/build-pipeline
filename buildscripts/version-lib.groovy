@@ -13,16 +13,22 @@ def deleteDirectory(directory)
     print(returnStdout)
 }
 
-def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credentialsId)
+def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credentialsId, author, authorEmail)
 {
     dir(gitCheckoutFolder)
     {
         sshagent (credentials: [credentialsId])
         {
+            sh "git config --global user.name \"$author\""
+            sh "git config --global user.email $authorEmail"
             String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
             print("Commited: ready to push")
             print(out)
-            //sh returnStdout: true, script: 'git push origin master'      
+
+            //String result = sh returnStdout: true, script: 'git push origin master'      
+            //print(result)
+
+
         }
     }
 }
