@@ -19,16 +19,28 @@ def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credent
     {
         sshagent (credentials: [credentialsId])
         {
-            sh "git config --global user.name \"$author\""
-            sh "git config --global user.email $authorEmail"
-            String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
-            print("Commited: ready to push")
-            print(out)
+            if (isUnix())
+            { 
+                sh "git config --global user.name \"$author\""
+                sh "git config --global user.email $authorEmail"
+                String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
+                print("Commited: ready to push")
+                print(out)
 
-            //String result = sh returnStdout: true, script: 'git push origin master'      
-            //print(result)
+                //String result = sh returnStdout: true, script: 'git push origin master'      
+                //print(result)
+            }
+            else
+            {
+                bat "git config --global user.name \"$author\""
+                bat "git config --global user.email $authorEmail"
+                String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
+                print("Commited: ready to push")
+                print(out)
 
-
+                //String result = bat returnStdout: true, script: 'git push origin master'      
+                //print(result)
+            }
         }
     }
 }
@@ -62,28 +74,35 @@ def incrementVersionFile(increaseVersion, filename)
 }
 
 
-def createGitTag(versionString, message, credentialsId)
+def createGitTag(versionString, message, credentialsId, gitCheckoutFolder, author, authorEmail)
 {
     def result = false
     if (versionString != "")
     {
-        print(versionString)
-        if (isUnix())
-        { 
-            //result = sh returnStatus: true, script: "echo tag -a $versionString -m $message"
-            sshagent([credentialsId]) 
-            {
-                result = sh returnStatus: true, script: "git tag -a $versionString -m $message"
-            }
-        }
-        else
+        dir(gitCheckoutFolder)
         {
-            //result = bat returnStatus: true, script: "echo tag -a $versionString -m $message"
-            sshagent([credentialsId]) 
-            {
-                result = bat returnStatus: true, script: "git tag -a $versionString -m $message"
+            print(versionString)
+            if (isUnix())
+            { 
+                //result = sh returnStatus: true, script: "echo tag -a $versionString -m $message"
+                sshagent([credentialsId]) 
+                {
+                    sh "git config --global user.name \"$author\""
+                    sh "git config --global user.email $authorEmail"
+                    result = sh returnStatus: true, script: "git tag -a $versionString -m $message"
+                }
             }
-        }        
+            else
+            {
+                //result = bat returnStatus: true, script: "echo tag -a $versionString -m $message"
+                sshagent([credentialsId]) 
+                {
+                    bat "git config --global user.name \"$author\""
+                    bat "git config --global user.email $authorEmail"
+                    result = bat returnStatus: true, script: "git tag -a $versionString -m $message"
+                }
+            }        
+        }
     }
     return result
 }
