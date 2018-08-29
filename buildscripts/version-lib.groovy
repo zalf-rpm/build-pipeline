@@ -19,27 +19,32 @@ def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credent
     {
         sshagent (credentials: [credentialsId])
         {
+            def gitCmd = """git commit $relFilePathInCheckout -m "auto commit version file with $versionString" """
+            def setAuthor = """git config --global user.name "$author" """
+            def setEmail = """git config --global user.email $authorEmail """
+            def pushToMaster = 'git push origin master'
+
             if (isUnix())
             { 
-                sh "git config --global user.name \"$author\""
-                sh "git config --global user.email $authorEmail"
-                String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
+                sh setAuthor
+                sh setEmail
+                String out = sh returnStdout: true, script: gitCmd
                 print("Commited: ready to push")
                 print(out)
 
-                //String result = sh returnStdout: true, script: 'git push origin master'      
-                //print(result)
+                String result = sh returnStdout: true, script: pushToMaster     
+                print(result)
             }
             else
             {
-                bat "git config --global user.name \"$author\""
-                bat "git config --global user.email $authorEmail"
-                String out = sh returnStdout: true, script: "git commit $relFilePathInCheckout -m \"auto commit version file with $versionString\" "
+                bat setAuthor
+                bat setEmail
+                String out = bat returnStdout: true, script: gitCmd
                 print("Commited: ready to push")
                 print(out)
 
-                //String result = bat returnStdout: true, script: 'git push origin master'      
-                //print(result)
+                String result = bat returnStdout: true, script: pushToMaster      
+                print(result)
             }
         }
     }
@@ -81,25 +86,33 @@ def createGitTag(versionString, message, credentialsId, gitCheckoutFolder, autho
     {
         dir(gitCheckoutFolder)
         {
-            print(versionString)
+            def gitCmd = """git tag -a "v.$versionString" -m "$message" """
+            def setAuthor = """git config --global user.name "$author" """
+            def setEmail = """git config --global user.email $authorEmail """
+            def pushToMaster = 'git push origin master'
+            print (gitCmd)
             if (isUnix())
             { 
-                //result = sh returnStatus: true, script: "echo tag -a $versionString -m $message"
                 sshagent([credentialsId]) 
                 {
-                    sh "git config --global user.name \"$author\""
-                    sh "git config --global user.email $authorEmail"
-                    result = sh returnStatus: true, script: "git tag -a $versionString -m \"$message\""
+                    sh setAuthor
+                    sh setEmail
+                    result = sh returnStatus: true, script: gitCmd
+                    print(result)
+                    String resultOut = sh returnStdout: true, script: pushToMaster      
+                    print(resultOut)
                 }
             }
             else
             {
-                //result = bat returnStatus: true, script: "echo tag -a $versionString -m $message"
                 sshagent([credentialsId]) 
                 {
-                    bat "git config --global user.name \"$author\""
-                    bat "git config --global user.email $authorEmail"
-                    result = bat returnStatus: true, script: "git tag -a $versionString -m \"$message\""
+                    bat setAuthor
+                    bat setEmail
+                    result = bat returnStatus: true, script: gitCmd
+                    print(result)
+                    String resultOut = bat returnStdout: true, script: pushToMaster      
+                    print(resultOut)
                 }
             }        
         }
