@@ -1,50 +1,27 @@
-// Workaround deleteDir() is not always working properly
-def deleteDirectory(directory)
-{
-    returnStdout = ""
-    if (isUnix())
-    {
-        returnStdout = sh returnStdout: true, script: "rm -rf \"$directory\""
-    }
-    else
-    {
-        returnStdout = bat returnStdout: true, script: "rmdir /s /q \"$directory\""
-    }
-    print(returnStdout)
-}
-
-def commitToGit(versionString, relFilePathInCheckout, gitCheckoutFolder, credentialsId, author, authorEmail)
+def commitVersionFileToGit(versionString, relVersionFilePath, reporsitory_Url, gitCheckoutFolder, credentials, authorName, authorEmail)
 {
     dir(gitCheckoutFolder)
     {
-        sshagent (credentials: [credentialsId])
+        withCredentials([usernamePassword(credentialsId: credentials, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) 
         {
-            def gitCmd = """git commit $relFilePathInCheckout -m "auto commit version file with $versionString" """
-            def setAuthor = """git config --global user.name "$author" """
+            def gitCommitCmd = """git commit $relVersionFilePath -m \"auto commit version file version $versionString\" """
+            def setAuthor = """git config --global user.name \"$authorName\" """
             def setEmail = """git config --global user.email $authorEmail """
-            def pushToMaster = 'git push origin master'
+            def pushToMaster = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url master"""
 
             if (isUnix())
             { 
                 sh setAuthor
                 sh setEmail
-                String out = sh returnStdout: true, script: gitCmd
-                print("Commited: ready to push")
-                print(out)
-
-                String result = sh returnStdout: true, script: pushToMaster     
-                print(result)
+                sh gitCommitCmd
+                sh pushToMaster   
             }
             else
             {
                 bat setAuthor
                 bat setEmail
-                String out = bat returnStdout: true, script: gitCmd
-                print("Commited: ready to push")
-                print(out)
-
-                String result = bat returnStdout: true, script: pushToMaster      
-                print(result)
+                bat gitCommitCmd
+                bat pushToMaster   
             }
         }
     }
@@ -78,46 +55,37 @@ def incrementVersionFile(increaseVersion, filename)
     return versionStr
 }
 
-
-def createGitTag(versionString, message, credentialsId, gitCheckoutFolder, author, authorEmail)
+def createGitTag(versionString, message, reporsitory_Url, gitCheckoutFolder, credentials, authorName, authorEmail)
 {
-    def result = false
-    if (versionString != "")
+    // create tag if message and tag id are given. 
+    if (versionString != "" && message != "")
     {
         dir(gitCheckoutFolder)
-        {
-            def gitCmd = """git tag -a "v.$versionString" -m "$message" """
-            def setAuthor = """git config --global user.name "$author" """
-            def setEmail = """git config --global user.email $authorEmail """
-            def pushToMaster = 'git push origin master'
-            print (gitCmd)
-            if (isUnix())
-            { 
-                sshagent([credentialsId]) 
-                {
+        {          
+            withCredentials([usernamePassword(credentialsId: credentials, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                def gitTagCmd = """git tag -a "v.$versionString" -m "$message" """
+                def setAuthor = """git config --global user.name \"$authorName\" """
+                def setEmail = """git config --global user.email $authorEmail """
+                def pushToMaster = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url master"""
+
+        
+                if (isUnix())
+                { 
                     sh setAuthor
                     sh setEmail
-                    result = sh returnStatus: true, script: gitCmd
-                    print(result)
-                    String resultOut = sh returnStdout: true, script: pushToMaster      
-                    print(resultOut)
+                    sh gitTagCmd
+                    sh pushToMaster
                 }
-            }
-            else
-            {
-                sshagent([credentialsId]) 
+                else
                 {
                     bat setAuthor
                     bat setEmail
-                    result = bat returnStatus: true, script: gitCmd
-                    print(result)
-                    String resultOut = bat returnStdout: true, script: pushToMaster      
-                    print(resultOut)
-                }
-            }        
+                    bat gitTagCmd
+                    bat pushToMaster
+                }        
+            }
         }
     }
-    return result
 }
 
 def getVersionFromVersionFile(buildNumberOnly, semanticVersionOnly, headerfilePath)
@@ -166,6 +134,5 @@ def getVersionFromVersionFile(buildNumberOnly, semanticVersionOnly, headerfilePa
 
     return result
 }
-
 
 return this
