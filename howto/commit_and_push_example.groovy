@@ -26,11 +26,11 @@ pipeline {
                 
                     def outVarMap = checkoutRepository(reporsitory_Url, checkoutFolder, credentials)
                     print (outVarMap)
-                    autorEmail = outVarMap.GIT_AUTHOR_EMAIL // get default email from git plugin - as defined in jenkins configuration
-                    autorName = outVarMap.GIT_AUTHOR_NAME // get default git user from git plugin - as defined in jenkins configuration
+                    authorEmail = outVarMap.GIT_AUTHOR_EMAIL // get default email from git plugin - as defined in jenkins configuration
+                    authorName = outVarMap.GIT_AUTHOR_NAME // get default git user from git plugin - as defined in jenkins configuration
         
-                    print("Email: " + autorEmail)   
-                    print("Autor: " + autorName)
+                    print("Email: " + authorEmail)   
+                    print("Autor: " + authorName)
 
                     // use withCredentials to pass username and password
                     withCredentials([usernamePassword(credentialsId: credentials, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
@@ -46,13 +46,13 @@ pipeline {
                             def testafter = readFile file: fileName
                             print ("changed $filename: $testafter")
                             
-                            def setAuthor = """git config --global user.name \"$autorName\" """
-                            def setEmail = """git config --global user.email $autorEmail """
+                            def setAuthor = """git config --global user.name \"$authorName\" """
+                            def setEmail = """git config --global user.email $authorEmail """
                             def gitCommitCmd = """git commit $fileName -m \"autocommit\" """
 
                             sh setAuthor
                             sh setEmail
-                            sh script: gitCommitCmd
+                            sh gitCommitCmd
                         }
                         dir (checkoutFolder)
                         {
@@ -61,9 +61,8 @@ pipeline {
                             print(branchName)
 
                             def pushToMaster = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url master"""
-                            sh script: pushToMaster
+                            sh pushToMaster
                         }
-
                     }
                 }
             }
