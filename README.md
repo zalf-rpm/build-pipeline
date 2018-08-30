@@ -1,2 +1,2 @@
 # build-pipeline
-This project contains build scripts, setup and how-to instructions.
+This project contains build scripts, setups, how-to instructions and examples.
