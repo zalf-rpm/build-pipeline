@@ -4,23 +4,15 @@ pipeline {
         stage('test stage') {
             agent { label 'debian' }  
             environment {
-                baseurl = "https://api.github.com"
+                apiUrl = "https://api.github.com"
+                baseUrl = "https://github.com"
                 owner = "zalf-rpm"
                 repository = "monica"
                 extract_path = "artifact"
                 artifact_path = "$extract_path/monica/installer"
+                credentials = 'zalffpmbuild_basic'
             }
             steps {
-                // script
-                // {
-                //     def response = httpRequest (
-                //                     httpMode: 'GET',
-                //                     url:"$env.baseurl/repos/$env.owner/$env.repository/releases/latest",
-                //                     authentication: 'zalffpmbuild_basic')
-                //     print (response.content)
-
-                // }
-
                 // copy artifacts from another job
                 // create artifact path 
                 sh "rm -rf $env.extract_path"
@@ -60,8 +52,10 @@ pipeline {
                         print("Release Name:" + releaseName)
                         print ("upload files" + uploadFileNames)
 
+                        // extract git commit log starting from last release tag
+                        def log = extractLog(env.apiUrl, env.owner, env.repository, env.baseUrl, env.credentials)
                         // send git REST api request to create a release
-                        def uploadURL = createRelease(env.baseurl, env.owner, env.repository, 'zalffpmbuild_basic', tag, releaseName, "TODO")
+                        def uploadURL = createRelease(env.apiUrl, env.owner, env.repository, env.credentials, tag, releaseName, log)
                         if (uploadURL != "none")
                         {
                             // remove parameter description
@@ -69,7 +63,7 @@ pipeline {
                             for (asset in uploadFileNames)
                             {
                                 // upload asset file
-                                uploadReleaseAsset(uploadURL, 'zalffpmbuild_basic', asset)                                
+                                uploadReleaseAsset(uploadURL, env.credentials, asset)                                
                             }
                         }
                     }
@@ -79,7 +73,7 @@ pipeline {
     }
 }
 
-def createRelease(baseurl, owner, repository, credentials, tag, releaseName, releaseDescription)
+def createRelease(apiUrl, owner, repository, credentials, tag, releaseName, releaseDescription)
 {
 
     postContent =  """{
@@ -94,7 +88,7 @@ def createRelease(baseurl, owner, repository, credentials, tag, releaseName, rel
 
     response = httpRequest (
                     httpMode: 'POST',
-                    url:"$baseurl/repos/$owner/$repository/releases",
+                    url:"$apiUrl/repos/$owner/$repository/releases",
                     authentication: credentials, 
                     contentType: 'APPLICATION_JSON', 
                     requestBody: postContent
@@ -124,3 +118,50 @@ def uploadReleaseAsset(uploadURL, credentials, assetName)
                            script: """curl -i --data-binary @"$filename" -H "Content-Type: application/octet-stream" $upload_url -u $username:$password """
     }
 }    
+
+// apiUrl -> https://api.github.com
+// repoOwner -> zalf-rpm
+// repository -> monica
+// baseUrl -> https://github.com/
+def extractLog(apiUrl, repoOwner, repository, baseUrl, credentials)
+{
+    if ( fileExists("${repository}.git") ) {
+        dir("${repository}.git") {
+            deleteDir()
+        }
+    }
+    // get latest release
+    def response = httpRequest (
+                    httpMode: 'GET',
+                    url:"$apiUrl/repos/$repoOwner/$repository/releases/latest",
+                    authentication: credentials)
+    print (response.content)
+    props = readJSON text: response.content  
+    def oldTag = props['tag_name']
+
+
+    // clone only version control informations, no files
+    def bareClone = "git clone --bare $baseUrl/$repoOwner/$repository"
+
+    // get log from tag to head, '%s' just the subject 
+    def getLog = "git log ${oldTag}.. --format=%s"
+    def out = ""
+    if (isUnix())
+    {
+        sh bareClone                           
+        dir("${repository}.git")
+        {
+            out = sh returnStdout: true, script: getLog                            
+        }
+    }
+    else
+    {
+        bat bareClone
+        dir("${repository}.git")
+        {
+            out = bat returnStdout: true, script: getLog                            
+        }
+    }
+    print (out)
+    return out
+}
