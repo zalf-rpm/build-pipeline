@@ -63,7 +63,7 @@ def createGitTag(versionString, message, reporsitory_Url, gitCheckoutFolder, cre
         dir(gitCheckoutFolder)
         {          
             withCredentials([usernamePassword(credentialsId: credentials, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
-                def gitTagCmd = """git tag -a "v.$versionString" -m "$message" """
+                def gitTagCmd = """git tag -a \"v.$versionString\" -m "$message" """
                 def setAuthor = """git config --global user.name \"$authorName\" """
                 def setEmail = """git config --global user.email $authorEmail """
                 def pushToMaster = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url master"""
