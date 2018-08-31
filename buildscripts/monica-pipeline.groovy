@@ -41,10 +41,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         script 
                         {
                             boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                            checkoutGitRepository('build-pipeline', doCleanupFirst)
-                            checkoutGitRepository('monica', doCleanupFirst)
-                            checkoutGitRepository('util', doCleanupFirst)
-                            checkoutGitRepository('sys-libs', doCleanupFirst)                            
+                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic')                            
                         }
 
 
@@ -65,7 +65,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         // increase build version, but do not commit it, this will happen later, if the build is successfull
                         script
                         {
-                            increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild')     
+                            increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "")     
                         }
                         // create cmake project in folder monica/_cmake_linux
                         script 
@@ -120,11 +120,11 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                             cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
                             // git checkout and optional cleanup
-                            checkoutGitRepository('build-pipeline', doCleanupFirst)
-                            checkoutGitRepository('monica', doCleanupFirst)
-                            checkoutGitRepository('util', doCleanupFirst)
-                            checkoutGitRepository('sys-libs', doCleanupFirst)
-                            checkoutGitRepository('monica-parameters', doCleanupFirst)                            
+                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'zalffpmbuild_basic')                            
                         }
 
                         // create vcpkg package directory 
@@ -143,7 +143,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         }
                         // increase build version, but do not check-in
                         println('increase version number')
-                        increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild')   
+                        increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "")   
                         println('Full version number:')
                         getFullVersionNumber() // yes, this is just debug output
 
@@ -216,12 +216,13 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 {
                     boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
                     // checkout version in monica
-                    checkoutGitRepository('monica', doCleanupFirst)
+                    def outVarMap = checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
                     // checkout build script
-                    checkoutGitRepository('build-pipeline', doCleanupFirst)
+                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
+
+                    // increase version, commit + push to git, <optional> create tag     
+                    increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild_basic', outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
                 }
-                // increase version, commit + push to git, <optional> create tag 
-                increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild')                 
             }                
         }
         stage('archiving')
@@ -237,8 +238,8 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 {
                     // checkout pipeline scripts and monica version
                     boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                    checkoutGitRepository('monica', doCleanupFirst)
-                    checkoutGitRepository('build-pipeline', doCleanupFirst)
+                    checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
+                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
                     def storageFolder = 'tostorage'
                     def archivFolder = "../../archiv" // this should be a mounted folder
                     sh "rm -rf $storageFolder"
@@ -288,18 +289,18 @@ def getVersionNumber()
 }
 
 // increase version, git commit + push, do tag (only if also commited)
-def increaseVersionStr(doCommit, tagBuildParam, buildMessageParam, increaseVersionParam, credentialsId)
+def increaseVersionStr(doCommit, tagBuildParam, buildMessageParam, increaseVersionParam, credentials, author, email)
 {
     def rootDir = pwd()
     def versionLib = load "${rootDir}/build-pipeline/buildscripts/version-lib.groovy"
     def versionStr = versionLib.incrementVersionFile(increaseVersionParam, "monica/src/resource/version.h")
     if (doCommit)
     {
-        versionLib.commitToGit(versionStr, "src/resource/version.h", "monica", credentialsId)       
+        versionLib.commitVersionFileToGit(versionStr, "src/resource/version.h",  "github.com/zalf-rpm/monica", "monica", credentials, author, email)       
     }
     if (doCommit && tagBuildParam)
     {
-        versionLib.createGitTag(versionStr, buildMessageParam, credentialsId)
+        versionLib.createGitTag(versionStr, buildMessageParam,  "github.com/zalf-rpm/monica", "monica", credentials, author, email)   
     }     
     return versionStr
 }
@@ -317,7 +318,7 @@ def cleanUpAll(cleanWorkspace)
 }
 
 // checkout git repository 
-def checkoutGitRepository(repositoryName, cleanWorkspace)
+def checkoutGitRepository(repositoryName, cleanWorkspace, credentials)
 {
     // cleanup workspace
     if (cleanWorkspace) { 
@@ -326,12 +327,15 @@ def checkoutGitRepository(repositoryName, cleanWorkspace)
         }
     }
 
-    checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
+    def outVarMap = checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
     doGenerateSubmoduleConfigurations: false, 
-    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "$repositoryName"]], 
+    extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: repositoryName], 
+                    [$class: 'LocalBranch', localBranch: "**"]], 
     submoduleCfg: [], 
-    credentialsId: 'zalffpmbuild',
+    credentialsId: credentials,
     userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName"]]])
+
+    return outVarMap
 }
 
 // checkout vcpkg
