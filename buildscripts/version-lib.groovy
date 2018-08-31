@@ -52,6 +52,7 @@ def incrementVersionFile(increaseVersion, filename)
     {
         versionStr = bat returnStdout: true, script: "python build-pipeline/buildscripts/incrementversion.py $filename $varIncrementParameters"
     }
+    versionStr = versionStr.trim()
     return versionStr
 }
 
