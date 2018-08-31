@@ -54,6 +54,8 @@ pipeline {
 
                         // extract git commit log starting from last release tag
                         def log = extractLog(env.apiUrl, env.owner, env.repository, env.baseUrl, env.credentials)
+                        log = log.replace("\r\n", "<br/>")
+                        log = log.replace("\n", "<br/>")
                         // send git REST api request to create a release
                         def uploadURL = createRelease(env.apiUrl, env.owner, env.repository, env.credentials, tag, releaseName, log)
                         if (uploadURL != "none")
