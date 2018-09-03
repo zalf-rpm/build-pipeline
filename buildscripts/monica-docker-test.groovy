@@ -63,7 +63,7 @@ def checkoutGitRepository(repositoryName, cleanWorkspace)
     doGenerateSubmoduleConfigurations: false, 
     extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "$repositoryName"]], 
     submoduleCfg: [], 
-    credentialsId: 'zalffpmbuild',
+    credentialsId: 'zalffpmbuild_basic',
     userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName"]]])
 }
 
