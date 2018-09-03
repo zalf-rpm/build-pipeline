@@ -1,5 +1,15 @@
 pipeline {
     agent none
+    parameters {
+    // create release as draft
+    booleanParam(defaultValue: false, 
+      description: 'Create release as draft. It will not be visible for public use until manualy released on website',
+      name: 'DRAFT')
+    // mark release as not production ready
+    booleanParam(defaultValue: false, 
+      description: '''Mark release as 'pre-release'. Pre-release means that this code is production ready. ''',
+      name: 'PRERELEASE')
+    }
     stages {  
         stage('test stage') {
             agent { label 'debian' }  
@@ -57,7 +67,14 @@ pipeline {
                         log = log.replace("\r\n", "<br/>")
                         log = log.replace("\n", "<br/>")
                         // send git REST api request to create a release
-                        def uploadURL = createRelease(env.apiUrl, env.owner, env.repository, env.credentials, tag, releaseName, log)
+                        def uploadURL = createRelease(  env.apiUrl, 
+                                                        env.owner, 
+                                                        env.repository, 
+                                                        env.credentials, 
+                                                        tag, releaseName, 
+                                                        params.DRAFT, 
+                                                        params.PRERELEASE, 
+                                                        log)
                         if (uploadURL != "none")
                         {
                             // remove parameter description
@@ -75,7 +92,7 @@ pipeline {
     }
 }
 
-def createRelease(apiUrl, owner, repository, credentials, tag, releaseName, releaseDescription)
+def createRelease(apiUrl, owner, repository, credentials, tag, releaseName, draft, prerelease, releaseDescription)
 {
 
     postContent =  """{
@@ -83,8 +100,8 @@ def createRelease(apiUrl, owner, repository, credentials, tag, releaseName, rele
         "target_commitish": "master",
         "name": "${releaseName}",
         "body": "${releaseDescription}",
-        "draft": true,
-        "prerelease": false
+        "draft": ${draft},
+        "prerelease": ${prerelease}
     }"""
     print (postContent)
 

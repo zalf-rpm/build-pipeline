@@ -28,6 +28,19 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
     booleanParam(defaultValue: false, 
       description: 'upload to archive', 
       name: 'UPLOAD_TO_ARCHIV')
+    // create release 
+    booleanParam(defaultValue: false, 
+      description: 'upload to archive', 
+      name: 'CREATE_RELEASE')
+    // create release as draft
+    booleanParam(defaultValue: false, 
+      description: 'Create release as draft. It will not be visible for public use until manualy released on website',
+      name: 'DRAFT')
+    // mark release as not production ready
+    booleanParam(defaultValue: false, 
+      description: '''Mark release as 'pre-release'. Pre-release means that this code is production ready. ''',
+      name: 'PRERELEASE')
+    
   }
   stages {   
         stage('parallel stage') {
@@ -225,39 +238,68 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 }
             }                
         }
-        stage('archiving')
+        stage ('test in docker')
         {
             agent { label 'debian' }
             when 
             {
-                expression { currentBuild.result != 'FAILURE' && params.UPLOAD_TO_ARCHIV }
+                expression { currentBuild.result != 'FAILURE' }
             }
             steps 
-            { 
-                script 
+            {
+                build job: 'monica.pipeline.testing', propagate: true
+            }
+        }
+        stage('parallel deployment') {
+            parallel {
+                stage('archiving')
                 {
-                    // checkout pipeline scripts and monica version
-                    boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                    checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
-                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
-                    def storageFolder = 'tostorage'
-                    def archivFolder = "../../archiv" // this should be a mounted folder
-                    sh "rm -rf $storageFolder"
-                    sh "mkdir -p $storageFolder"
-                    dir(storageFolder)
+                    agent { label 'debian' }
+                    when 
                     {
-                        unstash 'win_installer'
-                        unstash 'linux_executables'
-                    }  
-
-                    def buildFolder = 'monica_' + getFullVersionNumber()
-                    def versionFolder = "workversion"
-                    if (params.INCREASE_VERSION != 'NONE')
-                    {
-                        versionFolder = 'monica_' + getVersionNumber()
+                        expression { currentBuild.result != 'FAILURE' && params.UPLOAD_TO_ARCHIV }
                     }
-                    sh "sh build-pipeline/buildscripts/move-artifacts-to-archive.sh $versionFolder $buildFolder $storageFolder $archivFolder"                    
-                }          
+                    steps 
+                    { 
+                        script 
+                        {
+                            // checkout pipeline scripts and monica version
+                            boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
+                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
+                            def storageFolder = 'tostorage'
+                            def archivFolder = "../../archiv" // this should be a mounted folder
+                            sh "rm -rf $storageFolder"
+                            sh "mkdir -p $storageFolder"
+                            dir(storageFolder)
+                            {
+                                unstash 'win_installer'
+                                unstash 'linux_executables'
+                            }  
+
+                            def buildFolder = 'monica_' + getFullVersionNumber()
+                            def versionFolder = "workversion"
+                            if (params.INCREASE_VERSION != 'NONE')
+                            {
+                                versionFolder = 'monica_' + getVersionNumber()
+                            }
+                            sh "sh build-pipeline/buildscripts/move-artifacts-to-archive.sh $versionFolder $buildFolder $storageFolder $archivFolder"                    
+                        }          
+                    }
+                }
+                stage ('Create Git release') {
+                    agent { label 'debian' }
+                    when 
+                    {
+                        expression { currentBuild.result != 'FAILURE' && params.CREATE_RELEASE }
+                    }
+                    steps 
+                    {
+                        build job: 'monica.pipeline.release', propagate: true,
+                                    parameters: [   booleanParam( name: 'DRAFT', value: params.DRAFT),
+                                                    booleanParam( name: 'PRERELEASE', value: params.PRERELEASE)]
+                    }
+                }
             }
         }
     }
