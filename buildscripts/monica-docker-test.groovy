@@ -42,7 +42,7 @@ pipeline {
                     def VERSION_NUMBER = getVersion("$env.ARTIFACT_PATH/deployartefact"); 
                     def dockerfilePathMonica = './monica'
 
-                    docker.withRegistry("https://registry.hub.docker.com", "zalffpm_docker_basic") {
+                    docker.withRegistry('', "zalffpm_docker_basic") {
 
                         def clusterImage = docker.build("monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
 
