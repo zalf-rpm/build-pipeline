@@ -1,5 +1,19 @@
 pipeline {
     agent none
+    parameters {
+        // push docker image on successfull build
+        booleanParam(defaultValue: false, 
+        description: 'push docker image', 
+        name: 'PUSH_DOCKER_IMAGE')
+        // if PUSH_DOCKER_IMAGE is true, push as latest version 
+        booleanParam(defaultValue: true, 
+        description: 'push docker image as latest version', 
+        name: 'LATEST')
+        // if PUSH_DOCKER_IMAGE is true, push with current version number
+        booleanParam(defaultValue: true, 
+        description: 'push docker image as with version number', 
+        name: 'VERSION')
+    }
     stages {  
         stage('build-cluster-image') {
             agent { label 'dockerInstalled' }
@@ -28,22 +42,36 @@ pipeline {
                     def VERSION_NUMBER = getVersion("$env.ARTIFACT_PATH/deployartefact"); 
                     def dockerfilePathMonica = './monica'
 
-                    def clusterImage = docker.build("monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
+                    docker.withRegistry("https://registry.hub.docker.com", "zalffpm_docker_basic") {
 
-                    def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
-                    def testImage = docker.build("dotnet-producer-consumer:$VERSION_NUMBER", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
+                        def clusterImage = docker.build("monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
 
-                    def status = 1
-                    clusterImage.withRun('--env monica_instances=1') { c ->
-                        testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
-                            sh "echo linked ${c.id}"
-                            status = sh returnStatus: true, script: "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
+                        def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
+                        def testImage = docker.build("dotnet-producer-consumer:$VERSION_NUMBER", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
+
+                        def status = 1
+                        clusterImage.withRun('--env monica_instances=1') { c ->
+                            testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
+                                sh "echo linked ${c.id}"
+                                status = sh returnStatus: true, script: "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
+                            }
+                        }                
+                        if (status != 0) {
+                            currentBuild.result = 'FAILURE'
+                        }        
+                        else {
+                            // push image to docker
+                            if (params.PUSH_DOCKER_IMAGE) {
+                                if (params.LATEST) {
+                                    clusterImage.push('latest')
+                                }
+                                if (params.VERSION) {
+                                    clusterImage.push() 
+                                }
+                            }
                         }
-                    }                
-                    if (status != 0) {
-                        currentBuild.result = 'FAILURE'
-                    }        
-                }                     
+                    }
+                }
             }
         }
     }

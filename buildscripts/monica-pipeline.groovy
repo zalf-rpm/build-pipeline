@@ -40,6 +40,18 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
     booleanParam(defaultValue: false, 
       description: '''Mark release as 'pre-release'. Pre-release means that this code is production ready. ''',
       name: 'PRERELEASE')
+    // push docker image on successfull build
+    booleanParam(defaultValue: false, 
+        description: 'push docker image', 
+        name: 'PUSH_DOCKER_IMAGE')
+    // if PUSH_DOCKER_IMAGE is true, push as latest version 
+    booleanParam(defaultValue: true, 
+        description: 'push docker image as latest version', 
+        name: 'LATEST')
+    // if PUSH_DOCKER_IMAGE is true, push with current version number
+    booleanParam(defaultValue: true, 
+        description: 'push docker image as with version number', 
+        name: 'VERSION')
     
   }
   stages {   
@@ -247,7 +259,11 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
             }
             steps 
             {
-                build job: 'monica.pipeline.testing', propagate: true
+                build job: 'monica.pipeline.testing', 
+                    propagate: true,
+                    parameters: [   booleanParam( name: 'PUSH_DOCKER_IMAGE', value: params.PUSH_DOCKER_IMAGE),
+                                    booleanParam( name: 'LATEST', value: params.LATEST),
+                                    booleanParam( name: 'VERSION', value: params.VERSION)]
             }
         }
         stage('parallel deployment') {
