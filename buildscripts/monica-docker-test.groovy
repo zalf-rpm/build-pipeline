@@ -44,7 +44,7 @@ pipeline {
 
                     docker.withRegistry('', "zalffpm_docker_basic") {
 
-                        def clusterImage = docker.build("monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
+                        def clusterImage = docker.build("zalfrpm/monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
 
                         def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
                         def testImage = docker.build("dotnet-producer-consumer:$VERSION_NUMBER", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
