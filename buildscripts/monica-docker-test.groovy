@@ -13,6 +13,10 @@ pipeline {
         booleanParam(defaultValue: true, 
         description: 'push docker image as with version number', 
         name: 'VERSION')
+        // from which build to copy artifact 
+        string(defaultValue: 'lastSuccessfulBuild', 
+        description: '''(optional) build number from which to build a release''',
+        name: 'MONICA_BUILD_NUMBER')
     }
     stages {  
         stage('build-cluster-image') {
@@ -35,7 +39,8 @@ pipeline {
                 step ([$class: 'CopyArtifact',
                         projectName: 'monica.pipeline',
                         filter: "deployartefact/monica_*.tar.gz",
-                        target: env.ARTIFACT_PATH]);
+                        target: env.ARTIFACT_PATH,
+                        selector: [$class: 'SpecificBuildSelector', buildNumber: '${MONICA_BUILD_NUMBER}']);
                 sh "sh build-pipeline/buildscripts/extract-monica-executables.sh $env.ARTIFACT_PATH/deployartefact $env.EXECUTABLE_SOURCE"
 
                 script {

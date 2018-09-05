@@ -10,6 +10,11 @@ pipeline {
       description: '''Mark release as 'pre-release'. Pre-release means that this code is production ready. ''',
       name: 'PRERELEASE')
     }
+    // 
+    string(defaultValue: 'lastSuccessfulBuild', 
+      description: '''(optional) build number from which to build a release''',
+      name: 'MONICA_BUILD_NUMBER')
+    }
     stages {  
         stage('test stage') {
             agent { label 'debian' }  
@@ -31,7 +36,8 @@ pipeline {
                 step ([$class: 'CopyArtifact',
                         projectName: 'monica.pipeline',
                         filter: "monica/installer/MONICA-Setup-*.exe",
-                        target: env.extract_path]);
+                        target: env.extract_path,
+                        selector: [$class: 'SpecificBuildSelector', buildNumber: '${MONICA_BUILD_NUMBER}']);
 
                 script {
 
@@ -74,7 +80,7 @@ pipeline {
                                                         tag, releaseName, 
                                                         params.DRAFT, 
                                                         params.PRERELEASE, 
-                                                        log)
+                                                        "ToDo: patch notes")
                         if (uploadURL != "none")
                         {
                             // remove parameter description
@@ -92,6 +98,9 @@ pipeline {
     }
 }
 
+// apiUrl -> https://api.github.com
+// owner -> zalf-rpm
+// repository -> monica
 def createRelease(apiUrl, owner, repository, credentials, tag, releaseName, draft, prerelease, releaseDescription)
 {
 

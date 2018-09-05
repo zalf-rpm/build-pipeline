@@ -18,7 +18,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
       name: 'CLEANUP')
     // create a git tag
     booleanParam(defaultValue: false, 
-      description: 'tag build in git', 
+      description: '(optional) TAG build in git. Note: CREATE_RELEASE will create a TAG by default. ', 
       name: 'TAG_BUILD')
     // add a nice message to the git tag
     string(defaultValue: 'automatic version increased by jenkins', 
@@ -26,11 +26,11 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
       name: 'TAG_MESSAGE') 
     // upload to archive
     booleanParam(defaultValue: false, 
-      description: 'upload to archive', 
+      description: 'Upload to archive. (upload build artifacts to ZALF samba archive)', 
       name: 'UPLOAD_TO_ARCHIV')
     // create release 
     booleanParam(defaultValue: false, 
-      description: 'upload to archive', 
+      description: 'Create git release.', 
       name: 'CREATE_RELEASE')
     // create release as draft
     booleanParam(defaultValue: false, 
@@ -42,17 +42,16 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
       name: 'PRERELEASE')
     // push docker image on successfull build
     booleanParam(defaultValue: false, 
-        description: 'push docker image', 
+        description: 'Push/upload docker image (to https://hub.docker.com/r/zalfrpm)', 
         name: 'PUSH_DOCKER_IMAGE')
     // if PUSH_DOCKER_IMAGE is true, push as latest version 
     booleanParam(defaultValue: true, 
-        description: 'push docker image as latest version', 
+        description: 'Push docker image with Tag "latest" (zalfrpm/monica-cluster:latest)', 
         name: 'LATEST')
     // if PUSH_DOCKER_IMAGE is true, push with current version number
     booleanParam(defaultValue: true, 
-        description: 'push docker image as with version number', 
+        description: 'push docker image with Tag "version number" (e.g. zalfrpm/monica-cluster:2.0.3.148)', 
         name: 'VERSION')
-    
   }
   stages {   
         stage('parallel stage') {
@@ -263,7 +262,8 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     propagate: true,
                     parameters: [   booleanParam( name: 'PUSH_DOCKER_IMAGE', value: params.PUSH_DOCKER_IMAGE),
                                     booleanParam( name: 'LATEST', value: params.LATEST),
-                                    booleanParam( name: 'VERSION', value: params.VERSION)]
+                                    booleanParam( name: 'VERSION', value: params.VERSION),
+                                    string(name: 'MONICA_BUILD_NUMBER', value: env.BUILD_NUMBER)]
             }
         }
         stage('parallel deployment') {
@@ -313,7 +313,8 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     {
                         build job: 'monica.pipeline.release', propagate: true,
                                     parameters: [   booleanParam( name: 'DRAFT', value: params.DRAFT),
-                                                    booleanParam( name: 'PRERELEASE', value: params.PRERELEASE)]
+                                                    booleanParam( name: 'PRERELEASE', value: params.PRERELEASE),
+                                                    string(name: 'MONICA_BUILD_NUMBER', value: env.BUILD_NUMBER)]
                     }
                 }
             }
