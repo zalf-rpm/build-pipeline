@@ -31,21 +31,21 @@ for line in versionfile:
     if (line.startswith("#define VERSION_BUILD               ")):
         versionBuildLine = line.replace("#define VERSION_BUILD               ", "")
 
-currentMayorVersion = int(versionMayorLine)		
-currentMinorVersion = int(versionMinorLine)
-currentRevisionVersion = int(versionRevisionLine)
 currentBuildNumber = int(versionBuildLine)
 versionBuildLine = currentBuildNumber + 1   #always increment the build number
 
+currentMayorVersion = int(versionMayorLine)
 if (incrementMayor == "true"):
 	versionMayorLine = currentMayorVersion + 1
-    versionMinorLine = 0 
-    versionRevisionLine = 0
+	versionMinorLine = 0
+	versionRevisionLine = 0
 
+currentMinorVersion = int(versionMinorLine)
 if (incrementMinor == "true"):
 	versionMinorLine = currentMinorVersion + 1
 	versionRevisionLine = 0
 
+currentRevisionVersion = int(versionRevisionLine)
 if (incrementRevision == "true"):
 	versionRevisionLine = currentRevisionVersion + 1
 	
