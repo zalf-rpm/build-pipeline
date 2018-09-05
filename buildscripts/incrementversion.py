@@ -39,10 +39,13 @@ versionBuildLine = currentBuildNumber + 1   #always increment the build number
 
 if (incrementMayor == "true"):
 	versionMayorLine = currentMayorVersion + 1
+    versionMinorLine = 0 
+    versionRevisionLine = 0
 
 if (incrementMinor == "true"):
 	versionMinorLine = currentMinorVersion + 1
-	
+	versionRevisionLine = 0
+
 if (incrementRevision == "true"):
 	versionRevisionLine = currentRevisionVersion + 1
 	
