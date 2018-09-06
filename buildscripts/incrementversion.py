@@ -18,18 +18,27 @@ versionMinorLine = ""
 versionRevisionLine = ""
 versionBuildLine = ""
 
+fullLineMayor = ""
+fullLineMinor = ""
+fullLineRevision = ""
+fullLineBuild = ""
+
 for line in versionfile:
     if line.startswith("#define VERSION_MAJOR               "):
         versionMayorLine = line.replace("#define VERSION_MAJOR               ", "")
+        fullLineMayor = line.strip()
 		
     if (line.startswith("#define VERSION_MINOR               ")):
         versionMinorLine = line.replace("#define VERSION_MINOR               ", "")
+        fullLineMinor = line.strip()
 
     if (line.startswith("#define VERSION_REVISION            ")):
         versionRevisionLine = line.replace("#define VERSION_REVISION            ", "")
+        fullLineRevision = line.strip()
 
     if (line.startswith("#define VERSION_BUILD               ")):
         versionBuildLine = line.replace("#define VERSION_BUILD               ", "")
+        fullLineBuild = line.strip()
 
 currentBuildNumber = int(versionBuildLine)
 versionBuildLine = currentBuildNumber + 1   #always increment the build number
@@ -56,10 +65,10 @@ newPath = "{}tmp".format(headerfile)
 newFile = open(newPath,'w')
 oldFile = open(oldPath)
 for line in oldFile:
-    line1 = line.replace("#define VERSION_MAJOR               {}".format(currentMayorVersion),"#define VERSION_MAJOR               {}".format(versionMayorLine))
-    line2 = line1.replace("#define VERSION_MINOR               {}".format(currentMinorVersion),"#define VERSION_MINOR               {}".format(versionMinorLine))
-    line3 = line2.replace("#define VERSION_REVISION            {}".format(currentRevisionVersion),"#define VERSION_REVISION            {}".format(versionRevisionLine))
-    line4 = line3.replace("#define VERSION_BUILD               {}".format(currentBuildNumber),"#define VERSION_BUILD               {}".format(versionBuildLine))
+    line1 = line.replace(fullLineMayor,"#define VERSION_MAJOR               {}".format(versionMayorLine))
+    line2 = line1.replace(fullLineMinor,"#define VERSION_MINOR               {}".format(versionMinorLine))
+    line3 = line2.replace(fullLineRevision,"#define VERSION_REVISION            {}".format(versionRevisionLine))
+    line4 = line3.replace(fullLineBuild,"#define VERSION_BUILD               {}".format(versionBuildLine))
     newFile.write(line4)
 
 newFile.close()
