@@ -37,7 +37,7 @@ pipeline {
                         projectName: 'monica.pipeline',
                         filter: "monica/installer/MONICA-Setup-*.exe",
                         target: env.extract_path,
-                        selector: [$class: 'SpecificBuildSelector', buildNumber: '${MONICA_BUILD_NUMBER}']);
+                        selector: [$class: 'SpecificBuildSelector', buildNumber: '${MONICA_BUILD_NUMBER}']]);
 
                 script {
 
