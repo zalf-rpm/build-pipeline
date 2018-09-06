@@ -35,12 +35,15 @@ pipeline {
                 // extract executables
                 sh "rm -rf monica/artifact"
                 sh "mkdir -p monica/artifact"
-
+                script
+                {
+                    print ("BuildNumber: ${params.MONICA_BUILD_NUMBER}")
+                }
                 step ([$class: 'CopyArtifact',
                         projectName: 'monica.pipeline',
                         filter: "deployartefact/monica_*.tar.gz",
                         target: env.ARTIFACT_PATH,
-                        selector: [$class: 'SpecificBuildSelector', buildNumber: '${MONICA_BUILD_NUMBER}']]);
+                        selector: [$class: 'SpecificBuildSelector', buildNumber: '${params.MONICA_BUILD_NUMBER}']]);
                 sh "sh build-pipeline/buildscripts/extract-monica-executables.sh $env.ARTIFACT_PATH/deployartefact $env.EXECUTABLE_SOURCE"
 
                 script {
