@@ -26,6 +26,7 @@ pipeline {
                 extract_path = "artifact"
                 artifact_path = "$extract_path/monica/installer"
                 credentials = 'zalffpmbuild_basic'
+                commitHistory = 'patchhistory.txt'
             }
             steps {
                 // copy artifacts from another job
@@ -70,8 +71,8 @@ pipeline {
 
                         // extract git commit log starting from last release tag
                         def log = extractLog(env.apiUrl, env.owner, env.repository, env.baseUrl, env.credentials)
-                        log = log.replace("\r\n", "<br/>")
-                        log = log.replace("\n", "<br/>")
+                        writeFile file: commitHistory, text: log
+                        uploadFileNames << commitHistory
                         // send git REST api request to create a release
                         def uploadURL = createRelease(  env.apiUrl, 
                                                         env.owner, 
