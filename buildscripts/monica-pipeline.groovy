@@ -222,7 +222,72 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     }
                 }
             }
+        }      
+        stage('build-cluster-image') {
+            agent { label 'dockerInstalled' }
+            when 
+            {
+                expression { currentBuild.result != 'FAILURE' }
+            }
+            environment { 
+                ARTIFACT_PATH = "monica/artifact"
+                def rootDir = pwd()
+                EXECUTABLE_SOURCE = "$rootDir/monica/monica-executables"
+            }            
+            steps {
+                checkoutGitRepository('build-pipeline', true, 'zalffpmbuild_basic')
+                checkoutGitRepository('monica', true, 'zalffpmbuild_basic')
+                checkoutGitRepository('monica-parameters', true, 'zalffpmbuild_basic')
+                checkoutGitRepository('util', true, 'zalffpmbuild_basic')    
+
+                // extract executables
+                sh "rm -rf $env.ARTIFACT_PATH"
+                sh "mkdir -p $env.ARTIFACT_PATH"
+
+                dir(env.ARTIFACT_PATH)
+                {
+                    unstash "linux_executables"
+                }
+
+                sh "sh build-pipeline/buildscripts/extract-monica-executables.sh $env.ARTIFACT_PATH $env.EXECUTABLE_SOURCE"
+
+                script {
+                    def VERSION_NUMBER = getVersion("$env.ARTIFACT_PATH"); 
+                    def dockerfilePathMonica = './monica'
+
+                    docker.withRegistry('', "zalffpm_docker_basic") {
+
+                        def clusterImage = docker.build("zalfrpm/monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
+
+                        def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
+                        def testImage = docker.build("dotnet-producer-consumer:$VERSION_NUMBER", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
+
+                        def status = 1
+                        clusterImage.withRun('--env monica_instances=1') { c ->
+                            testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
+                                sh "echo linked ${c.id}"
+                                status = sh returnStatus: true, script: "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
+                            }
+                        }                
+                        if (status != 0) {
+                            currentBuild.result = 'FAILURE'
+                        }        
+                        else {
+                            // push image to docker
+                            if (params.PUSH_DOCKER_IMAGE) {
+                                if (params.LATEST) {
+                                    clusterImage.push('latest')
+                                }
+                                if (params.VERSION) {
+                                    clusterImage.push() 
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
+
         stage('commitVersion')
         {
             // has to be executed on linux, because this step is using sshagent, 
@@ -248,23 +313,6 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild_basic', outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
                 }
             }                
-        }
-        stage ('test in docker')
-        {
-            agent { label 'debian' }
-            when 
-            {
-                expression { currentBuild.result != 'FAILURE' }
-            }
-            steps 
-            {
-                build job: 'monica.pipeline.testing', 
-                    propagate: true,
-                    parameters: [   booleanParam( name: 'PUSH_DOCKER_IMAGE', value: params.PUSH_DOCKER_IMAGE),
-                                    booleanParam( name: 'LATEST', value: params.LATEST),
-                                    booleanParam( name: 'VERSION', value: params.VERSION),
-                                    string(name: 'MONICA_BUILD_NUMBER', value: env.BUILD_NUMBER)]
-            }
         }
         stage('parallel deployment') {
             parallel {
@@ -303,18 +351,86 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         }          
                     }
                 }
-                stage ('Create Git release') {
-                    agent { label 'debian' }
+                stage('Create Git release') {
+                    agent { label 'debian' }  
                     when 
                     {
                         expression { currentBuild.result != 'FAILURE' && params.CREATE_RELEASE }
                     }
-                    steps 
-                    {
-                        build job: 'monica.pipeline.release', propagate: true,
-                                    parameters: [   booleanParam( name: 'DRAFT', value: params.DRAFT),
-                                                    booleanParam( name: 'PRERELEASE', value: params.PRERELEASE),
-                                                    string(name: 'MONICA_BUILD_NUMBER', value: env.BUILD_NUMBER)]
+                    environment {
+                        apiUrl = "https://api.github.com"
+                        baseUrl = "https://github.com"
+                        owner = "zalf-rpm"
+                        repository = "monica"
+                        artifact_path = "artifact/monica/installer"
+                        credentials = 'zalffpmbuild_basic'
+                        commitHistory = 'patchhistory.txt'
+                    }
+                    steps {
+                        // copy artifacts from another job
+                        // create artifact path 
+                        sh "rm -rf $env.artifact_path"
+                        sh "mkdir -p $env.artifact_path"
+                        // copy artifact step
+                        dir(env.artifact_path)
+                        {
+                            unstash "win_installer"
+                        }
+
+                        script {
+
+                            dir("$env.artifact_path")
+                            {
+                                def version = "1.1.1"
+                                def buildNr = "123"
+                                def uploadFileNames = []
+                                files = findFiles(glob: 'MONICA-Setup-*.exe')
+                                for (file in files)
+                                {
+                                    print ("file to upload: $file")
+                                    uploadFileNames << (file.name)
+                                    // extract version and build number from installer filename
+                                    if (file.name ==~ /MONICA-Setup-.*-x64-64bit-build.*.exe/)
+                                    {
+                                        buildNr = file.name - ~"MONICA-Setup-.*-x64-64bit-build"
+                                        buildNr = buildNr - ~".exe" 
+                                        version = file.name - ~"MONICA-Setup-"
+                                        version = version - ~"-x64-64bit-build.*.exe"
+                                    }
+                                }
+                                // release tag
+                                def tag = version + "." + buildNr
+                                // release name
+                                def releaseName = "MONICA $version"
+                                print("TAG:" + tag)
+                                print("Release Name:" + releaseName)
+                                print ("upload files" + uploadFileNames)
+
+                                // extract git commit log starting from last release tag
+                                def log = extractLog(env.apiUrl, env.owner, env.repository, env.baseUrl, env.credentials)
+                                writeFile file: commitHistory, text: log
+                                uploadFileNames << commitHistory
+                                // send git REST api request to create a release
+                                def uploadURL = createRelease(  env.apiUrl, 
+                                                                env.owner, 
+                                                                env.repository, 
+                                                                env.credentials, 
+                                                                tag, releaseName, 
+                                                                params.DRAFT, 
+                                                                params.PRERELEASE, 
+                                                                "ToDo: patch notes")
+                                if (uploadURL != "none")
+                                {
+                                    // remove parameter description
+                                    uploadURL = uploadURL - ~/\{.*\}/
+                                    for (asset in uploadFileNames)
+                                    {
+                                        // upload asset file
+                                        uploadReleaseAsset(uploadURL, env.credentials, asset)                                
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -363,6 +479,28 @@ def increaseVersionStr(doCommit, tagBuildParam, buildMessageParam, increaseVersi
     }     
     return versionStr
 }
+
+def getVersion(folder)
+{
+    version = 'none'
+    dir(folder)
+    {
+        files = findFiles(glob: 'monica_*.tar.gz' );
+        for (file in files)
+        {
+            version = getVersionNumberFromFilename(file.name)
+        } 
+    }
+    return version
+}
+
+def getVersionNumberFromFilename(filename)
+{
+    version = filename - ~'monica_'
+    version = version - ~'.tar.gz'
+    return version
+}
+
 
 // cleanup the workspace or folder this methode is called in
 // NOTE: Windows file handling can be a bit bitchy. If something keeps file handles on any files or folder that are to be deleted,
@@ -427,4 +565,100 @@ def deleteDirectory(directory)
         returnStdout = bat returnStdout: true, script: "rmdir /s /q \"$directory\""
     }
     print(returnStdout)
+}
+
+// apiUrl -> https://api.github.com
+// owner -> zalf-rpm
+// repository -> monica
+def createRelease(apiUrl, owner, repository, credentials, tag, releaseName, draft, prerelease, releaseDescription)
+{
+
+    postContent =  """{
+        "tag_name": "${tag}",
+        "target_commitish": "master",
+        "name": "${releaseName}",
+        "body": "${releaseDescription}",
+        "draft": ${draft},
+        "prerelease": ${prerelease}
+    }"""
+    print (postContent)
+
+    response = httpRequest (
+                    httpMode: 'POST',
+                    url:"$apiUrl/repos/$owner/$repository/releases",
+                    authentication: credentials, 
+                    contentType: 'APPLICATION_JSON', 
+                    requestBody: postContent
+                    )
+    
+
+    if (response.status == 201)
+    {
+        print (response.content)
+        props = readJSON text: response.content  
+        // extract upload url for assets
+        return props['upload_url']
+    }
+    else
+    {
+        return "none"
+    }
+}
+
+def uploadReleaseAsset(uploadURL, credentials, assetName)
+{
+    withCredentials ([usernamePassword(credentialsId: credentials, passwordVariable: 'password', usernameVariable: 'username')])
+    {
+        def upload_url = "$uploadURL?name=$assetName"
+        def filename = "./" + assetName
+        def returnVal = sh  returnStatus: true, 
+                           script: """curl -i --data-binary @"$filename" -H "Content-Type: application/octet-stream" $upload_url -u $username:$password """
+    }
+}    
+
+// apiUrl -> https://api.github.com
+// repoOwner -> zalf-rpm
+// repository -> monica
+// baseUrl -> https://github.com/
+def extractLog(apiUrl, repoOwner, repository, baseUrl, credentials)
+{
+    if ( fileExists("${repository}.git") ) {
+        dir("${repository}.git") {
+            deleteDir()
+        }
+    }
+    // get latest release
+    def response = httpRequest (
+                    httpMode: 'GET',
+                    url:"$apiUrl/repos/$repoOwner/$repository/releases/latest",
+                    authentication: credentials)
+    print (response.content)
+    props = readJSON text: response.content  
+    def oldTag = props['tag_name']
+
+
+    // clone only version control informations, no files
+    def bareClone = "git clone --bare $baseUrl/$repoOwner/$repository"
+
+    // get log from tag to head, '%s' just the subject 
+    def getLog = "git log ${oldTag}.. --format=%s"
+    def out = ""
+    if (isUnix())
+    {
+        sh bareClone                           
+        dir("${repository}.git")
+        {
+            out = sh returnStdout: true, script: getLog                            
+        }
+    }
+    else
+    {
+        bat bareClone
+        dir("${repository}.git")
+        {
+            out = bat returnStdout: true, script: getLog                            
+        }
+    }
+    print (out)
+    return out
 }
