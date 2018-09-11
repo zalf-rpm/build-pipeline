@@ -10,7 +10,7 @@ pipeline {
       description: '''Mark release as 'pre-release'. Pre-release means that this code is production ready. ''',
       name: 'PRERELEASE')
     }
-    // 
+    // from which build to copy artifact 
     string(defaultValue: 'lastSuccessfulBuild', 
       description: '''(optional) build number from which to build a release''',
       name: 'MONICA_BUILD_NUMBER')
