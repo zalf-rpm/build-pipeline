@@ -17,6 +17,7 @@ import (
 
 const dockerAPIURL string = "https://hub.docker.com"
 
+var port uint64 = 6080
 var sshKey []byte
 var sshDefaultUserName string
 
@@ -268,6 +269,7 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `["INVALID PARAMETER"]`)
 }
 
+// concurrent worker for ssh remote run
 func sshWorker(c chan<- string, user string, clusterID string, sshKey []byte, requestedNumCores int) {
 	cmdresult, err := remoteRun(user, clusterID, sshKey, requestedNumCores, analyseLoad)
 	if err != nil {
@@ -277,9 +279,10 @@ func sshWorker(c chan<- string, user string, clusterID string, sshKey []byte, re
 	c <- cmdresult
 }
 
+// main
+// args optional: -sshkey Ssh/File/Path -sshuser defaultUser -port 6080
 func main() {
 	argsWithoutProg := os.Args[1:]
-
 	for i, arg := range argsWithoutProg {
 		if arg == "-sshkey" && i+1 < len(argsWithoutProg) {
 			sshFileName := argsWithoutProg[i+1]
@@ -293,8 +296,16 @@ func main() {
 		if arg == "-sshuser" && i+1 < len(argsWithoutProg) {
 			sshDefaultUserName = argsWithoutProg[i+1]
 		}
+		if arg == "-port" && i+1 < len(argsWithoutProg) {
+			p, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
+			if err != nil {
+				log.Fatal("ERROR: Failed to parse port number")
+				return
+			}
+			port = p
+		}
 	}
 
 	http.HandleFunc("/rundeckvar/", rundeckVarHandler)
-	log.Fatal(http.ListenAndServe(":6080", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }
