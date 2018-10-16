@@ -172,6 +172,61 @@ func analyseLoad(session *ssh.Session, numCoresObj interface{}) (string, error) 
 	return result, nil
 }
 
+type portRange struct {
+	StartPort uint
+	EndPort   uint
+}
+
+func validatePortRange(session *ssh.Session, portRangeObj interface{}) (string, error) {
+
+	initialPortRange, ok := portRangeObj.(portRange)
+	if !ok {
+		return "", errors.New("invalid portRange type")
+	}
+	if initialPortRange.StartPort > initialPortRange.EndPort {
+		return "", errors.New("invalid port range: start > end port")
+	}
+	if initialPortRange.StartPort > 65535 || initialPortRange.EndPort > 65535 {
+		return "", errors.New("invalid port: port must be less than 65535")
+	}
+	var b bytes.Buffer  // import "bytes"
+	session.Stderr = &b // get output
+	// commandline scan ports
+	getUsedPorts := fmt.Sprintf("nc -vz localhost %v-%v", initialPortRange.StartPort, initialPortRange.EndPort)
+	err := session.Run(getUsedPorts)
+	if err != nil {
+		return "", err
+	}
+	// get output
+	stdout := b.String()
+	outLines := strings.Split(stdout, "\n")
+	blockedPorts := make(map[uint]bool)
+	for _, line := range outLines {
+		token := strings.SplitAfter(line, "] ")
+		if len(token) == 2 {
+			token = strings.SplitAfter(token[1], " ")
+			if len(token) > 1 {
+				val, err := strconv.ParseUint(strings.Trim(token[0], " "), 10, 16)
+				if err != nil {
+					return "", err
+				}
+				port := uint(val)
+				if port >= initialPortRange.StartPort && port <= initialPortRange.EndPort {
+					blockedPorts[port] = false
+				}
+			}
+		}
+	}
+	var resultArray []string
+	for i := initialPortRange.StartPort; i <= initialPortRange.EndPort; i++ {
+		if _, ok := blockedPorts[i]; !ok {
+			resultArray = append(resultArray, fmt.Sprint(i))
+		}
+	}
+	resultStr := strings.Join(resultArray, `","`)
+	return resultStr, nil
+}
+
 // parseLscpu parse output of lscpu
 func parseLscpu(lscpuOut string) (int, error) {
 
@@ -186,15 +241,16 @@ func parseLscpu(lscpuOut string) (int, error) {
 // parseUptime parse output of uptime
 func parseUptime(uptimeOut string) (float64, error) {
 
-	strings.Split(uptimeOut, "\n")
-
 	loadAvg := strings.SplitAfter(uptimeOut, "load average:")
 	loadList := strings.Split(loadAvg[1], " ")
 	var sumLoad float64
 	var numLoad int
 	var hasParsedSomething = false
 	for _, valStr := range loadList {
-		val, err := strconv.ParseFloat(strings.Trim(valStr, " \n"), 64)
+		trimed := strings.Trim(valStr, ", \n")
+		// normalize (possible german number format)
+		normalized := strings.Replace(trimed, ",", ".", -1)
+		val, err := strconv.ParseFloat(normalized, 64)
 		if err == nil {
 			sumLoad += val
 			numLoad++
@@ -207,6 +263,20 @@ func parseUptime(uptimeOut string) (float64, error) {
 	}
 	err := errors.New("no values parsed")
 	return 0, err
+}
+
+func extractClusterCredentials(value string) (string, string, error) {
+	clusterID := value
+	sshUserName := sshDefaultUserName
+	if strings.Contains(clusterID, "/") {
+		tokens := strings.Split(clusterID, "/")
+		if len(tokens) != 2 || tokens[0] == "" || tokens[1] == "" {
+			return "", "", errors.New("wrong cluster format - cluster=clusterName/sshUser expected")
+		}
+		sshUserName = tokens[1]
+		clusterID = tokens[0]
+	}
+	return sshUserName, clusterID, nil
 }
 
 func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
@@ -237,16 +307,10 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 
 			outChan := make(chan string, 20)
 			for _, val := range clusterValues {
-				clusterID := val
-				sshUserName := sshDefaultUserName
-				if strings.Contains(clusterID, "/") {
-					tokens := strings.Split(clusterID, "/")
-					if len(tokens) != 2 || tokens[0] == "" || tokens[1] == "" {
-						fmt.Fprintf(w, `["ERROR: wrong cluster format - cluster=clusterName/sshUser expected"]`)
-						return
-					}
-					sshUserName = tokens[1]
-					clusterID = tokens[0]
+				sshUserName, clusterID, err := extractClusterCredentials(val)
+				if err != nil {
+					fmt.Fprintf(w, `["ERROR: %s"]`, err)
+					return
 				}
 				go sshWorker(outChan, sshUserName, clusterID, sshKey, numCores)
 			}
@@ -262,10 +326,45 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			fmt.Fprintf(w, `["%s"]`, strings.Join(cmdresults, `","`))
+			fmt.Fprintf(w, `{ %s }`, strings.Join(cmdresults, `, `))
+			return
+		}
+	} else if strings.HasPrefix(requestType, "ports") {
+
+		startports, startOk := r.URL.Query()["startport"]
+		endports, endOk := r.URL.Query()["endport"]
+		clusterIDs, clusterOk := r.URL.Query()["cluster"]
+		if (startOk && len(startports[0]) > 0) &&
+			(endOk && len(endports[0]) > 0) &&
+			(clusterOk && len(clusterIDs[0]) > 0) {
+			sshUserName, clusterID, err := extractClusterCredentials(clusterIDs[0])
+
+			var ports portRange
+			startport, err := strconv.ParseUint(startports[0], 10, 64)
+			if err != nil {
+				fmt.Fprintf(w, `["ERROR:  start port not a number"]`)
+				return
+			}
+			ports.StartPort = uint(startport)
+
+			endport, err := strconv.ParseUint(endports[0], 10, 64)
+			if err != nil {
+				fmt.Fprintf(w, `["ERROR:  end port not a number"]`)
+				return
+			}
+			ports.EndPort = uint(endport)
+
+			cmdresult, err := remoteRun(sshUserName, clusterID, sshKey, ports, validatePortRange)
+			if err != nil {
+				serr := strings.Replace(err.Error(), `"`, "'", -1)
+				fmt.Fprintf(w, `["Error: %s "]`, serr)
+				return
+			}
+			fmt.Fprintf(w, `["%s"]`, cmdresult)
 			return
 		}
 	}
+
 	fmt.Fprintf(w, `["INVALID PARAMETER"]`)
 }
 
@@ -274,8 +373,11 @@ func sshWorker(c chan<- string, user string, clusterID string, sshKey []byte, re
 	cmdresult, err := remoteRun(user, clusterID, sshKey, requestedNumCores, analyseLoad)
 	if err != nil {
 		cmdresult = err.Error()
+		c <- cmdresult
+		return
 	}
-	cmdresult = clusterID + cmdresult
+
+	cmdresult = fmt.Sprintf(`"%s": "%s"`, clusterID+cmdresult, clusterID)
 	c <- cmdresult
 }
 
