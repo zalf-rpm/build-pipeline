@@ -20,6 +20,7 @@ const dockerAPIURL string = "https://hub.docker.com"
 var port uint64 = 6080
 var sshKey []byte
 var sshDefaultUserName string
+var sshPassPhrase string
 
 // fetch docker tags, return them as json format string
 // baseurl = e.g. https://hub.docker.com
@@ -73,9 +74,15 @@ func fetchDockerTags(project string, baseurl string) (string, error) {
 // params - parameter for remoteOperationHandler
 // remoteOperationHandler - operation that uses the session
 // returns a result string and error
-func remoteRun(user string, addr string, privateKey []byte, params interface{}, remoteOperationHandler func(*ssh.Session, interface{}) (string, error)) (string, error) {
+func remoteRun(user string, addr string, privateKey []byte, passPhrase string, params interface{}, remoteOperationHandler func(*ssh.Session, interface{}) (string, error)) (string, error) {
 	// Authentication
-	key, err := ssh.ParsePrivateKey([]byte(privateKey))
+	var key ssh.Signer
+	var err error
+	if passPhrase != "" {
+		key, err = ssh.ParsePrivateKeyWithPassphrase([]byte(privateKey), []byte(passPhrase))
+	} else {
+		key, err = ssh.ParsePrivateKey([]byte(privateKey))
+	}
 	if err != nil {
 		return "", err
 	}
@@ -354,7 +361,7 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			ports.EndPort = uint(endport)
 
-			cmdresult, err := remoteRun(sshUserName, clusterID, sshKey, ports, validatePortRange)
+			cmdresult, err := remoteRun(sshUserName, clusterID, sshKey, sshPassPhrase, ports, validatePortRange)
 			if err != nil {
 				serr := strings.Replace(err.Error(), `"`, "'", -1)
 				fmt.Fprintf(w, `["Error: %s "]`, serr)
@@ -370,7 +377,7 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 
 // concurrent worker for ssh remote run
 func sshWorker(c chan<- string, user string, clusterID string, sshKey []byte, requestedNumCores int) {
-	cmdresult, err := remoteRun(user, clusterID, sshKey, requestedNumCores, analyseLoad)
+	cmdresult, err := remoteRun(user, clusterID, sshKey, sshPassPhrase, requestedNumCores, analyseLoad)
 	if err != nil {
 		cmdresult = err.Error()
 		c <- cmdresult
@@ -397,6 +404,15 @@ func main() {
 		}
 		if arg == "-sshuser" && i+1 < len(argsWithoutProg) {
 			sshDefaultUserName = argsWithoutProg[i+1]
+		}
+		if arg == "-sshphrase" && i+1 < len(argsWithoutProg) {
+			sshPassPhraseFileName := argsWithoutProg[i+1]
+			body, err := ioutil.ReadFile(sshPassPhraseFileName)
+			if err != nil {
+				log.Fatal("ERROR: Failed to load ssh pass phrase")
+				return
+			}
+			sshPassPhrase = string(body)
 		}
 		if arg == "-port" && i+1 < len(argsWithoutProg) {
 			p, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
