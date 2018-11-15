@@ -422,8 +422,21 @@ func main() {
 			}
 			port = p
 		}
+		if arg == "-store" && i+2 < len(argsWithoutProg) {
+
+			tempfile := argsWithoutProg[i+1]
+			password := argsWithoutProg[i+2]
+			println("varservice: store to file")
+			err := ioutil.WriteFile(tempfile, []byte(password), os.ModePerm)
+			if err != nil {
+				println(err.Error)
+				log.Fatal("ERROR: Failed to write pw file")
+			}
+			return
+		}
 	}
 
+	println("varservice started")
 	http.HandleFunc("/rundeckvar/", rundeckVarHandler)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }
