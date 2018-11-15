@@ -5,3 +5,4 @@ testtools/CoreConsoleParser/CoreConsoleParser/bin/
 testtools/CoreConsoleParser/.vs/
 testtools/CoreConsoleParser/CoreConsoleParser/CoreConsoleParser.csproj.user
 simplace_exe
+rundeck/varservice/varservice
