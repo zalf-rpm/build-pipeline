@@ -370,9 +370,61 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `["%s"]`, cmdresult)
 			return
 		}
+	} else if strings.HasPrefix(requestType, "listdockercontainer") {
+		pattern, patternOk := r.URL.Query()["pattern"]
+		clusterIDs, clusterOk := r.URL.Query()["cluster"]
+		if patternOk && len(pattern[0]) > 0 &&
+			clusterOk && len(clusterIDs[0]) > 0 {
+
+			sshUserName, clusterID, err := extractClusterCredentials(clusterIDs[0])
+			cmdresult, err := remoteRun(sshUserName, clusterID, sshKey, sshPassPhrase, pattern[0], listDockerImages)
+			if err != nil {
+				serr := strings.Replace(err.Error(), `"`, "'", -1)
+				fmt.Fprintf(w, `["Error: %s "]`, serr)
+				return
+			}
+			fmt.Fprintf(w, `["%s"]`, cmdresult)
+			return
+		}
 	}
 
 	fmt.Fprintf(w, `["INVALID PARAMETER"]`)
+}
+
+func listDockerImages(session *ssh.Session, pattern interface{}) (string, error) {
+
+	imagePattern, ok := pattern.(string)
+	if !ok {
+		return "", errors.New("invalid pattern")
+	}
+	var b bytes.Buffer  // import "bytes"
+	session.Stdout = &b // get output
+	// commandline list docker container
+	var listDockerContainer string
+	if imagePattern == "all" {
+		listDockerContainer = `docker ps --format "{{.Image}}: {{.Names}}"`
+	} else {
+		listDockerContainer = fmt.Sprintf(`docker ps --format "{{.Image}}: {{.Names}}" | grep %s`, imagePattern)
+	}
+
+	err := session.Run(listDockerContainer)
+	if err != nil {
+		// process returns error if nothing is found
+		return "none", nil
+	}
+	// get output
+	stdout := b.String()
+	var resultList []string
+	lines := strings.Split(stdout, "\n")
+	for _, line := range lines {
+		tokens := strings.Split(line, ":")
+		if len(tokens) > 1 {
+			resultList = append(resultList, strings.TrimSpace(tokens[1]))
+		}
+
+	}
+
+	return strings.Join(resultList, `", "`), nil
 }
 
 // concurrent worker for ssh remote run
