@@ -402,9 +402,9 @@ func listDockerImages(session *ssh.Session, pattern interface{}) (string, error)
 	// commandline list docker container
 	var listDockerContainer string
 	if imagePattern == "all" {
-		listDockerContainer = `docker ps --format "{{.Image}}: {{.Names}}"`
+		listDockerContainer = `docker ps --format "{{.Image}}; {{.Names}}"`
 	} else {
-		listDockerContainer = fmt.Sprintf(`docker ps --format "{{.Image}}: {{.Names}}" | grep %s`, imagePattern)
+		listDockerContainer = fmt.Sprintf(`docker ps --format "{{.Image}}; {{.Names}}" | grep %s`, imagePattern)
 	}
 
 	err := session.Run(listDockerContainer)
@@ -417,7 +417,7 @@ func listDockerImages(session *ssh.Session, pattern interface{}) (string, error)
 	var resultList []string
 	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
-		tokens := strings.Split(line, ":")
+		tokens := strings.Split(line, ";")
 		if len(tokens) > 1 {
 			resultList = append(resultList, strings.TrimSpace(tokens[1]))
 		}
