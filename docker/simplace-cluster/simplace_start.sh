@@ -3,6 +3,7 @@
 mkdir -p $WORKDIR 
 mkdir -p $OUTPUTDIR
 mkdir -p $DATADIR
+mkdir -p $PROJECTDIR
 
 LOGLEVEL=" -loglevel=ERROR"
 if [ $DEBUG = "true" ]; then
@@ -22,13 +23,13 @@ if [ $DEBUG = "true" ]; then
 fi
 
 if [ $TESTRUN = "true" ]; then
-  echo "Simplace in Docker: this is a testrun for soulution: $WORKDIR/$SOLUTION"
-  $EXECDIR/simplace run -s=$WORKDIR/$SOLUTION -w=$WORKDIR -o=$OUTPUTDIR
-  echo "output dir"
-  ls -alR $OUTPUTDIR
+    echo "Simplace in Docker: this is a testrun for soulution: $WORKDIR/$SOLUTION"
+    $EXECDIR/simplace run -s=$WORKDIR/$SOLUTION -w=$WORKDIR -o=$OUTPUTDIR
 else 
-  echo "Simplace in Docker - Solution: $WORKDIR/$SOLUTION"
-  echo "Simplace in Docker - Project: $WORKDIR/$PROJECT"
-  echo "Simplace in Docker - Lines: $LINE_START-$LINE_END"
-  $EXECDIR/simplace run -t=CLUSTER -s=$WORKDIR/$SOLUTION -p=$WORKDIR/$PROJECT -l=$LINE_START-$LINE_END $LOGLEVEL
-fi
+    echo "Simplace in Docker - Solution: $WORKDIR/$SOLUTION"
+    echo "Simplace in Docker - Project: $WORKDIR/$PROJECT"
+    echo "Simplace in Docker - Lines: $LINE_START-$LINE_END"
+    $EXECDIR/simplace run -s=$WORKDIR/$SOLUTION -p=$WORKDIR/$PROJECT -w=$WORKDIR -o=$OUTPUTDIR -fd=$DATADIR -fp=$PROJECTDIR -l=$LINE_START-$LINE_END $LOGLEVEL
+fi  
+echo "output dir"
+ls -alR $OUTPUTDIR

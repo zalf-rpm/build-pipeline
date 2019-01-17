@@ -4,7 +4,9 @@ ARG EXECSOURCE="/simplace_exe"
 ENV EXECDIR /simplace
 ENV WORKDIR $EXECDIR/SIMPLACE_WORK
 ENV OUTPUTDIR $EXECDIR/output
-ENV DATADIR $EXECDIR/data 
+ENV DATADIR $EXECDIR/data
+ENV PROJECTDIR $EXECDIR/projects 
+
 ENV PROJECT "path/to/projectfile.proj.xml"
 ENV SOLUTION "path/to/solution.sol.xml"
 ENV LINE_START 1
