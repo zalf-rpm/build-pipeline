@@ -7,6 +7,7 @@ VERSION=$4
 STARTLINE=$5
 ENDLINE=$6
 CONTAINER_NAME="simplace_test_run"
+OUTPUT_NAME="some_test"
 
          #-v $WORK_VOLUME:$IMAGE_WORK \
          #-v $OUT_VOLUME:$IMAGE_OUT \
@@ -20,6 +21,7 @@ docker run \
 --env LINE_END=$ENDLINE \
 --env TESTRUN=false \
 --env DEBUG=true \
+--env FINAL_OUT_NAME=$OUTPUT_NAME \
 --mount type=bind,source=$SIMPLACE_SOURCEDIR,target=/simplace/source \
 --mount type=bind,source=/simplace_out,target=/simplace/output_final \
 --rm \

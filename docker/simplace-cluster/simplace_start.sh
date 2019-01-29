@@ -55,7 +55,7 @@ if [ $DEBUG = "true" ]; then
   ls -al $DATADIR
   LOGLEVEL=""
 fi
-if [ $SVN_CHECKOUT_PATH = "NONE" ]; then
+if [ $SVN_CHECKOUT_PATH = "none" ]; then
     echo "using mounted solution $SIMPLACE_WORKDIR/$SOLUTION"
 else
     echo "SVN checkout from: $SVN_CHECKOUT_PATH"
@@ -71,9 +71,16 @@ else
 fi  
 echo "output dir"
 ls -alR $OUTPUTDIR
+if [ "$FINAL_OUT_NAME" = "none" ]; then
+    # create a unique name for the output tar.gz
+    FINAL_OUT_NAME=$(cat /proc/sys/kernel/random/uuid)
+    echo "FINAL_OUT_NAME: $FINAL_OUT_NAME"
+fi 
+
 cd $OUTPUTDIR
 for dir in */
 do
   base=$(basename "$dir")
-  tar -czf "$FINAL_OUTPUTDIR/${base}.tar.gz" "$dir"
+  DATE=`date +%Y-%m-%d`
+  tar -czf "$FINAL_OUTPUTDIR/${FINAL_OUT_NAME}_${DATE}_${base}.tar.gz" "$dir"
 done
