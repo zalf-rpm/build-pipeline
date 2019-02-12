@@ -80,7 +80,7 @@ func main() {
 			// -v $STORAGE_VOLUME:$IMAGE_STORAGE etc
 			dockerParameters = argsWithoutProg[i+1]
 		}
-		if arg == "timeout" && i+1 < len(argsWithoutProg) {
+		if arg == "-timeout" && i+1 < len(argsWithoutProg) {
 			timeout, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
 			if err != nil {
 				log.Fatal("ERROR: Failed to parse timeout")
@@ -141,6 +141,7 @@ func printHelp() {
 	fmt.Println(`-call             call into docker containter to launch the model`)
 	fmt.Println(`-containername    base name for launched containers`)
 	fmt.Println(`-dockerParameters additional docker parameters like shared volumes`)
+	fmt.Println(`--timeout         timeout for child process in minutes`)
 }
 
 // startInDocker runs a docker image with a commandline (or for debug a programm) and sends the log output back into a channel.

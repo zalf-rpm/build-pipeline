@@ -6,3 +6,4 @@ testtools/CoreConsoleParser/.vs/
 testtools/CoreConsoleParser/CoreConsoleParser/CoreConsoleParser.csproj.user
 simplace_exe
 rundeck/varservice/debug
+rundeck/sim_schedule/debug
