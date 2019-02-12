@@ -1,5 +1,4 @@
 #!/bin/bash
-
-cd ${HERMES_HOME}
+cd ${HERMES_HOME} 
 ls -al
-xvfb-run -a wine HERMAIN.EXE
+xvfb-run -a wine $@
