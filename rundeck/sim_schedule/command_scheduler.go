@@ -12,7 +12,8 @@ import (
 	"time"
 )
 
-var concurrentOperations uint16 = 10
+var concurrentOperations uint16 = 10 // number of paralell processes
+var childProcessTimeout = 2          // timeout in minutes
 
 func main() {
 
@@ -53,7 +54,7 @@ func main() {
 		if arg == "-concurrent" && i+1 < len(argsWithoutProg) {
 			cOps, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
 			if err != nil {
-				log.Fatal("ERROR: Failed to parse port number")
+				log.Fatal("ERROR: Failed to parse number of concurrent runs")
 				return
 			}
 			concurrentOperations = uint16(cOps)
@@ -79,6 +80,15 @@ func main() {
 			// -v $STORAGE_VOLUME:$IMAGE_STORAGE etc
 			dockerParameters = argsWithoutProg[i+1]
 		}
+		if arg == "timeout" && i+1 < len(argsWithoutProg) {
+			timeout, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
+			if err != nil {
+				log.Fatal("ERROR: Failed to parse timeout")
+				return
+			}
+			childProcessTimeout = int(timeout)
+		}
+
 	}
 	// start active runs for number of concurrentOperations
 	// when an active run is finished, start a follow up run
@@ -106,7 +116,7 @@ func main() {
 				commandLine = call + " " + line
 			}
 			logID := fmt.Sprintf("[%v]", i)
-			go startInDocker(workingDir, dockerImage, user, dockerParameters, containerName, commandLine, logID, resultChannel, logOutputChan, 2)
+			go startInDocker(workingDir, dockerImage, user, dockerParameters, containerName, commandLine, logID, resultChannel, logOutputChan, childProcessTimeout)
 		}
 	}
 	// fetch output of last runs
@@ -137,7 +147,7 @@ func printHelp() {
 // Setup timeout a timeout for programms that may get stuck.
 func startInDocker(workingDir, image, user, dockerParameters, name, cmdline, logID string, out, logout chan<- string, timeoutMinutes int) {
 
-	// docker run --user $(id -u):$(id -g) --rm -v $STORAGE_VOLUME:$IMAGE_STORAGE --name=$CONTAINER_NAME zalfrpm/wineforhermes:$VERSION xvfb-run -a wine "$CMD"
+	// docker run --user $(id -u):$(id -g) --rm -v $STORAGE_VOLUME:$IMAGE_STORAGE --name=$CONTAINER_NAME zalfrpm/wineforhermes:$VERSION "$CMD"
 
 	// create command
 	var cmd *exec.Cmd
