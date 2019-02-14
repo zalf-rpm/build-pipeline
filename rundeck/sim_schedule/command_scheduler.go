@@ -24,6 +24,7 @@ func main() {
 	var dockerParameters string
 	var configLines []string
 	var workingDir string
+	var numberOfLines = -1
 
 	fmt.Println("Model execution schedular")
 	// read command line args
@@ -72,6 +73,15 @@ func main() {
 			// xvfb-run -a wine "$CMD"
 			call = argsWithoutProg[i+1]
 		}
+		if arg == "-numlines" && i+1 < len(argsWithoutProg) {
+			// evaluate the first n lines only (optional)
+			numLines, err := strconv.ParseInt(argsWithoutProg[i+1], 10, 64)
+			if err != nil {
+				log.Fatal("ERROR: Failed to parse number of lines")
+				return
+			}
+			numberOfLines = int(numLines)
+		}
 		if arg == "-containername" && i+1 < len(argsWithoutProg) {
 			// myContainerName parameter (optional)
 			containerName = "--name=" + argsWithoutProg[i+1]
@@ -96,6 +106,10 @@ func main() {
 	resultChannel := make(chan string)
 	var activeRuns uint16
 	for i, line := range configLines {
+		if numberOfLines > 0 && i >= numberOfLines {
+			// if number of lines is set and limit is reached
+			break
+		}
 		for activeRuns == concurrentOperations {
 			select {
 			case result := <-resultChannel:
@@ -141,7 +155,8 @@ func printHelp() {
 	fmt.Println(`-call             call into docker containter to launch the model`)
 	fmt.Println(`-containername    base name for launched containers`)
 	fmt.Println(`-dockerParameters additional docker parameters like shared volumes`)
-	fmt.Println(`--timeout         timeout for child process in minutes`)
+	fmt.Println(`-timeout          timeout for child process in minutes`)
+	fmt.Println(`-numlines         (optional) execute only the first n lines`)
 }
 
 // startInDocker runs a docker image with a commandline (or for debug a programm) and sends the log output back into a channel.
