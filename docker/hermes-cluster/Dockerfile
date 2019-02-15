@@ -9,12 +9,14 @@ RUN apt-get update \
 # Install wine with 32 support, because HERMES is a 32 bit application
 RUN dpkg --add-architecture i386 \
 		&& apt-get update \
-		&& apt-get install -y --no-install-recommends wine wine32 
+		&& apt-get install -y --no-install-recommends sudo wine wine32 
 
 # Install display redirect
 RUN apt-get install -y xvfb 
 RUN rm -rf /var/lib/apt/lists/*
 
+ENV USERID 0
+ENV GROUPID 0
 ENV HERMES_HOME /hermes/run
 
 # mount hermes in this folder 
