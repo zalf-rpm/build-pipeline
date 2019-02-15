@@ -1,11 +1,5 @@
 FROM golang:stretch
 
-WORKDIR /go/src/sim_schedule
-COPY rundeck/sim_schedule .
-
-RUN go get -d -v 
-RUN go install -v 
-
 RUN apt-get update 
 RUN apt-get install -y apt-utils
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install apt-transport-https \
@@ -23,6 +17,12 @@ RUN add-apt-repository \
 RUN apt-get update 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install docker-ce docker-ce-cli containerd.io
 RUN rm -rf /var/lib/apt/lists/*
+
+WORKDIR /go/src/sim_schedule
+COPY rundeck/sim_schedule .
+
+RUN go get -d -v 
+RUN go install -v 
 
 RUN docker --version
 
