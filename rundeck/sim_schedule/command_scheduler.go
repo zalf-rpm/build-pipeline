@@ -17,11 +17,10 @@ var childProcessTimeout = 2          // timeout in minutes
 
 func main() {
 
-	var user string
 	var call string
 	var containerName string
 	var dockerImage string
-	var dockerParameters string
+	var dockerParameters []string
 	var configLines []string
 	var workingDir string
 	var numberOfLines = -1
@@ -60,10 +59,6 @@ func main() {
 			}
 			concurrentOperations = uint16(cOps)
 		}
-		if arg == "-user" && i+1 < len(argsWithoutProg) {
-			//e.g. $(id -u):$(id -g)
-			user = argsWithoutProg[i+1]
-		}
 		if arg == "-image" && i+1 < len(argsWithoutProg) {
 			// -docker image zalfrpm/wineforhermes:latest
 			dockerImage = argsWithoutProg[i+1]
@@ -88,7 +83,10 @@ func main() {
 		}
 		if arg == "-dockerparameter" && i+1 < len(argsWithoutProg) {
 			// -v $STORAGE_VOLUME:$IMAGE_STORAGE etc
-			dockerParameters = argsWithoutProg[i+1]
+			parameterStr := argsWithoutProg[i+1]
+			parameterStr = strings.TrimLeft(parameterStr, `" `)
+			parameterStr = strings.TrimRight(parameterStr, ` "`)
+			dockerParameters = strings.Fields(parameterStr)
 		}
 		if arg == "-timeout" && i+1 < len(argsWithoutProg) {
 			timeout, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
@@ -98,7 +96,6 @@ func main() {
 			}
 			childProcessTimeout = int(timeout)
 		}
-
 	}
 	// start active runs for number of concurrentOperations
 	// when an active run is finished, start a follow up run
@@ -122,15 +119,16 @@ func main() {
 
 		if activeRuns < concurrentOperations {
 			activeRuns++
+			var nextContainerName string
 			if len(containerName) > 0 {
-				containerName += fmt.Sprint(i)
+				nextContainerName = containerName + fmt.Sprint(i)
 			}
 			commandLine := line
 			if len(call) > 0 {
 				commandLine = call + " " + line
 			}
 			logID := fmt.Sprintf("[%v]", i)
-			go startInDocker(workingDir, dockerImage, user, dockerParameters, containerName, commandLine, logID, resultChannel, logOutputChan, childProcessTimeout)
+			go startInDocker(workingDir, dockerImage, nextContainerName, commandLine, logID, dockerParameters, resultChannel, logOutputChan, childProcessTimeout)
 		}
 	}
 	// fetch output of last runs
@@ -161,7 +159,7 @@ func printHelp() {
 
 // startInDocker runs a docker image with a commandline (or for debug a programm) and sends the log output back into a channel.
 // Setup timeout a timeout for programms that may get stuck.
-func startInDocker(workingDir, image, user, dockerParameters, name, cmdline, logID string, out, logout chan<- string, timeoutMinutes int) {
+func startInDocker(workingDir, image, name, cmdline, logID string, dockerParameters []string, out, logout chan<- string, timeoutMinutes int) {
 
 	// docker run --user $(id -u):$(id -g) --rm -v $STORAGE_VOLUME:$IMAGE_STORAGE --name=$CONTAINER_NAME zalfrpm/wineforhermes:$VERSION "$CMD"
 
@@ -169,8 +167,8 @@ func startInDocker(workingDir, image, user, dockerParameters, name, cmdline, log
 	var cmd *exec.Cmd
 	if len(image) > 0 {
 		// create docker command
-		dockerArgs := []string{"run", "--rm", "--user", user, name}
-		dockerArgs = append(dockerArgs, strings.Fields(dockerParameters)...)
+		dockerArgs := []string{"run", "--rm", name}
+		dockerArgs = append(dockerArgs, dockerParameters...)
 		dockerArgs = append(dockerArgs, image)
 		dockerArgs = append(dockerArgs, strings.Fields(cmdline)...)
 
