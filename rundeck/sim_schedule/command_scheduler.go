@@ -90,7 +90,7 @@ func main() {
 		}
 		if arg == "-containername" && i+1 < len(argsWithoutProg) {
 			// myContainerName parameter (optional)
-			containerName = "--name=" + argsWithoutProg[i+1]
+			containerName = argsWithoutProg[i+1]
 		}
 		if arg == "-dockerparameter" && i+1 < len(argsWithoutProg) {
 			// -v $STORAGE_VOLUME:$IMAGE_STORAGE etc
@@ -203,7 +203,7 @@ func startInDocker(workingDir, image, containername, cmdline, logID string, dock
 	var cmd *exec.Cmd
 	if len(image) > 0 {
 		// create docker command
-		dockerArgs := []string{"run", "--rm", containername}
+		dockerArgs := []string{"run", "--rm", "--name=" + containername}
 		dockerArgs = append(dockerArgs, dockerParameters...)
 		dockerArgs = append(dockerArgs, image)
 		dockerArgs = append(dockerArgs, strings.Fields(cmdline)...)
@@ -257,10 +257,10 @@ func startInDocker(workingDir, image, containername, cmdline, logID string, dock
 			}
 		case <-timer.C:
 			cmdresult := logID + "timeout"
-			out <- cmdresult
 			if len(image) > 0 {
 				stopDockerContainer(containername)
 			}
+			out <- cmdresult
 			return
 		}
 	}
