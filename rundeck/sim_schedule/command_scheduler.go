@@ -179,9 +179,12 @@ func checkResultForError() func(string, []string) []string {
 	return func(result string, configLines []string) []string {
 		if !strings.HasSuffix(result, "Success") {
 			if strings.HasSuffix(result, "timeout") {
-				numStr := strings.Trim(result, "[]")
+				numStr := strings.Trim(result, "[]timeout")
+				fmt.Printf("LogId %v \n", numStr)
 				lineNumber, _ := strconv.ParseInt(numStr, 10, 64)
+				fmt.Printf("LogId parsed %v \n", lineNumber)
 				errSummary = append(errSummary, result+": "+configLines[int(lineNumber)])
+				fmt.Println(errSummary)
 			} else {
 				errSummary = append(errSummary, result)
 			}
