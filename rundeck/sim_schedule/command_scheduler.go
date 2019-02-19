@@ -110,6 +110,8 @@ func main() {
 	logOutputChan := make(chan string)
 	resultChannel := make(chan string)
 	var activeRuns uint16
+	errorSummary := checkResultForError()
+	var errorSummaryResult []string
 	for i, line := range configLines {
 		if numberOfLines > 0 && i >= numberOfLines {
 			// if number of lines is set and limit is reached
@@ -119,6 +121,7 @@ func main() {
 			select {
 			case result := <-resultChannel:
 				activeRuns--
+				errorSummaryResult = errorSummary(result, configLines)
 				fmt.Println(result)
 			case log := <-logOutputChan:
 				fmt.Println(log)
@@ -139,29 +142,19 @@ func main() {
 			go startInDocker(workingDir, dockerImage, nextContainerName, commandLine, logID, dockerParameters, resultChannel, logOutputChan, childProcessTimeout)
 		}
 	}
-	var errSummary = []string{"Error Summary:"}
 	// fetch output of last runs
 	for activeRuns > 0 {
 		select {
 		case result := <-resultChannel:
 			activeRuns--
-			if result != "success" {
-				if strings.HasSuffix(result, "timeout") {
-					numStr := strings.Trim(result, "[]")
-					lineNumber, _ := strconv.ParseInt(numStr, 10, 64)
-					errSummary = append(errSummary, result+": "+configLines[int(lineNumber)])
-				} else {
-					errSummary = append(errSummary, result)
-				}
-			}
-
+			errorSummaryResult = errorSummary(result, configLines)
 			fmt.Println(result)
 		case log := <-logOutputChan:
 			fmt.Println(log)
 		}
 	}
 	var numErr int
-	for line := range errSummary {
+	for _, line := range errorSummaryResult {
 		fmt.Println(line)
 		numErr++
 	}
@@ -181,10 +174,25 @@ func printHelp() {
 	fmt.Println(`-timeout          timeout for child process in minutes`)
 	fmt.Println(`-numlines         (optional) execute only the first n lines`)
 }
+func checkResultForError() func(string, []string) []string {
+	var errSummary = []string{"Error Summary:"}
+	return func(result string, configLines []string) []string {
+		if !strings.HasSuffix(result, "Success") {
+			if strings.HasSuffix(result, "timeout") {
+				numStr := strings.Trim(result, "[]")
+				lineNumber, _ := strconv.ParseInt(numStr, 10, 64)
+				errSummary = append(errSummary, result+": "+configLines[int(lineNumber)])
+			} else {
+				errSummary = append(errSummary, result)
+			}
+		}
+		return errSummary
+	}
+}
 
 // startInDocker runs a docker image with a commandline (or for debug a programm) and sends the log output back into a channel.
 // Setup timeout a timeout for programms that may get stuck.
-func startInDocker(workingDir, image, name, cmdline, logID string, dockerParameters []string, out, logout chan<- string, timeoutMinutes int) {
+func startInDocker(workingDir, image, containername, cmdline, logID string, dockerParameters []string, out, logout chan<- string, timeoutMinutes int) {
 
 	// docker run --user $(id -u):$(id -g) --rm -v $STORAGE_VOLUME:$IMAGE_STORAGE --name=$CONTAINER_NAME zalfrpm/wineforhermes:$VERSION "$CMD"
 
@@ -192,7 +200,7 @@ func startInDocker(workingDir, image, name, cmdline, logID string, dockerParamet
 	var cmd *exec.Cmd
 	if len(image) > 0 {
 		// create docker command
-		dockerArgs := []string{"run", "--rm", name}
+		dockerArgs := []string{"run", "--rm", containername}
 		dockerArgs = append(dockerArgs, dockerParameters...)
 		dockerArgs = append(dockerArgs, image)
 		dockerArgs = append(dockerArgs, strings.Fields(cmdline)...)
@@ -247,6 +255,9 @@ func startInDocker(workingDir, image, name, cmdline, logID string, dockerParamet
 		case <-timer.C:
 			cmdresult := logID + "timeout"
 			out <- cmdresult
+			if len(image) > 0 {
+				stopDockerContainer(containername)
+			}
 			return
 		}
 	}
@@ -260,4 +271,12 @@ func startInDocker(workingDir, image, name, cmdline, logID string, dockerParamet
 
 	cmdresult := logID + "Success"
 	out <- cmdresult
+}
+
+func stopDockerContainer(name string) {
+	cmd := exec.Command("docker", "stop", name)
+	err := cmd.Run()
+	if err != nil {
+		println("Failed to stop docker container " + name)
+	}
 }
