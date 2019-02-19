@@ -131,17 +131,34 @@ func main() {
 			go startInDocker(workingDir, dockerImage, nextContainerName, commandLine, logID, dockerParameters, resultChannel, logOutputChan, childProcessTimeout)
 		}
 	}
+	var errSummary = []string{"Error Summary:"}
 	// fetch output of last runs
 	for activeRuns > 0 {
 		select {
 		case result := <-resultChannel:
 			activeRuns--
+			if result != "success" {
+				if strings.HasSuffix(result, "timeout") {
+					numStr := strings.Trim(result, "[]")
+					lineNumber, _ := strconv.ParseInt(numStr, 10, 64)
+					errSummary = append(errSummary, result+": "+configLines[int(lineNumber)])
+				} else {
+					errSummary = append(errSummary, result)
+				}
+			}
+
 			fmt.Println(result)
 		case log := <-logOutputChan:
 			fmt.Println(log)
 		}
 	}
+	var numErr int
+	for line := range errSummary {
+		fmt.Println(line)
+		numErr++
+	}
 
+	fmt.Printf("Number of errors: %v \n", numErr-1)
 }
 
 // printHelp prints the valid command line parameter and their usage
