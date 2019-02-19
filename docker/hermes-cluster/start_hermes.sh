@@ -1,9 +1,11 @@
 #!/bin/bash
-cd ${HERMES_HOME} 
-ls -al
 
-if [ ${USERID} != 0 ] && [ ${GROUPID} != 0 ] ; then 
-addgroup --gid ${GROUPID} mygroup
-adduser --gecos "" --disabled-password --uid ${USERID} --ingroup mygroup myuser 
+# create a home dir for wine 
+mkdir -p /home/generic
+export "HOME=/home/generic"
+
+cd ${HERMES_HOME}
+if  [ "${DEBUG}" == "true" ]; then
+ls -al
 fi 
-sudo -H -u myuser xvfb-run -a wine $@
+xvfb-run -a wine $@

@@ -26,14 +26,25 @@ func main() {
 	var numberOfLines = -1
 
 	fmt.Println("Model execution schedular")
+	var dockerParameterMode = false
 	// read command line args
 	argsWithoutProg := os.Args[1:]
 	for i, arg := range argsWithoutProg {
+
+		if dockerParameterMode {
+			// when -dockerparameter was called any following parameter will be interpreted as a parameter for docker
+			parameterStr := argsWithoutProg[i]
+			parameterStr = strings.TrimLeft(parameterStr, `" `)
+			parameterStr = strings.TrimRight(parameterStr, ` "`)
+			dockerParameters = append(dockerParameters, strings.Fields(parameterStr)...)
+		}
 		if arg == "-help" {
+			// print help and terminate
 			printHelp()
 			return
 		}
 		if arg == "-setup" && i+1 < len(argsWithoutProg) {
+			// read setup file
 			setupFilename := argsWithoutProg[i+1]
 			file, err := os.Open(setupFilename)
 			if err != nil {
@@ -83,10 +94,7 @@ func main() {
 		}
 		if arg == "-dockerparameter" && i+1 < len(argsWithoutProg) {
 			// -v $STORAGE_VOLUME:$IMAGE_STORAGE etc
-			parameterStr := argsWithoutProg[i+1]
-			parameterStr = strings.TrimLeft(parameterStr, `" `)
-			parameterStr = strings.TrimRight(parameterStr, ` "`)
-			dockerParameters = strings.Fields(parameterStr)
+			dockerParameterMode = true
 		}
 		if arg == "-timeout" && i+1 < len(argsWithoutProg) {
 			timeout, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
@@ -169,7 +177,7 @@ func printHelp() {
 	fmt.Println(`-image            docker image <user>/<image>:<tag> e.g "zalfrpm/wineforhermes:latest"`)
 	fmt.Println(`-call             call into docker containter to launch the model`)
 	fmt.Println(`-containername    base name for launched containers`)
-	fmt.Println(`-dockerParameters additional docker parameters like shared volumes`)
+	fmt.Println(`-dockerParameters !!!must be last!!! all following parameters will be treated as docker parameters`)
 	fmt.Println(`-timeout          timeout for child process in minutes`)
 	fmt.Println(`-numlines         (optional) execute only the first n lines`)
 }
