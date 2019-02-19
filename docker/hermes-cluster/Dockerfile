@@ -15,13 +15,16 @@ RUN dpkg --add-architecture i386 \
 RUN apt-get install -y xvfb 
 RUN rm -rf /var/lib/apt/lists/*
 
-ENV USERID 0
-ENV GROUPID 0
+ENV DEBUG "false"
 ENV HERMES_HOME /hermes/run
+
+# create a home folder
+RUN mkdir -p /home
+RUN chmod -R 777 /home
 
 # mount hermes in this folder 
 RUN mkdir -p ${HERMES_HOME} 
-RUN chmod -R 777 ${HERMES_HOME}
+RUN chmod -R 777 /hermes
 
 COPY ./docker/hermes-cluster/start_hermes.sh /start.sh
 RUN chmod +x ./start.sh
