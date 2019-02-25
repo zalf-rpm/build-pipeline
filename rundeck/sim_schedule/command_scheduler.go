@@ -24,6 +24,7 @@ func main() {
 	var configLines []string
 	var workingDir string
 	var numberOfLines = -1
+	var writeLogoutput = false
 
 	fmt.Println("Model execution schedular")
 	var dockerParameterMode = false
@@ -104,6 +105,9 @@ func main() {
 			}
 			childProcessTimeout = int(timeout)
 		}
+		if arg == "-logoutput" {
+			writeLogoutput = true
+		}
 	}
 	// start active runs for number of concurrentOperations
 	// when an active run is finished, start a follow up run
@@ -122,9 +126,10 @@ func main() {
 			case result := <-resultChannel:
 				activeRuns--
 				errorSummaryResult = errorSummary(result, configLines)
-				fmt.Println(result)
 			case log := <-logOutputChan:
-				fmt.Println(log)
+				if writeLogoutput {
+					fmt.Println(log)
+				}
 			}
 		}
 
@@ -139,6 +144,7 @@ func main() {
 				commandLine = call + " " + line
 			}
 			logID := fmt.Sprintf("[%v]", i)
+			fmt.Println(logID)
 			go startInDocker(workingDir, dockerImage, nextContainerName, commandLine, logID, dockerParameters, resultChannel, logOutputChan, childProcessTimeout)
 		}
 	}
@@ -148,9 +154,10 @@ func main() {
 		case result := <-resultChannel:
 			activeRuns--
 			errorSummaryResult = errorSummary(result, configLines)
-			fmt.Println(result)
 		case log := <-logOutputChan:
-			fmt.Println(log)
+			if writeLogoutput {
+				fmt.Println(log)
+			}
 		}
 	}
 	var numErr int
@@ -173,6 +180,7 @@ func printHelp() {
 	fmt.Println(`-dockerParameters !!!must be last!!! all following parameters will be treated as docker parameters`)
 	fmt.Println(`-timeout          timeout for child process in minutes`)
 	fmt.Println(`-numlines         (optional) execute only the first n lines`)
+	fmt.Println(`-logoutput        (optional) write log output for every process`)
 }
 func checkResultForError() func(string, []string) []string {
 	var errSummary = []string{"Error Summary:"}
@@ -180,11 +188,8 @@ func checkResultForError() func(string, []string) []string {
 		if !strings.HasSuffix(result, "Success") {
 			if strings.HasSuffix(result, "timeout") {
 				numStr := strings.Trim(result, "[]timeout")
-				fmt.Printf("LogId %v \n", numStr)
 				lineNumber, _ := strconv.ParseInt(numStr, 10, 64)
-				fmt.Printf("LogId parsed %v \n", lineNumber)
 				errSummary = append(errSummary, result+": "+configLines[int(lineNumber)])
-				fmt.Println(errSummary)
 			} else {
 				errSummary = append(errSummary, result)
 			}
