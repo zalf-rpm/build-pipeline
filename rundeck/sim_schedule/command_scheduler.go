@@ -246,7 +246,6 @@ func startInDocker(workingDir, image, containername, cmdline, logID string, dock
 		for outScanner.Scan() {
 			text := outScanner.Text()
 			logout <- logID + text
-			fmt.Println(text)
 			c1 <- true
 		}
 		c1 <- false
