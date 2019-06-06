@@ -9,10 +9,11 @@
 #SBATCH --array=0-3
 ARGS=(1-80 81-160 161-240 241-320)
 
+MYUSER=$(whoami)
 EXECUTABLE=hermestogo
-PROJECTDATA=/beegfs/sschulz/hermes/BBB/BBG_all.bat
+PROJECTDATA=/beegfs/$MYUSER/hermes/BBB/BBG_all.bat
 CMDLINE="-module batch -concurrent 40 -logoutput -batch $PROJECTDATA -lines"
 
-cd /home/sschulz/go/src/gitlab.com/zalf-rpm/hermesforsimplace/hermestogo
+cd /home/$MYUSER/go/src/gitlab.com/zalf-rpm/hermesforsimplace/hermestogo
 
 srun ./$EXECUTABLE $CMDLINE ${ARGS[$SLURM_ARRAY_TASK_ID]}
