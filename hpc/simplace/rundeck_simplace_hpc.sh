@@ -33,16 +33,16 @@ if [ -z "$JOB_NAME" ] ; then
 fi 
 
 #sbatch job name 
-SBATCH_JOB_NAME=${USER}_simplace_${JOB_NAME}_${JOB_EXEC_ID}
+SBATCH_JOB_NAME="simpl_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
 
-#pull simplace image from docker and create singuarity image
-SINGULARITY_IMAGE=simplace-hpc_${VERSION}.sif
+#check if the singularity image exists 
+SINGULARITY_IMAGE=simplace_4.2.1.sif
 IMAGE_DIR=~/singularity/simplace
-mkdir -p ${IMAGE_DIR}
-cd ${IMAGE_DIR}
-if [ ! -f ${SINGULARITY_IMAGE} ] ; then 
-	singularity pull docker://zalfrpm/simplace-hpc:${VERSION}
-fi 
+if [ ! -e ${IMAGE_DIR}/${SINGULARITY_IMAGE} ] ; then
+echo "File '${IMAGE_DIR}/${SINGULARITY_IMAGE}' not found"
+exit 1
+fi
+
 cd ~
 
 #TODO write a program to extract lines, cpu usage, and time estimate
@@ -57,12 +57,13 @@ for i in "${ADDR[@]}"; do # access each element of array
     STARTLINE=${SOME[0]}
     ENDLINE=${SOME[1]}
 	#sbatch commands
-	SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=${CPU} "
+	SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=${CPU} -o log/simplace-%j"
 	#simplace sbatch script commands
     SIMPLACE_INPUT="${MOUNT_DATA} ${MOUNT_WORK} ${MOUNT_OUT} ${MOUNT_OUT_ZIP} ${MOUNT_PROJECT} ${SOLUTION_PATH} ${PROJECT_PATH} ${IMAGE_DIR}/${SINGULARITY_IMAGE} ${DEBUG} ${STARTLINE} ${ENDLINE} ${SBATCH_JOB_NAME}_${i} false"
     echo "First  $STARTLINE"
     echo "Second $ENDLINE"
     echo "$i"
 
-	echo "sbatch $SBATCH_COMMANDS sbatch_simplace.sh $SIMPLACE_INPUT "
+	echo "sbatch $SBATCH_COMMANDS batch/sbatch_simplace.sh $SIMPLACE_INPUT"
+	sbatch $SBATCH_COMMANDS batch/sbatch_simplace.sh $SIMPLACE_INPUT 
 done
