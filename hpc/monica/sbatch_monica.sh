@@ -1,18 +1,16 @@
 #!/bin/bash -x
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --time=0:05:00
-#SBATCH --cpus-per-task=5
 #SBATCH --partition=compute
-#SBATCH -o monica-%j
 
-NUM_WORKER=5
-PROXY_SERVER=login01.cluster.zalf.de
-MOUNT_STORAGE=/beegfs/common/data/climate
-SINGULARITY_IMAGE=monica-cluster_2.2.1.168.sif
-WORKDIR=/monica_data/climate-data
+{MOUNT_DATA} ${IMAGE_DIR}/${SINGULARITY_IMAGE} ${NUM_WORKER} ${PROXY_SERVER}
+MOUNT_DATA=$1
+SINGULARITY_IMAGE=$2
+NUM_WORKER=$3
+PROXY_SERVER=$4
+
+
+DATADIR=/monica_data/climate-data
 LOGOUT=/var/log
-MOUNT_LOG=~/log
+MOUNT_LOG=~/log/supervisor/monica/worker-%j
 
 export monica_instances=$NUM_WORKER
 export monica_intern_in_port=6677
@@ -25,7 +23,7 @@ export monica_proxy_in_host=$PROXY_SERVER
 export monica_proxy_out_host=$PROXY_SERVER
 
 srun singularity run -B \
-$MOUNT_STORAGE:$WORKDIR,\
+$MOUNT_DATA:$DATADIR,\
 $MOUNT_LOG:$LOGOUT \
 --pwd / \
 ${SINGULARITY_IMAGE} 
