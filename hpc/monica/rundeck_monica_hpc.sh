@@ -70,9 +70,9 @@ export monica_autostart_worker=false
 export monica_auto_restart_proxies=true
 export monica_auto_restart_worker=false
 
-echo "singularity instance start -B $MOUNT_LOG:$LOGOUT ${SINGULARITY_IMAGE} monica_proxy "
-echo "singularity run instance://monica_proxy > /dev/null 2>&1 &"
 
+singularity instance start -B $MOUNT_LOG:$LOGOUT ${SINGULARITY_IMAGE} monica_proxy 
+nohup singularity run instance://monica_proxy > /dev/null 2>&1 & 
 # start worker
 
 #sbatch commands
