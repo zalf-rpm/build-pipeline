@@ -1,16 +1,15 @@
 #!/bin/bash -x
 #SBATCH --partition=compute
 
-{MOUNT_DATA} ${IMAGE_DIR}/${SINGULARITY_IMAGE} ${NUM_WORKER} ${PROXY_SERVER}
 MOUNT_DATA=$1
 SINGULARITY_IMAGE=$2
 NUM_WORKER=$3
 PROXY_SERVER=$4
 
-
 DATADIR=/monica_data/climate-data
 LOGOUT=/var/log
-MOUNT_LOG=~/log/supervisor/monica/worker-%j
+MOUNT_LOG=~/log/supervisor/monica/worker
+mkdir -p $MOUNT_LOG
 
 export monica_instances=$NUM_WORKER
 export monica_intern_in_port=6677

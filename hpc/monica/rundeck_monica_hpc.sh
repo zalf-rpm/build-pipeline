@@ -76,7 +76,7 @@ echo "singularity run instance://monica_proxy > /dev/null 2>&1 &"
 # start worker
 
 #sbatch commands
-SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME} --time=${TIME} --ntasks=${NUM_NODES} --cpus-per-task=40 -o log/monica-%j"
+SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n ${NUM_NODES} -c 40 -o log/monica-%j"
 
 #sbatch script commands
 PROXY_SERVER=$HOSTNAME
@@ -84,3 +84,4 @@ SCRIPT_INPUT="${MOUNT_DATA} ${IMAGE_PATH} ${NUM_WORKER} ${PROXY_SERVER}"
 
 
 echo "sbatch $SBATCH_COMMANDS batch/sbatch_monica.sh $SCRIPT_INPUT"
+sbatch $SBATCH_COMMANDS batch/sbatch_monica.sh $SCRIPT_INPUT
