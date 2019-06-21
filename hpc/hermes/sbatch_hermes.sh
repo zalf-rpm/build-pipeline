@@ -1,19 +1,28 @@
 #!/bin/bash
-#SBATCH -J HermesBatchRun
-#SBATCH --time=0:05:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=40
 #SBATCH --partition=compute
-#SBATCH -o hermes-%j 
-#SBATCH --array=0-3
-ARGS=(1-80 81-160 161-240 241-320)
 
-MYUSER=$(whoami)
+MOUNT_PROJECT=$1
+MOUNT_DATA=$2
+MOUNT_OUTPUT=$1
+IMAGE_PATH=$2
+BATCH_LIST_FILE=$3
+ARGS=$4
+
 EXECUTABLE=hermestogo
-PROJECTDATA=/beegfs/$MYUSER/hermes/BBB/BBG_all.bat
-CMDLINE="-module batch -concurrent 40 -logoutput -batch $PROJECTDATA -lines"
+EXECUTABLE_DIR=/hermes/go
+PROJECT=/hermes/project
+DATA=/hermes/data
+OUTPUT=/hermes/out
+CMDLINE="-module batch -concurrent 40 -logoutput -batch $PROJECTDATA/${BATCH_LIST_FILE} -lines"
 
-cd /home/$MYUSER/go/src/gitlab.com/zalf-rpm/hermesforsimplace/hermestogo
+CMD="srun singularity run -B \
+$MOUNT_PROJECT:$PROJECTDATA,\
+$MOUNT_DATA:$DATA,\
+$MOUNT_OUTPUT:$OUTPUT \
+--pwd ${EXECUTABLE_DIR} \
+${SINGULARITY_IMAGE}"
 
-srun ./$EXECUTABLE $CMDLINE ${ARGS[$SLURM_ARRAY_TASK_ID]}
+${CMD} $EXECUTABLE $CMDLINE ${ARGS[$SLURM_ARRAY_TASK_ID]}
