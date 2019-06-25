@@ -18,11 +18,10 @@ FINAL_OUT_NAME=${12}
 TESTRUN=${13}
 
 EXECDIR=/simplace
-SIMPLACE_DIR=/simplace
-SIMPLACE_WORKDIR=$SIMPLACE_DIR/SIMPLACE_WORK
-DATADIR=$SIMPLACE_DIR/data
-OUTDIR=$SIMPLACE_DIR/output
-PROJECTDIR=$SIMPLACE_DIR/projects
+SIMPLACE_WORKDIR=/simplace/SIMPLACE_WORK
+DATADIR=/data
+OUTDIR=/outputs
+PROJECTDIR=/projects
 
 LOGLEVEL=" -loglevel=ERROR"
 if [ $DEBUG = "true" ]; then
@@ -39,7 +38,7 @@ else
 fi 
 
 mkdir $MOUNT_OUTDIR_RUN
-echo "output dir: " $MOUNT_OUTDIR_RUN
+echo "outputs dir: " $MOUNT_OUTDIR_RUN
 
 echo "using mounted solution $SIMPLACE_WORKDIR/$SOLUTION"
 
@@ -58,7 +57,7 @@ else
     echo "Simplace - Solution: $SIMPLACE_WORKDIR/$SOLUTION"
     echo "Simplace - Project: $SIMPLACE_WORKDIR/$PROJECT"
     echo "Simplace - Lines: $LINE_START-$LINE_END"
-    $CMD $EXECDIR/simplace run -s=$SIMPLACE_WORKDIR/$SOLUTION -p=$SIMPLACE_WORKDIR/$PROJECT -w=$SIMPLACE_WORKDIR -o=$OUTDIR -fd=$DATADIR -fp=$PROJECTDIR -l=$LINE_START-$LINE_END $LOGLEVEL
+    $CMD $EXECDIR/simplace run -s=$SIMPLACE_WORKDIR/$SOLUTION -p=$SIMPLACE_WORKDIR/$PROJECT -t=CLUSTER -l=$LINE_START-$LINE_END $LOGLEVEL
 fi  
 
 echo "Content output dir:"

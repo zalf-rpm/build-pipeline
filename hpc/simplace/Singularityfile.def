@@ -10,9 +10,9 @@ export SIMPLACE_DIR=/simplace
 
 
 export SIMPLACE_WORKDIR=/simplace/SIMPLACE_WORK
-export OUTDIR=/simplace/output
-export DATADIR=/simplace/data
-export PROJECTDIR=/simplace/projects 
+export OUTDIR=/output
+export DATADIR=/data
+export PROJECTDIR=/projects 
 
 %post
 
@@ -22,6 +22,6 @@ chmod -R 555 /simplace
 
 #mountpoints
 mkdir -p /simplace/SIMPLACE_WORK
-mkdir -p /simplace/output
-mkdir -p /simplace/data
-mkdir -p /simplace/projects
+mkdir -p /output
+mkdir -p /data
+mkdir -p /projects
