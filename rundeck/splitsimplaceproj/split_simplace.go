@@ -1,13 +1,21 @@
 package main
 
 import (
-	"bufio"
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"path"
 	"strconv"
-	"strings"
 )
+
+type projectIDCount struct {
+	ID    []byte
+	Count int64
+}
 
 func main() {
 
@@ -23,34 +31,37 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cpuUsage := 1
-	tasks := 1
-	nodes := int(maxNodes)
+	var cpuUsage int64 = 1
+	var tasks int64 = 1
+	nodes := maxNodes
 	var sliceStr string
-	projectMap, min, max := readProj(projectFile, 1)
-	numEntries := len(projectMap)
+	projectMap, min, max, linesSum, err := readProjectFile(projectFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	numEntries := int64(len(projectMap))
 	enable := true
 	if min == max && enable {
 		maxSplit := numEntries
-		if max >= int(maxCPU) {
-			cpuUsage = int(maxCPU)
-			tasks = int(maxNodes)
+		if max >= maxCPU {
+			cpuUsage = maxCPU
+			tasks = maxNodes
 		} else {
 			cpuUsage = max
-			tasks = (int(maxCPU) / max) * int(maxNodes)
+			tasks = (maxCPU / max) * maxNodes
 		}
 		if maxSplit < tasks {
 			tasks = maxSplit
 		}
-		if tasks <= int(maxNodes) {
+		if tasks <= maxNodes {
 			nodes = tasks
 		}
 		entrySlice := maxSplit / tasks
 		modEntrySlice := maxSplit % tasks
 
 		sliceStr = "1-"
-		tVal := 0
-		i := 0
+		var tVal int64
+		var i int64
 		for ; i < modEntrySlice; i++ {
 			tVal = tVal + (max * (entrySlice + 1))
 			sliceStr = fmt.Sprintf("%s%d,%d-", sliceStr, tVal, tVal+1)
@@ -60,7 +71,7 @@ func main() {
 			tVal = tVal + (max * entrySlice)
 
 			if i == tasks-1 {
-				sliceStr += strconv.Itoa(tVal)
+				sliceStr += strconv.FormatInt(tVal, 10)
 			} else {
 				sliceStr = fmt.Sprintf("%s%d,%d-", sliceStr, tVal, tVal+1)
 			}
@@ -69,100 +80,141 @@ func main() {
 		fmt.Printf("nodes: %d\n", nodes)
 		fmt.Printf("cpu: %d\n", cpuUsage)
 	} else {
-		sumEntries := 0
-		for _, val := range projectMap {
-			sumEntries += val
+		cpuUsage := max
+		if max > maxCPU {
+			cpuUsage = maxCPU
 		}
-		if maxNodes > 0 && sumEntries > 0 {
-			sliceStr, nodes := splitIrregularProjectFile(projectFile, 1, int(maxNodes), sumEntries)
+		var sumEntries int64
+		for _, val := range projectMap {
+			sumEntries += val.Count
+		}
+		if maxNodes > 0 && linesSum > 0 {
+			sliceStr, nodes := splitProjectFile(projectMap, maxNodes, linesSum)
 			fmt.Println(sliceStr)
 			fmt.Printf("nodes: %d\n", nodes)
-			fmt.Printf("cpu: %d\n", max)
+			fmt.Printf("cpu: %d\n", cpuUsage)
 		}
 
 	}
 }
-func splitIrregularProjectFile(filename string, ignoreLines int, numSlices int, sumEntries int) (string, int) {
 
-	strSlice := "1-"
+func readProjectFile(filename string) (resMap []projectIDCount, minVal, maxVal, linesSum int64, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	numline := 0
-	index := 0
+	var tarReader *tar.Reader
+	if path.Ext(filename) == "tar.gz" {
+		tarReader = readTarGzipFile(file)
+	}
+
+	buf := make([]byte, 32*1024)
+	var count int64
+
+	readID := false
+	var previousID []byte
+	var currentID []byte
+	for {
+		var c int
+		var err error
+		if tarReader != nil {
+			c, err = tarReader.Read(buf)
+		} else {
+			c, err = file.Read(buf)
+		}
+		if c > 0 {
+			for i := 0; i < c; i++ {
+				if '\n' == buf[i] {
+					readID = true
+					currentID = []byte{}
+				} else if ',' == buf[i] && readID {
+					readID = false
+					if !bytes.Equal(previousID, currentID) && len(previousID) > 0 {
+						resMap = append(resMap, projectIDCount{ID: previousID, Count: count})
+						if count < minVal || minVal == 0 {
+							minVal = count
+						}
+						if count > maxVal {
+							maxVal = count
+						}
+						count = 1
+					} else {
+						count++
+					}
+					linesSum++
+					previousID = currentID
+
+				} else if readID {
+					currentID = append(currentID, buf[i])
+				}
+			}
+		}
+		switch {
+		case err == io.EOF:
+			// add the last
+			resMap = append(resMap, projectIDCount{ID: previousID, Count: count})
+			if count < minVal || minVal == 0 {
+				minVal = count
+			}
+			if count > maxVal {
+				maxVal = count
+			}
+			return resMap, minVal, maxVal, linesSum, nil
+
+		case err != nil:
+			return resMap, minVal, maxVal, linesSum, err
+		}
+	}
+}
+
+func splitProjectFile(resMap []projectIDCount, numSlices, sumEntries int64) (string, int64) {
+	strSlice := "1-"
 	sliceSize := sumEntries / numSlices
 	if sliceSize == 0 {
 		sliceSize = 1
 	}
-	currentSliceSize := 0
-	currentProjID := ""
-	currentSlice := 1
-	for scanner.Scan() {
-		line := scanner.Text()
-		if numline >= ignoreLines {
+	var index int64
+	var currentSliceSize int64
+	var currentSlice int64 = 1
+	for _, entry := range resMap {
 
-			fields := strings.FieldsFunc(line, func(r rune) bool { return r == ',' })
-			projID := fields[0]
-			if currentProjID == "" {
-				currentProjID = projID
-			}
-			currentSliceSize++
-			if projID != currentProjID {
-				if currentSliceSize > sliceSize && currentSlice != numSlices {
-					// start a new slice
-					currentSlice++
-					currentSliceSize = 0
-					strSlice = fmt.Sprintf("%s%d,%d-", strSlice, index, index+1)
-				}
-				currentProjID = projID
-			}
-			index++
+		if currentSliceSize >= sliceSize && currentSlice != numSlices {
+			// start a new slice
+			currentSlice++
+			currentSliceSize = 0
+			strSlice = fmt.Sprintf("%s%d,%d-", strSlice, index, index+1)
 		}
-		numline++
+		currentSliceSize = currentSliceSize + entry.Count
+		index = index + entry.Count
 	}
-	strSlice += strconv.Itoa(index)
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	strSlice += strconv.FormatInt(index, 10)
 	return strSlice, currentSlice
 }
 
-func readProj(filename string, ignoreLines int) (resMap map[string]int, minVal, maxVal int) {
-	resMap = make(map[string]int)
-	file, err := os.Open(filename)
+func readTarGzipFile(file *os.File) (reader *tar.Reader) {
+	// open gzip reader
+	gzf, err := gzip.NewReader(file)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	numline := 0
-	for scanner.Scan() {
-		line := scanner.Text()
-		if numline >= ignoreLines {
-			fields := strings.FieldsFunc(line, func(r rune) bool { return r == ',' })
-			projID := fields[0]
-			if _, exists := resMap[projID]; exists {
-				resMap[projID]++
-			} else {
-				resMap[projID] = 1
-			}
-		}
-		numline++
+	// open tar reader
+	tarReader := tar.NewReader(gzf)
+
+	// should contain exacly one file
+	header, err := tarReader.Next()
+	if err == io.EOF {
+		log.Fatal("File is empty")
 	}
-	if err := scanner.Err(); err != nil {
+	if err != nil {
 		log.Fatal(err)
 	}
-	for _, val := range resMap {
-		if minVal == 0 || minVal > val {
-			minVal = val
-		}
-		if maxVal < val {
-			maxVal = val
-		}
-	}
 
-	return resMap, minVal, maxVal
+	switch header.Typeflag {
+	case tar.TypeReg:
+		return tarReader
+	default:
+		log.Fatal("unable to read file in tar.gz")
+	}
+	return nil
 }
