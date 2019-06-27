@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"time"
 )
 
 type projectIDCount struct {
@@ -18,7 +17,7 @@ type projectIDCount struct {
 }
 
 func main() {
-	start := time.Now()
+	//start := time.Now()
 	args := os.Args[1:]
 
 	if len(args) != 3 {
@@ -102,9 +101,9 @@ func main() {
 		}
 
 	}
-	end := time.Now()
-	elapsed := end.Sub(start)
-	fmt.Println("Execution time: ", elapsed)
+	// end := time.Now()
+	// elapsed := end.Sub(start)
+	// fmt.Println("Execution time: ", elapsed)
 }
 
 func readProjectFile(filename string) (resMap []projectIDCount, minVal, maxVal, linesSum int64, err error) {
