@@ -1,7 +1,6 @@
 package main
 
 import (
-	"archive/tar"
 	"bytes"
 	"compress/gzip"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 )
 
 type projectIDCount struct {
@@ -18,7 +18,7 @@ type projectIDCount struct {
 }
 
 func main() {
-
+	start := time.Now()
 	args := os.Args[1:]
 
 	projectFile := args[0]
@@ -96,6 +96,9 @@ func main() {
 		}
 
 	}
+	end := time.Now()
+	elapsed := end.Sub(start)
+	fmt.Println("Execution time: ", elapsed)
 }
 
 func readProjectFile(filename string) (resMap []projectIDCount, minVal, maxVal, linesSum int64, err error) {
@@ -104,9 +107,13 @@ func readProjectFile(filename string) (resMap []projectIDCount, minVal, maxVal, 
 		log.Fatal(err)
 	}
 	defer file.Close()
-	var tarReader *tar.Reader
-	if path.Ext(filename) == "tar.gz" {
-		tarReader = readTarGzipFile(file)
+	var gzfile *gzip.Reader
+	ext := path.Ext(filename)
+	if ext == ".gz" {
+		gzfile, err = gzip.NewReader(file)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	buf := make([]byte, 32*1024)
@@ -118,8 +125,8 @@ func readProjectFile(filename string) (resMap []projectIDCount, minVal, maxVal, 
 	for {
 		var c int
 		var err error
-		if tarReader != nil {
-			c, err = tarReader.Read(buf)
+		if gzfile != nil {
+			c, err = gzfile.Read(buf)
 		} else {
 			c, err = file.Read(buf)
 		}
@@ -190,31 +197,4 @@ func splitProjectFile(resMap []projectIDCount, numSlices, sumEntries int64) (str
 	}
 	strSlice += strconv.FormatInt(index, 10)
 	return strSlice, currentSlice
-}
-
-func readTarGzipFile(file *os.File) (reader *tar.Reader) {
-	// open gzip reader
-	gzf, err := gzip.NewReader(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// open tar reader
-	tarReader := tar.NewReader(gzf)
-
-	// should contain exacly one file
-	header, err := tarReader.Next()
-	if err == io.EOF {
-		log.Fatal("File is empty")
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	switch header.Typeflag {
-	case tar.TypeReg:
-		return tarReader
-	default:
-		log.Fatal("unable to read file in tar.gz")
-	}
-	return nil
 }
