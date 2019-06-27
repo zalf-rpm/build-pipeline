@@ -21,14 +21,20 @@ func main() {
 	start := time.Now()
 	args := os.Args[1:]
 
+	if len(args) != 3 {
+		fmt.Println("usage:")
+		fmt.Println("splitsimplaceproj <project_file> <max cpu> <max nodes>")
+		return
+	}
+
 	projectFile := args[0]
 	maxCPU, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("MaxCpu argument needs to be an int: %s", err)
 	}
 	maxNodes, err := strconv.ParseInt(args[2], 10, 64)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("MaxNodes argument needs to be an int: %s", err)
 	}
 
 	var cpuUsage int64 = 1
@@ -40,8 +46,7 @@ func main() {
 		log.Fatal(err)
 	}
 	numEntries := int64(len(projectMap))
-	enable := true
-	if min == max && enable {
+	if min == max {
 		maxSplit := numEntries
 		if max >= maxCPU {
 			cpuUsage = maxCPU
@@ -80,6 +85,7 @@ func main() {
 		fmt.Printf("nodes: %d\n", nodes)
 		fmt.Printf("cpu: %d\n", cpuUsage)
 	} else {
+		// project file contains projectID sets of differing sizes
 		cpuUsage := max
 		if max > maxCPU {
 			cpuUsage = maxCPU
