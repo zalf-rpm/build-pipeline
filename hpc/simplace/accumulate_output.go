@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -21,6 +22,7 @@ func main() {
 
 	inFolder := "/home/user/project/out"
 	outFolder := "/home/user/project/sum_out"
+	mergeTarBall := false
 	argsWithoutExe := os.Args[1:]
 
 	num := len(argsWithoutExe)
@@ -30,6 +32,9 @@ func main() {
 		}
 		if arg == "-outfolder" && i+1 < num {
 			outFolder = argsWithoutExe[i+1]
+		}
+		if arg == "-mergetarball" {
+			mergeTarBall = true
 		}
 	}
 	fmt.Printf("In: %s\n", inFolder)
@@ -43,11 +48,54 @@ func main() {
 	// sort by line numbers
 	fmt.Println("Sorted:")
 	sort.Sort(files)
-	for _, f := range files {
-		fmt.Println(f.Name())
-		// read file content into output files
-		readTarGzipFile(inFolder+"/"+f.Name(), outFolder)
+	if mergeTarBall {
+		baseFolderName := filepath.Base(inFolder)
+		tarFile := filepath.Join(outFolder, fmt.Sprintf("%s.tar", baseFolderName))
+		err = os.MkdirAll(outFolder, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		merge := mergeTarGzipFile(tarFile)
+		var outFile *os.File
+		var outWriter *tar.Writer
+		for _, f := range files {
+			fmt.Println(f.Name())
+			// read file content into output files
+			outFile, outWriter = merge(filepath.Join(inFolder, f.Name()))
+		}
+		if outWriter != nil && outFile != nil {
+			outWriter.Close()
+			outFile.Close()
+
+			reader, err := os.Open(tarFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			tarFileName := filepath.Base(tarFile)
+			gzTarget := filepath.Join(outFolder, fmt.Sprintf("%s.gz", tarFileName))
+
+			writer, err := os.Create(gzTarget)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer writer.Close()
+
+			archiver := gzip.NewWriter(writer)
+			archiver.Name = tarFileName
+			defer archiver.Close()
+
+			_, err = io.Copy(archiver, reader)
+		}
+
+	} else {
+		for _, f := range files {
+			fmt.Println(f.Name())
+			// read file content into output files
+			readTarGzipFile(inFolder+"/"+f.Name(), outFolder)
+		}
 	}
+
 }
 
 func readTarGzipFile(filename string, outPath string) {
@@ -86,7 +134,7 @@ func readTarGzipFile(filename string, outPath string) {
 			fmt.Printf("Contents of %s %d %d\n", header.Name, header.Mode, header.Size)
 			filePath := header.Name
 			// make dir
-			fullFileName := path.Clean(outPath + "/" + filePath)
+			fullFileName := joinPath(outPath, filePath)
 			fullFilePath := path.Dir(fullFileName)
 			err = os.MkdirAll(fullFilePath, os.ModePerm)
 			if err != nil {
@@ -144,7 +192,7 @@ func readTarGzipFile(filename string, outPath string) {
 			}
 		default:
 			fmt.Printf("%s : %c %s %s\n",
-				"Yikes! Unable to figure out type",
+				"Unable to figure out type",
 				header.Typeflag,
 				"in file",
 				name,
@@ -152,6 +200,72 @@ func readTarGzipFile(filename string, outPath string) {
 		}
 	}
 
+}
+
+func mergeTarGzipFile(targetFile string) func(string) (*os.File, *tar.Writer) {
+	tarfile, err := os.Create(targetFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tarball := tar.NewWriter(tarfile)
+	dirLookup := make(map[string]bool)
+	fileLookup := make(map[string]bool)
+	return func(filename string) (*os.File, *tar.Writer) {
+		f, err := os.Open(filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		// open gzip reader
+		gzf, err := gzip.NewReader(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// open tar reader
+		tarReader := tar.NewReader(gzf)
+
+		// read file entries from tar
+		for {
+			header, err := tarReader.Next()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			switch header.Typeflag {
+			case tar.TypeDir:
+				fmt.Printf("Directory %s \n", header.Name)
+				if !dirLookup[header.Name] {
+					dirLookup[header.Name] = true
+					tarball.WriteHeader(header)
+				}
+				continue
+			case tar.TypeReg:
+				fmt.Printf("Contents of %s %d %d\n", header.Name, header.Mode, header.Size)
+				if fileLookup[header.Name] {
+					log.Fatalf("duplicated file '%s' in '%s'\n", header.Name, filename)
+				}
+				fileLookup[header.Name] = true
+				tarball.WriteHeader(header)
+
+				if _, err := io.Copy(tarball, tarReader); err != nil {
+					log.Fatal(err)
+				}
+
+			default:
+				fmt.Printf("%s : %c %s %s\n",
+					"Unable to figure out type",
+					header.Typeflag,
+					"in file",
+					header.Name,
+				)
+			}
+		}
+		return tarfile, tarball
+	}
 }
 
 // ByLineNumber implements sort.Interface for []os.FileInfo based on
@@ -187,4 +301,13 @@ func (a ByLineNumber) Less(i, j int) bool {
 	}
 
 	return numberI < numberJ
+}
+
+// joinPath with zip slip attack check
+func joinPath(outputFolder, filePath string) (result string) {
+	result = filepath.Join(outputFolder, filePath)
+	if !strings.HasPrefix(result, filepath.Clean(outputFolder)+string(os.PathSeparator)) {
+		log.Fatalf("%s: illegal file path", filePath)
+	}
+	return result
 }
