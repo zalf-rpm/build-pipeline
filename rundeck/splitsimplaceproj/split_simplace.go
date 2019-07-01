@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/xml"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 type projectIDCount struct {
@@ -20,12 +23,13 @@ func main() {
 	//start := time.Now()
 	args := os.Args[1:]
 
-	if len(args) != 3 {
+	if len(args) < 3 {
 		fmt.Println("usage:")
-		fmt.Println("splitsimplaceproj <project_file> <max cpu> <max nodes>")
+		fmt.Println("splitsimplaceproj <project_file or project_data> <max cpu> <max nodes> (optional: placeholder?directory ...")
+		fmt.Println("Example:")
+		fmt.Println("splitsimplaceproj /simplace/SIMPLACE_WORK/user/myproject/project/my.proj.xml 40 50 _PROJECTSDIR_?/projects _WORKDIR_?/simplace/SIMPLACE_WORK")
 		return
 	}
-
 	projectFile := args[0]
 	maxCPU, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
@@ -34,6 +38,22 @@ func main() {
 	maxNodes, err := strconv.ParseInt(args[2], 10, 64)
 	if err != nil {
 		log.Fatalf("MaxNodes argument needs to be an int: %s", err)
+	}
+	var placeholder map[string]string
+	if len(args) > 3 {
+		placeholder = make(map[string]string)
+		for i := 3; i < len(args); i++ {
+			arg := strings.Split(args[i], "?")
+			if len(arg) == 2 {
+				placeholder[arg[0]] = arg[1]
+			}
+		}
+	}
+
+	if path.Ext(projectFile) == ".xml" {
+		// resolve project file name from configuration files
+		projectFile = resolveProjectFromXML(projectFile, placeholder)
+		fmt.Printf("Resolved Project File: %s", projectFile)
 	}
 
 	var cpuUsage int64 = 1
@@ -202,4 +222,39 @@ func splitProjectFile(resMap []projectIDCount, numSlices, sumEntries int64) (str
 	}
 	strSlice += strconv.FormatInt(index, 10)
 	return strSlice, currentSlice
+}
+
+func resolveProjectFromXML(projFileName string, placeholder map[string]string) (resultPath string) {
+
+	xmlFile, err := os.Open(projFileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer xmlFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(xmlFile)
+
+	var projectData ProjectData
+	err = xml.Unmarshal(byteValue, &projectData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, val := range projectData.ProjectIntefaces.Interfaces {
+		if val.ID == "projectdata" {
+			resultPath = val.Filename
+
+			if placeholder != nil {
+				for key, value := range placeholder {
+					prefix := fmt.Sprintf("${%s}", key)
+					if strings.HasPrefix(resultPath, prefix) {
+						resultPath = strings.Replace(resultPath, prefix, value, 1)
+						break
+					}
+				}
+			}
+			break
+		}
+	}
+
+	return resultPath
 }
