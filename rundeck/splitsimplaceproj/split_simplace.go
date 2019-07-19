@@ -53,7 +53,6 @@ func main() {
 	if path.Ext(projectFile) == ".xml" {
 		// resolve project file name from configuration files
 		projectFile = resolveProjectFromXML(projectFile, placeholder)
-		fmt.Printf("Resolved Project File: %s", projectFile)
 	}
 
 	var cpuUsage int64 = 1
