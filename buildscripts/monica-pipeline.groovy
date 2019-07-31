@@ -1,6 +1,27 @@
 pipeline {
   agent none
   parameters {
+    gitParameter name: 'BRANCH_MONICA',
+                type: 'PT_BRANCH',
+                defaultValue: 'master',
+                useRepository: '.*monica.git'
+    gitParameter name: 'BRANCH_UTIL',
+                type: 'PT_BRANCH',
+                defaultValue: 'master',
+                useRepository: '.*util.git'
+    gitParameter name: 'BRANCH_SYSLIB',
+                type: 'PT_BRANCH',
+                defaultValue: 'master',
+                useRepository: '.*sys-libs.git'
+    gitParameter name: 'BRANCH_BUILD_PIPELINE',
+                type: 'PT_BRANCH',
+                defaultValue: 'master',
+                useRepository: '.*build-pipeline.git'
+    gitParameter name: 'BRANCH_PARAMETER',
+                type: 'PT_BRANCH',
+                defaultValue: 'master',
+                useRepository: '.*monica-parameters.git'
+
     // select versioning methode 
     choice(choices: ['NONE', 'PATCH', 'MINOR', 'MAYOR'], 
     description: '''Increase semanic version number (<mayor>.<minor>.<patch>.<build>) (1.2.34.1234). Build number will always increase. 
@@ -53,7 +74,62 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
         description: 'push docker image with Tag "version number" (e.g. zalfrpm/monica-cluster:2.0.3.148)', 
         name: 'VERSION')
   }
-  stages {   
+  stages {  
+        stage ('preload'){
+            agent { label 'debian' }
+            steps {
+                print "${params.BRANCH_MONICA}"
+                checkout([$class: 'GitSCM',
+                        branches: [[name: "${params.BRANCH_MONICA}"]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica'], 
+                        [$class: 'LocalBranch', localBranch: "**"]], 
+                        gitTool: 'Default',
+                        submoduleCfg: [], 
+                        credentialsId: 'zalffpmbuild_basic',
+                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/monica"]]])
+
+                checkout([$class: 'GitSCM',
+                        branches: [[name: "${params.BRANCH_UTIL}"]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'util'], 
+                        [$class: 'LocalBranch', localBranch: "**"]], 
+                        submoduleCfg: [], 
+                        gitTool: 'Default',
+                        credentialsId: 'zalffpmbuild_basic',
+                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/util"]]])
+
+                checkout([$class: 'GitSCM',
+                        branches: [[name: "${params.BRANCH_BUILD_PIPELINE}"]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'build-pipeline'], 
+                        [$class: 'LocalBranch', localBranch: "**"]], 
+                        submoduleCfg: [], 
+                        gitTool: 'Default',
+                        credentialsId: 'zalffpmbuild_basic',
+                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/build-pipeline"]]])
+
+                checkout([$class: 'GitSCM',
+                        branches: [[name: "${params.BRANCH_SYSLIB}"]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'sys-libs'], 
+                        [$class: 'LocalBranch', localBranch: "**"]], 
+                        submoduleCfg: [], 
+                        gitTool: 'Default',
+                        credentialsId: 'zalffpmbuild_basic',
+                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/sys-libs"]]])
+
+                checkout([$class: 'GitSCM',
+                        branches: [[name: "${params.BRANCH_PARAMETER}"]], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica-parameters'], 
+                        [$class: 'LocalBranch', localBranch: "**"]], 
+                        submoduleCfg: [], 
+                        gitTool: 'Default',
+                        credentialsId: 'zalffpmbuild_basic',
+                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/monica-parameters"]]])
+            }
+        }
         stage('parallel stage') {
             parallel {
                 stage('BuildLinux') {
@@ -65,10 +141,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         script 
                         {
                             boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic')                            
+                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
+                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
+                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")
+                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_SYSLIB}")                            
                         }
 
 
@@ -144,27 +220,27 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                             cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
                             // git checkout and optional cleanup
-                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'zalffpmbuild_basic')                            
+                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
+                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
+                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")
+                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_SYSLIB}")
+                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_PARAMETER}")                            
                         }
 
                         // create vcpkg package directory 
                         doVcpkgCheckout()               
-                        script 
-                        {
-                            if ( !fileExists('boost') )
-                            {
-                                // create symlink to boost
-                                def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
-                                if (returnValueSymlink != 0)
-                                {
-                                    currentBuild.result = 'FAILURE'
-                                }
-                            }
-                        }
+                        // script 
+                        // {
+                        //     if ( !fileExists('boost') )
+                        //     {
+                        //         // create symlink to boost
+                        //         def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
+                        //         if (returnValueSymlink != 0)
+                        //         {
+                        //             currentBuild.result = 'FAILURE'
+                        //         }
+                        //     }
+                        // }
                         // increase build version, but do not check-in
                         println('increase version number')
                         increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "")   
@@ -235,10 +311,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 EXECUTABLE_SOURCE = "$rootDir/monica/monica-executables"
             }            
             steps {
-                checkoutGitRepository('build-pipeline', true, 'zalffpmbuild_basic')
-                checkoutGitRepository('monica', true, 'zalffpmbuild_basic')
-                checkoutGitRepository('monica-parameters', true, 'zalffpmbuild_basic')
-                checkoutGitRepository('util', true, 'zalffpmbuild_basic')    
+                checkoutGitRepository('build-pipeline', true, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
+                checkoutGitRepository('monica', true, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
+                checkoutGitRepository('monica-parameters', true, 'zalffpmbuild_basic', "${params.BRANCH_PARAMETER}")
+                checkoutGitRepository('util', true, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")    
 
                 // extract executables
                 sh "rm -rf $env.ARTIFACT_PATH"
@@ -305,9 +381,9 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 {
                     boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
                     // checkout version in monica
-                    def outVarMap = checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
+                    def outVarMap = checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
                     // checkout build script
-                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
+                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic',"${params.BRANCH_BUILD_PIPELINE}")
 
                     // increase version, commit + push to git, <optional> create tag     
                     increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild_basic', outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
@@ -329,8 +405,8 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         {
                             // checkout pipeline scripts and monica version
                             boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic')
-                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic')
+                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONCIA}")
+                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
                             def storageFolder = 'tostorage'
                             def archivFolder = "../../archiv" // this should be a mounted folder
                             sh "rm -rf $storageFolder"
@@ -515,7 +591,7 @@ def cleanUpAll(cleanWorkspace)
 }
 
 // checkout git repository 
-def checkoutGitRepository(repositoryName, cleanWorkspace, credentials)
+def checkoutGitRepository(repositoryName, cleanWorkspace, credentials, branch)
 {
     // cleanup workspace
     if (cleanWorkspace) { 
@@ -524,10 +600,11 @@ def checkoutGitRepository(repositoryName, cleanWorkspace, credentials)
         }
     }
 
-    def outVarMap = checkout([$class: 'GitSCM', branches: [[name: '*/master']], 
+    def outVarMap = checkout([$class: 'GitSCM',
+    branches: [[name: "$branch"]], 
     doGenerateSubmoduleConfigurations: false, 
     extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: repositoryName], 
-                    [$class: 'LocalBranch', localBranch: "**"]], 
+    [$class: 'LocalBranch', localBranch: "**"]], 
     submoduleCfg: [], 
     credentialsId: credentials,
     userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName"]]])
