@@ -338,8 +338,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
                         def testImage = docker.build("dotnet-producer-consumer:$VERSION_NUMBER", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
 
+                        def climateFilePath = pwd() + "/monica/installer/Hohenfinow2"
+                        sh "echo ${climateFilePath}"
                         def status = 1
-                        clusterImage.withRun('--env monica_instances=1') { c ->
+                        clusterImage.withRun("--env monica_instances=1 --mount type=bind,source=${climateFilePath},target=/monica_data/climate-data") { c ->
                             testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
                                 sh "echo linked ${c.id}"
                                 status = sh returnStatus: true, script: "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
