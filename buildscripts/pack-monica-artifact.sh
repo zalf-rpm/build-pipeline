@@ -18,7 +18,7 @@ cp -af monica ../../$ARTIFACT_FOLDER
 cp -af monica-run ../../$ARTIFACT_FOLDER
 cp -af monica-zmq-control-send ../../$ARTIFACT_FOLDER
 cp -af monica-zmq-run ../../$ARTIFACT_FOLDER
-#cp -af monica_python.so ../../$ARTIFACT_FOLDER
+cp -af monica_python.so ../../$ARTIFACT_FOLDER
 cp -af monica-zmq-control ../../$ARTIFACT_FOLDER
 cp -af monica-zmq-proxy ../../$ARTIFACT_FOLDER
 cp -af monica-zmq-server ../../$ARTIFACT_FOLDER

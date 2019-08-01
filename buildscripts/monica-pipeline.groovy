@@ -3,23 +3,23 @@ pipeline {
   parameters {
     gitParameter name: 'BRANCH_MONICA',
                 type: 'PT_BRANCH',
-                defaultValue: 'master',
+                defaultValue: 'origin/master',
                 useRepository: '.*monica.git'
     gitParameter name: 'BRANCH_UTIL',
                 type: 'PT_BRANCH',
-                defaultValue: 'master',
+                defaultValue: 'origin/master',
                 useRepository: '.*util.git'
     gitParameter name: 'BRANCH_SYSLIB',
                 type: 'PT_BRANCH',
-                defaultValue: 'master',
+                defaultValue: 'origin/master',
                 useRepository: '.*sys-libs.git'
     gitParameter name: 'BRANCH_BUILD_PIPELINE',
                 type: 'PT_BRANCH',
-                defaultValue: 'master',
+                defaultValue: 'origin/master',
                 useRepository: '.*build-pipeline.git'
     gitParameter name: 'BRANCH_PARAMETER',
                 type: 'PT_BRANCH',
-                defaultValue: 'master',
+                defaultValue: 'origin/master',
                 useRepository: '.*monica-parameters.git'
 
     // select versioning methode 
@@ -229,18 +229,18 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                         // create vcpkg package directory 
                         doVcpkgCheckout()               
-                        // script 
-                        // {
-                        //     if ( !fileExists('boost') )
-                        //     {
-                        //         // create symlink to boost
-                        //         def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
-                        //         if (returnValueSymlink != 0)
-                        //         {
-                        //             currentBuild.result = 'FAILURE'
-                        //         }
-                        //     }
-                        // }
+                        script 
+                        {
+                            if ( !fileExists('boost') )
+                            {
+                                // create symlink to boost
+                                def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
+                                if (returnValueSymlink != 0)
+                                {
+                                    currentBuild.result = 'FAILURE'
+                                }
+                            }
+                        }
                         // increase build version, but do not check-in
                         println('increase version number')
                         increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "")   
