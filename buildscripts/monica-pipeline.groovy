@@ -229,18 +229,18 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                         // create vcpkg package directory 
                         doVcpkgCheckout()               
-                        script 
-                        {
-                            if ( !fileExists('boost') )
-                            {
-                                // create symlink to boost
-                                def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
-                                if (returnValueSymlink != 0)
-                                {
-                                    currentBuild.result = 'FAILURE'
-                                }
-                            }
-                        }
+                        // script 
+                        // {
+                        //     if ( !fileExists('boost') )
+                        //     {
+                        //         // create symlink to boost
+                        //         def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
+                        //         if (returnValueSymlink != 0)
+                        //         {
+                        //             currentBuild.result = 'FAILURE'
+                        //         }
+                        //     }
+                        // }
                         // increase build version, but do not check-in
                         println('increase version number')
                         increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "")   
