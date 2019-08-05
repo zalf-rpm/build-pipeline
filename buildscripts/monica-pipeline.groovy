@@ -4,23 +4,23 @@ pipeline {
     gitParameter name: 'BRANCH_MONICA',
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
-                useRepository: '.*monica.git'
+                useRepository: '.*monica'
     gitParameter name: 'BRANCH_UTIL',
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
-                useRepository: '.*util.git'
+                useRepository: '.*util'
     gitParameter name: 'BRANCH_SYSLIB',
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
-                useRepository: '.*sys-libs.git'
+                useRepository: '.*sys-libs'
     gitParameter name: 'BRANCH_BUILD_PIPELINE',
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
-                useRepository: '.*build-pipeline.git'
+                useRepository: '.*build-pipeline'
     gitParameter name: 'BRANCH_PARAMETER',
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
-                useRepository: '.*monica-parameters.git'
+                useRepository: '.*monica-parameters'
 
     // select versioning methode 
     choice(choices: ['NONE', 'PATCH', 'MINOR', 'MAYOR'], 
@@ -75,61 +75,6 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
         name: 'VERSION')
   }
   stages {  
-        stage ('preload'){
-            agent { label 'debian' }
-            steps {
-                print "${params.BRANCH_MONICA}"
-                checkout([$class: 'GitSCM',
-                        branches: [[name: "${params.BRANCH_MONICA}"]], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica'], 
-                        [$class: 'LocalBranch', localBranch: "**"]], 
-                        gitTool: 'Default',
-                        submoduleCfg: [], 
-                        credentialsId: 'zalffpmbuild_basic',
-                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/monica"]]])
-
-                checkout([$class: 'GitSCM',
-                        branches: [[name: "${params.BRANCH_UTIL}"]], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'util'], 
-                        [$class: 'LocalBranch', localBranch: "**"]], 
-                        submoduleCfg: [], 
-                        gitTool: 'Default',
-                        credentialsId: 'zalffpmbuild_basic',
-                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/util"]]])
-
-                checkout([$class: 'GitSCM',
-                        branches: [[name: "${params.BRANCH_BUILD_PIPELINE}"]], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'build-pipeline'], 
-                        [$class: 'LocalBranch', localBranch: "**"]], 
-                        submoduleCfg: [], 
-                        gitTool: 'Default',
-                        credentialsId: 'zalffpmbuild_basic',
-                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/build-pipeline"]]])
-
-                checkout([$class: 'GitSCM',
-                        branches: [[name: "${params.BRANCH_SYSLIB}"]], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'sys-libs'], 
-                        [$class: 'LocalBranch', localBranch: "**"]], 
-                        submoduleCfg: [], 
-                        gitTool: 'Default',
-                        credentialsId: 'zalffpmbuild_basic',
-                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/sys-libs"]]])
-
-                checkout([$class: 'GitSCM',
-                        branches: [[name: "${params.BRANCH_PARAMETER}"]], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: 'monica-parameters'], 
-                        [$class: 'LocalBranch', localBranch: "**"]], 
-                        submoduleCfg: [], 
-                        gitTool: 'Default',
-                        credentialsId: 'zalffpmbuild_basic',
-                        userRemoteConfigs: [[url: "https://github.com/zalf-rpm/monica-parameters"]]])
-            }
-        }
         stage('parallel stage') {
             parallel {
                 stage('BuildLinux') {
