@@ -282,16 +282,18 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     def VERSION_NUMBER = getVersion("$env.ARTIFACT_PATH"); 
                     def dockerfilePathMonica = './monica'
 
+                    def DOCKER_TAG = VERSION_NUMBER
+                    if (!(params.BRANCH_MONICA == "origin/master" || params.BRANCH_MONICA == "master"))
+                    {
+                        if (params.BRANCH_MONICA ==~ /origin\/*/)
+                        {
+                            DOCKER_TAG = params.BRANCH_MONICA - ~"origin/" + VERSION_NUMBER
+                        }
+                    }
+
+
                     docker.withRegistry('', "zalffpm_docker_basic") {
 
-                        def DOCKER_TAG = "$VERSION_NUMBER"
-                        if (!("${params.BRANCH_MONICA}" == "origin/master" || "${params.BRANCH_MONICA}" == "master"))
-                        {
-                            if (${params.BRANCH_MONICA} ==~ /origin\/*/)
-                            {
-                                DOCKER_TAG = ${params.BRANCH_MONICA} - ~"origin/"+"$VERSION_NUMBER"
-                            }
-                        }
 
                         def clusterImage = docker.build("zalfrpm/monica-cluster:$DOCKER_TAG", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
 
@@ -348,7 +350,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic',"${params.BRANCH_BUILD_PIPELINE}")
 
                     // increase version, commit + push to git, <optional> create tag     
-                    increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild_basic', ${params.BRANCH_MONICA}, outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
+                    increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild_basic', params.BRANCH_MONICA, outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
                 }
             }                
         }
