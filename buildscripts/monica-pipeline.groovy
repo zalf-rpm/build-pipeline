@@ -289,7 +289,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         {
                             if (${params.BRANCH_MONICA} ==~ /origin\/*/)
                             {
-                                DOCKER_TAG = ${params.BRANCH_MONICA} - ~"origin\/"+"$VERSION_NUMBER"
+                                DOCKER_TAG = ${params.BRANCH_MONICA} - ~"origin/"+"$VERSION_NUMBER"
                             }
                         }
 
