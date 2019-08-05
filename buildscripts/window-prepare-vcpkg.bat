@@ -9,4 +9,7 @@ if not exist vcpkg (
 cd vcpkg
 .\vcpkg install zeromq:x64-windows-static
 .\vcpkg install zeromq:x86-windows-static
+.\vcpkg install capnproto:x86-windows-static
+.\vcpkg install capnproto:x64-windows-static
+
 cd ..

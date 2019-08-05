@@ -35,4 +35,5 @@ cd vcpkg
 # add packages to install here
 # zeromq
 ./vcpkg install zeromq:x64-linux
+./vcpkg install capnproto:x64-linux
 #boost TBD
