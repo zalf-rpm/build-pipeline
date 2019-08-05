@@ -115,7 +115,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         // increase build version, but do not commit it, this will happen later, if the build is successfull
                         script
                         {
-                            increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "")     
+                            increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "", "")     
                         }
                         // create cmake project in folder monica/_cmake_linux
                         script 
@@ -194,7 +194,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         // }
                         // increase build version, but do not check-in
                         println('increase version number')
-                        increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "")   
+                        increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "", "")   
                         println('Full version number:')
                         getFullVersionNumber() // yes, this is just debug output
 
@@ -284,10 +284,19 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                     docker.withRegistry('', "zalffpm_docker_basic") {
 
-                        def clusterImage = docker.build("zalfrpm/monica-cluster:$VERSION_NUMBER", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
+                        def DOCKER_TAG = "$VERSION_NUMBER"
+                        if (!("${params.BRANCH_MONICA}" == "origin/master" || "${params.BRANCH_MONICA}" == "master"))
+                        {
+                            if (${params.BRANCH_MONICA} ==~ /origin\/*/)
+                            {
+                                DOCKER_TAG = ${params.BRANCH_MONICA} - ~"origin\/"+"$VERSION_NUMBER"
+                            }
+                        }
+
+                        def clusterImage = docker.build("zalfrpm/monica-cluster:$DOCKER_TAG", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
 
                         def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
-                        def testImage = docker.build("dotnet-producer-consumer:$VERSION_NUMBER", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
+                        def testImage = docker.build("dotnet-producer-consumer:$DOCKER_TAG", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
 
                         def climateFilePath = pwd() + "/monica/installer/Hohenfinow2"
                         sh "echo ${climateFilePath}"
@@ -339,7 +348,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic',"${params.BRANCH_BUILD_PIPELINE}")
 
                     // increase version, commit + push to git, <optional> create tag     
-                    increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild_basic', outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
+                    increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalffpmbuild_basic', ${params.BRANCH_MONICA}, outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
                 }
             }                
         }
@@ -493,18 +502,18 @@ def getVersionNumber()
 }
 
 // increase version, git commit + push, do tag (only if also commited)
-def increaseVersionStr(doCommit, tagBuildParam, buildMessageParam, increaseVersionParam, credentials, author, email)
+def increaseVersionStr(doCommit, tagBuildParam, buildMessageParam, increaseVersionParam, credentials, branch, author, email)
 {
     def rootDir = pwd()
     def versionLib = load "${rootDir}/build-pipeline/buildscripts/version-lib.groovy"
     def versionStr = versionLib.incrementVersionFile(increaseVersionParam, "monica/src/resource/version.h")
     if (doCommit)
     {
-        versionLib.commitVersionFileToGit(versionStr, "src/resource/version.h",  "github.com/zalf-rpm/monica", "monica", credentials, author, email)       
+        versionLib.commitVersionFileToGit(versionStr, "src/resource/version.h",  "github.com/zalf-rpm/monica", "monica", credentials, branch, author, email)       
     }
     if (doCommit && tagBuildParam)
     {
-        versionLib.createGitTag(versionStr, buildMessageParam,  "github.com/zalf-rpm/monica", "monica", credentials, author, email)   
+        versionLib.createGitTag(versionStr, buildMessageParam,  "github.com/zalf-rpm/monica", "monica", credentials, branch, author, email)   
     }     
     return versionStr
 }

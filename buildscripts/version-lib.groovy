@@ -1,4 +1,4 @@
-def commitVersionFileToGit(versionString, relVersionFilePath, reporsitory_Url, gitCheckoutFolder, credentials, authorName, authorEmail)
+def commitVersionFileToGit(versionString, relVersionFilePath, reporsitory_Url, gitCheckoutFolder, credentials, branch, authorName, authorEmail)
 {
     dir(gitCheckoutFolder)
     {
@@ -7,21 +7,21 @@ def commitVersionFileToGit(versionString, relVersionFilePath, reporsitory_Url, g
             def gitCommitCmd = """git commit $relVersionFilePath -m \"auto commit version file version $versionString\" """
             def setAuthor = """git config --global user.name \"$authorName\" """
             def setEmail = """git config --global user.email $authorEmail """
-            def pushToMaster = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url master"""
+            def pushToGit = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url $branch"""
 
             if (isUnix())
             { 
                 sh setAuthor
                 sh setEmail
                 sh gitCommitCmd
-                sh pushToMaster   
+                sh pushToGit   
             }
             else
             {
                 bat setAuthor
                 bat setEmail
                 bat gitCommitCmd
-                bat pushToMaster   
+                bat pushToGit   
             }
         }
     }
@@ -56,7 +56,7 @@ def incrementVersionFile(increaseVersion, filename)
     return versionStr
 }
 
-def createGitTag(versionString, message, reporsitory_Url, gitCheckoutFolder, credentials, authorName, authorEmail)
+def createGitTag(versionString, message, reporsitory_Url, gitCheckoutFolder, credentials, branch, authorName, authorEmail)
 {
     // create tag if message and tag id are given. 
     if (versionString != "" && message != "")
@@ -68,7 +68,7 @@ def createGitTag(versionString, message, reporsitory_Url, gitCheckoutFolder, cre
                 print(gitTagCmd)
                 def setAuthor = """git config --global user.name \"$authorName\" """
                 def setEmail = """git config --global user.email $authorEmail """
-                def pushToMaster = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url master"""
+                def pushToGit = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url $branch"""
 
         
                 if (isUnix())
@@ -76,14 +76,14 @@ def createGitTag(versionString, message, reporsitory_Url, gitCheckoutFolder, cre
                     sh setAuthor
                     sh setEmail
                     sh gitTagCmd
-                    sh pushToMaster
+                    sh pushToGit
                 }
                 else
                 {
                     bat setAuthor
                     bat setEmail
                     bat gitTagCmd
-                    bat pushToMaster
+                    bat pushToGit
                 }        
             }
         }
