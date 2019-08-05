@@ -21,6 +21,10 @@ pipeline {
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
                 useRepository: '.*monica-parameters'
+    gitParameter name: 'BRANCH_CAPNPROTO',
+                type: 'PT_BRANCH',
+                defaultValue: 'origin/master',
+                useRepository: '.*capnproto_schemas'
 
     // select versioning methode 
     choice(choices: ['NONE', 'PATCH', 'MINOR', 'MAYOR'], 
@@ -89,7 +93,8 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                             checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
                             checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
                             checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")
-                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_SYSLIB}")                            
+                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_SYSLIB}")        
+                            checkoutGitRepository('capnproto_schemas', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_CAPNPROTO}")          
                         }
 
 
@@ -169,7 +174,8 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                             checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
                             checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")
                             checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_SYSLIB}")
-                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_PARAMETER}")                            
+                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_PARAMETER}")
+                            checkoutGitRepository('capnproto_schemas', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_CAPNPROTO}")                             
                         }
 
                         // create vcpkg package directory 
