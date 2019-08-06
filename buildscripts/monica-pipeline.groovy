@@ -374,7 +374,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         {
                             // checkout pipeline scripts and monica version
                             boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONCIA}")
+                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
                             checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
                             def storageFolder = 'tostorage'
                             def archivFolder = "../../archiv" // this should be a mounted folder
