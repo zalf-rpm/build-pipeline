@@ -290,7 +290,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                             DOCKER_TAG = params.BRANCH_MONICA - ~"origin/" + "." + VERSION_NUMBER
                         }
                     }
-
+                    sh "echo Docker Tag: $DOCKER_TAG"
 
                     docker.withRegistry('', "zalffpm_docker_basic") {
 
