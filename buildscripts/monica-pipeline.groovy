@@ -568,6 +568,7 @@ def checkoutGitRepository(repositoryName, cleanWorkspace, credentials, branch)
             deleteDirectory("$repositoryName")
         }
     }
+    print("checkout branch: $branch")
 
     def outVarMap = checkout([$class: 'GitSCM',
     branches: [[name: "$branch"]], 
@@ -575,8 +576,7 @@ def checkoutGitRepository(repositoryName, cleanWorkspace, credentials, branch)
     extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: repositoryName], 
     [$class: 'LocalBranch', localBranch: "**"]], 
     submoduleCfg: [], 
-    credentialsId: credentials,
-    userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName"]]])
+    userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName", credentialsId: credentials ]]])
 
     return outVarMap
 }
