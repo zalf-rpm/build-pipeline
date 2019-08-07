@@ -71,7 +71,7 @@ export monica_auto_restart_proxies=true
 export monica_auto_restart_worker=false
 
 
-singularity instance start -B $MOUNT_LOG:$LOGOUT ${SINGULARITY_IMAGE} monica_proxy 
+singularity instance start -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} monica_proxy 
 nohup singularity run instance://monica_proxy > /dev/null 2>&1 & 
 # start worker
 
