@@ -9,10 +9,6 @@ pipeline {
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
                 useRepository: '.*util'
-    gitParameter name: 'BRANCH_SYSLIB',
-                type: 'PT_BRANCH',
-                defaultValue: 'origin/master',
-                useRepository: '.*sys-libs'
     gitParameter name: 'BRANCH_BUILD_PIPELINE',
                 type: 'PT_BRANCH',
                 defaultValue: 'origin/master',
@@ -92,26 +88,14 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                             boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
                             checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
                             checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
-                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")
-                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_SYSLIB}")        
+                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")    
                             checkoutGitRepository('capnproto_schemas', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_CAPNPROTO}")          
                         }
 
 
                         // create vcpkg package directory 
                         doVcpkgCheckout()            
-                        // script 
-                        // {
-                        //     // create a symlink to the boost folder installed in jenkins
-                        //     if ( !fileExists('boost') )
-                        //     {
-                        //         def returnValueSymlink = sh returnStatus: true, script: 'ln -s ../../boost boost '
-                        //         if (returnValueSymlink != 0)
-                        //         {
-                        //             currentBuild.result = 'FAILURE'
-                        //         }
-                        //     }
-                        // }
+
                         // increase build version, but do not commit it, this will happen later, if the build is successfull
                         script
                         {
@@ -173,25 +157,13 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                             checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
                             checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
                             checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")
-                            checkoutGitRepository('sys-libs', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_SYSLIB}")
                             checkoutGitRepository('monica-parameters', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_PARAMETER}")
                             checkoutGitRepository('capnproto_schemas', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_CAPNPROTO}")                             
                         }
 
                         // create vcpkg package directory 
                         doVcpkgCheckout()               
-                        // script 
-                        // {
-                        //     if ( !fileExists('boost') )
-                        //     {
-                        //         // create symlink to boost
-                        //         def returnValueSymlink = bat returnStatus: true, script: 'if exist boost ( echo \"boost link already exist \" ) else (  mklink /D boost ..\\..\\boost )'
-                        //         if (returnValueSymlink != 0)
-                        //         {
-                        //             currentBuild.result = 'FAILURE'
-                        //         }
-                        //     }
-                        // }
+
                         // increase build version, but do not check-in
                         println('increase version number')
                         increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "", "")   
