@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_data? ?num_instance? ?version? ?estimated_time? ?hostname?
 set -eu
-[[ $# < 8 ]] && {
+[[ $# < 9 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -17,6 +17,7 @@ NUM_MONICA=$5
 VERSION=$6
 TIME=$7
 HOSTNAME=$8
+PORT_SETUP=$9
 
 MONICA_PER_NODE=40
 
@@ -59,11 +60,20 @@ LOGOUT=/var/log
 MOUNT_LOG=~/log/supervisor/monica/proxy
 mkdir -p $MOUNT_LOG
 
+IFS=':' read -ra ADDR <<< "${PORT_SETUP}"
+IFS=' '
+num_Param=${#ADDR[@]}
+if [ $num_Param != 5 ] ; then 
+ echo "Invalid Port setup ${PORT_SETUP}"
+ exit 1
+fi
+PROXY_NAME="monica_proxy_${ADDR[0]}"
+echo "proxy name: ${PROXY_NAME}"
 
-export monica_intern_in_port=6677
-export monica_intern_out_port=7788
-export monica_consumer_port=7777
-export monica_producer_port=6666
+export monica_intern_in_port=${ADDR[1]}
+export monica_intern_out_port=${ADDR[2]}
+export monica_consumer_port=${ADDR[3]}
+export monica_producer_port=${ADDR[4]}
  
 export monica_autostart_proxies=true
 export monica_autostart_worker=false
@@ -71,8 +81,8 @@ export monica_auto_restart_proxies=true
 export monica_auto_restart_worker=false
 
 
-singularity instance start -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} monica_proxy 
-nohup singularity run instance://monica_proxy > /dev/null 2>&1 & 
+singularity instance start -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} ${PROXY_NAME} 
+nohup singularity run instance://${PROXY_NAME} > /dev/null 2>&1 & 
 # start worker
 
 #sbatch commands
@@ -80,7 +90,7 @@ SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n
 
 #sbatch script commands
 PROXY_SERVER=$HOSTNAME
-SCRIPT_INPUT="${MOUNT_DATA} ${IMAGE_PATH} ${NUM_WORKER} ${PROXY_SERVER}"
+SCRIPT_INPUT="${MOUNT_DATA} ${IMAGE_PATH} ${NUM_WORKER} ${PROXY_SERVER} ${ADDR[1]} ${ADDR[2]}"
 
 
 echo "sbatch $SBATCH_COMMANDS batch/sbatch_monica.sh $SCRIPT_INPUT"
