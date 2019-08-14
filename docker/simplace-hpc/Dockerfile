@@ -1,44 +1,30 @@
-FROM amd64/openjdk:8u181-jre-stretch
+FROM amd64/openjdk:8u181-jre-slim
 
-RUN apt-get update && apt-get install -y subversion \
-    && rm -rf /var/lib/apt/lists/*
+ARG EXECUTABLE_SOURCE="/simplace_exe"
 
-ARG EXECSOURCE="/simplace_exe"
+ENV SIMPLACE_DIR=/simplace
 
-ENV EXECDIR /simplace
 #mountpoints
-ENV SIMPLACE_WORKDIR $EXECDIR/SIMPLACE_WORK
-ENV OUTPUTDIR $EXECDIR/output
-ENV ZIP_OUTPUTDIR $EXECDIR/output_final
-ENV DATADIR $EXECDIR/data
-ENV PROJECTDIR $EXECDIR/projects 
+ENV SIMPLACE_WORKDIR=/simplace/SIMPLACE_WORK
+ENV OUTDIR=/output
+ENV DATADIR=/data
+ENV PROJECTDIR=/projects 
 
-#execution parameters
-ENV DO_ZIP=true
-ENV PROJECT "path/to/projectfile.proj.xml"
-ENV SOLUTION "path/to/solution.sol.xml"
-ENV LINE_START 1
-ENV LINE_END 1
-ENV TESTRUN "false"
-ENV DEBUG "false"
-ENV FINAL_OUT_NAME "none"
+RUN mkdir -p /simplace/SIMPLACE_WORK
+RUN mkdir -p /output
+RUN mkdir -p /data
+RUN mkdir -p /projects
 
-RUN mkdir -p ${EXECDIR}
-COPY ${EXECSOURCE} ${EXECDIR}
-RUN rm -rf $EXECDIR/simplace.exe
-RUN rm -rf $EXECDIR/SIMPLACE_WORK
+COPY ${EXECUTABLE_SOURCE} ${SIMPLACE_DIR}
+RUN chmod -R 777 ${SIMPLACE_DIR}
+RUN find ${SIMPLACE_DIR} -type f -exec chmod 555 {} +
 
-RUN mkdir -p ${SIMPLACE_WORKDIR}
-RUN mkdir -p ${OUTPUTDIR}
-RUN mkdir -p ${ZIP_OUTPUTDIR}
-RUN mkdir -p ${DATADIR}
-RUN mkdir -p ${PROJECTDIR}
+COPY ./build-pipeline/docker/simplace-hpc/simplace_start.sh /simplace_start.sh
+RUN chmod -R 555 /simplace_start.sh
 
-RUN chmod -R 777 ${EXECDIR}
-RUN find ${EXECDIR} -type f -exec chmod 555 {} +
-
-COPY ./docker/simplace-hpc/simplace_start.sh /start.sh
+RUN useradd -ms /bin/bash myuser
+USER myuser
 
 RUN ls -alR /simplace
 
-ENTRYPOINT ["/start.sh"]
+ENTRYPOINT ["/simplace_start.sh"]
