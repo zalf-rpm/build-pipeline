@@ -7,7 +7,7 @@ LINE_END=$5
 TESTRUN=$6
 
 SIMPLACE_WORKDIR=/simplace/SIMPLACE_WORK
-OUTDIR=/output
+OUTDIR=/outputs
 
 
 LOGLEVEL=" -loglevel=ERROR"
@@ -16,7 +16,7 @@ if [ $DEBUG = "true" ]; then
   ls -al /simplace/SIMPLACE_WORK
   ls -al /data
   ls -al /projects
-  ls -al /output
+  ls -al /outputs
 fi
 
 echo "using mounted solution $SIMPLACE_WORKDIR/$SOLUTION"

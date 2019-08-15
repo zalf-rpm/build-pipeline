@@ -6,12 +6,12 @@ ENV SIMPLACE_DIR=/simplace
 
 #mountpoints
 ENV SIMPLACE_WORKDIR=/simplace/SIMPLACE_WORK
-ENV OUTDIR=/output
+ENV OUTDIR=/outputs
 ENV DATADIR=/data
 ENV PROJECTDIR=/projects 
 
 RUN mkdir -p /simplace/SIMPLACE_WORK
-RUN mkdir -p /output
+RUN mkdir -p /outputs
 RUN mkdir -p /data
 RUN mkdir -p /projects
 
