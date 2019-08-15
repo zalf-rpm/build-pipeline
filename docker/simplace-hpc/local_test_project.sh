@@ -22,4 +22,4 @@ docker run \
 --rm \
 --name $CONTAINER_NAME \
 --user $(id -u):$(id -g) \
-zalfrpm/simplace-hpc:$VERSION $SOLUTION $PROJECT $DEBUG $LINE_START $LINE_END $TESTRUN
+zalfrpm/simplace-hpc:$VERSION /simplace_start.sh $SOLUTION $PROJECT $DEBUG $LINE_START $LINE_END $TESTRUN

@@ -27,4 +27,5 @@ USER myuser
 
 RUN ls -alR /simplace
 
-ENTRYPOINT ["/simplace_start.sh"]
+#ENTRYPOINT ["/simplace_start.sh"]
+CMD ["/bin/bash"]
