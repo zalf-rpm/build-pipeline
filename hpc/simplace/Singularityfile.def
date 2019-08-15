@@ -1,27 +1,6 @@
 Bootstrap: docker
-From: amd64/openjdk:8u181-jre-stretch
-
-%files
-
-/home/rpm/singularity/simplace/build/simplace_exe /simplace
-
-%environment
-export SIMPLACE_DIR=/simplace
-
-
-export SIMPLACE_WORKDIR=/simplace/SIMPLACE_WORK
-export OUTDIR=/output
-export DATADIR=/data
-export PROJECTDIR=/projects 
+From: zalfrpm/simplace-hpc:latest
 
 %post
 
-rm -rf /simplace/simplace.exe
-rm -rf /simplace/SIMPLACE_WORK
 chmod -R 555 /simplace
-
-#mountpoints
-mkdir -p /simplace/SIMPLACE_WORK
-mkdir -p /output
-mkdir -p /data
-mkdir -p /projects
