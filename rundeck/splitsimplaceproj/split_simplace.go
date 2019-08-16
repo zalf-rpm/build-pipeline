@@ -56,9 +56,9 @@ func main() {
 		projectFile, devider = resolveProjectFromXML(projectFile, placeholder)
 	}
 
-	var cpuUsage int64 = 1
+	//var cpuUsage int64 = 1
 	var tasks int64 = 1
-	nodes := maxNodes
+	//nodes := maxNodes
 	var sliceStr string
 	projectMap, min, max, linesSum, err := readProjectFile(projectFile, devider)
 	if err != nil {
@@ -68,17 +68,17 @@ func main() {
 	if min == max {
 		maxSplit := numEntries
 		if max >= maxCPU {
-			cpuUsage = maxCPU
+			//cpuUsage = maxCPU
 			tasks = maxNodes
 		} else {
-			cpuUsage = max
+			//cpuUsage = max
 			tasks = (maxCPU / max) * maxNodes
 		}
 		if maxSplit < tasks {
 			tasks = maxSplit
 		}
 		if tasks <= maxNodes {
-			nodes = tasks
+			//nodes = tasks
 		}
 		entrySlice := maxSplit / tasks
 		modEntrySlice := maxSplit % tasks
@@ -101,23 +101,23 @@ func main() {
 			}
 		}
 		fmt.Println(sliceStr)
-		fmt.Printf("nodes: %d\n", nodes)
-		fmt.Printf("cpu: %d\n", cpuUsage)
+		// fmt.Printf("nodes: %d\n", nodes)
+		// fmt.Printf("cpu: %d\n", cpuUsage)
 	} else {
 		// project file contains projectID sets of differing sizes
-		cpuUsage := max
-		if max > maxCPU {
-			cpuUsage = maxCPU
-		}
+		// cpuUsage := max
+		// if max > maxCPU {
+		// 	cpuUsage = maxCPU
+		// }
 		var sumEntries int64
 		for _, val := range projectMap {
 			sumEntries += val.Count
 		}
 		if maxNodes > 0 && linesSum > 0 {
-			sliceStr, nodes := splitProjectFile(projectMap, maxNodes, linesSum)
+			sliceStr, _ := splitProjectFile(projectMap, maxNodes, linesSum)
 			fmt.Println(sliceStr)
-			fmt.Printf("nodes: %d\n", nodes)
-			fmt.Printf("cpu: %d\n", cpuUsage)
+			// fmt.Printf("nodes: %d\n", nodes)
+			// fmt.Printf("cpu: %d\n", cpuUsage)
 		}
 
 	}
