@@ -20,6 +20,6 @@ type SimInterface struct {
 	ID       string   `xml:"id,attr"`
 	FileType string   `xml:"type,attr"`
 	Poolsize int      `xml:"poolsize"`
-	Devider  rune     `xml:"devider"`
+	Divider  string   `xml:"divider"`
 	Filename string   `xml:"filename"`
 }

@@ -31,6 +31,7 @@ func main() {
 		return
 	}
 	projectFile := args[0]
+	devider := ','
 	maxCPU, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
 		log.Fatalf("MaxCpu argument needs to be an int: %s", err)
@@ -52,14 +53,14 @@ func main() {
 
 	if path.Ext(projectFile) == ".xml" {
 		// resolve project file name from configuration files
-		projectFile = resolveProjectFromXML(projectFile, placeholder)
+		projectFile, devider = resolveProjectFromXML(projectFile, placeholder)
 	}
 
 	var cpuUsage int64 = 1
 	var tasks int64 = 1
 	nodes := maxNodes
 	var sliceStr string
-	projectMap, min, max, linesSum, err := readProjectFile(projectFile)
+	projectMap, min, max, linesSum, err := readProjectFile(projectFile, devider)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,7 +126,7 @@ func main() {
 	// fmt.Println("Execution time: ", elapsed)
 }
 
-func readProjectFile(filename string) (resMap []projectIDCount, minVal, maxVal, linesSum int64, err error) {
+func readProjectFile(filename string, devider rune) (resMap []projectIDCount, minVal, maxVal, linesSum int64, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -159,7 +160,7 @@ func readProjectFile(filename string) (resMap []projectIDCount, minVal, maxVal, 
 				if '\n' == buf[i] {
 					readID = true
 					currentID = []byte{}
-				} else if ',' == buf[i] && readID {
+				} else if byte(devider) == buf[i] && readID {
 					readID = false
 					if !bytes.Equal(previousID, currentID) && len(previousID) > 0 {
 						resMap = append(resMap, projectIDCount{ID: previousID, Count: count})
@@ -223,7 +224,7 @@ func splitProjectFile(resMap []projectIDCount, numSlices, sumEntries int64) (str
 	return strSlice, currentSlice
 }
 
-func resolveProjectFromXML(projFileName string, placeholder map[string]string) (resultPath string) {
+func resolveProjectFromXML(projFileName string, placeholder map[string]string) (resultPath string, divider rune) {
 
 	xmlFile, err := os.Open(projFileName)
 	if err != nil {
@@ -239,9 +240,11 @@ func resolveProjectFromXML(projFileName string, placeholder map[string]string) (
 		log.Fatal(err)
 	}
 	for _, val := range projectData.ProjectIntefaces.Interfaces {
-		if val.ID == "projectdata" {
+		if val.ID == "projectdata" || val.ID == "projectdatafile" || val.ID == "project_data" {
 			resultPath = val.Filename
-
+			if len(val.Divider) == 1 {
+				divider = rune(val.Divider[0])
+			}
 			if placeholder != nil {
 				for key, value := range placeholder {
 					prefix := fmt.Sprintf("${%s}", key)
@@ -255,5 +258,5 @@ func resolveProjectFromXML(projFileName string, placeholder map[string]string) (
 		}
 	}
 
-	return resultPath
+	return resultPath, divider
 }
