@@ -6,9 +6,9 @@ RUN apk update && apk add --no-cache binutils git curl unzip tar
 WORKDIR /go/src/zalf-rpm
 RUN git clone https://github.com/zalf-rpm/build-pipeline.git
 
-WORKDIR /go/src/zalf-rpm/build-pipeline/rundeck/splitsimplaceproj
+WORKDIR /go/src/zalf-rpm/build-pipeline/hpc/simplace/splitsimplaceproj
 RUN go build -v 
-WORKDIR /go/src/zalf-rpm/build-pipeline/hpc/simplace
+WORKDIR /go/src/zalf-rpm/build-pipeline/hpc/simplace/accumulate_output
 RUN go build -v -o accumulate_output
 
 FROM amd64/openjdk:8u181-jre-alpine
@@ -18,8 +18,8 @@ ARG EXECUTABLE_SOURCE="/simplace_exe"
 RUN apk update && apk add --no-cache binutils bash
 
 RUN mkdir -p /splitsimplaceproj
-COPY --from=build-env /go/src/zalf-rpm/build-pipeline/rundeck/splitsimplaceproj/splitsimplaceproj /splitsimplaceproj/
-COPY --from=build-env /go/src/zalf-rpm/build-pipeline/hpc/simplace/accumulate_output /accumulate_output/
+COPY --from=build-env /go/src/zalf-rpm/build-pipeline/hpc/simplace/splitsimplaceproj/splitsimplaceproj /splitsimplaceproj/
+COPY --from=build-env /go/src/zalf-rpm/build-pipeline/hpc/simplace/accumulate_output/accumulate_output /accumulate_output/
 RUN chmod -R 555 /splitsimplaceproj
 RUN chmod -R 555 /accumulate_output
 
