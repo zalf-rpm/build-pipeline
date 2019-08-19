@@ -117,7 +117,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                 sh "echo Docker Tag: $DOCKER_TAG"
                 docker.withRegistry('', "zalffpm_docker_basic") {
-                    def clusterImage = docker.build("zalfrpm/simplace-hpc:$DOCKER_TAG", "-f $dockerfilePath/Dockerfile --build-arg EXECUTABLE_SOURCE=$env.ARTIFACT_PATH ." ) 
+                    def clusterImage = docker.build("zalfrpm/simplace-hpc:$DOCKER_TAG", "-f $dockerfilePath/Dockerfile --no-cache --build-arg EXECUTABLE_SOURCE=$env.ARTIFACT_PATH ." ) 
                     def SIMPLACE_WORKDIR = "/simplace/SIMPLACE_WORK"
                     def OUTDIR = "/outputs"
                     def DATADIR = "/data"
