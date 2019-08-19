@@ -16,5 +16,5 @@ echo "outputs final dir: " $OUT_ZIP_FINAL
 srun singularity run -B \
 $OUT_ZIP:$OUTDIR,\
 $OUT_ZIP_FINAL:$OUTDIR_FINAL \
-${SINGULARITY_IMAGE} /accumulate_output/accumulate_output -mergetarball -infolder /outputs -outfolder /final
+${SINGULARITY_IMAGE} /accumulate_output/accumulate_output -infolder /outputs -outfolder /final
 
