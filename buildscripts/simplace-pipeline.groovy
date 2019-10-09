@@ -16,7 +16,7 @@ pipeline {
     booleanParam(defaultValue: true, 
         description: 'push docker image with Tag "version number" (e.g. zalfrpm/monica-cluster:2.0.3.148)', 
         name: 'VERSION')
-    booleanParam(defaultValue: true, 
+    booleanParam(defaultValue: false, 
         description: 'set java max heap size to 26G RAM! (HPC version only)', 
         name: 'HIGH_MEM_USAGE')
     // select workspace cleaning mode 
@@ -55,6 +55,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 }
                 if (params.HIGH_MEM_USAGE) {
                     ant.replace(file: "console/simplace", token: "-Xmx10g", value: "-Xmx24g")
+
+                    def file = new File('console/simplace')
+                    def newConfig = file.text.replace('-Xmx10g', '-Xmx24g')
+                    file.text = newConfig
                 }
             }
         }
