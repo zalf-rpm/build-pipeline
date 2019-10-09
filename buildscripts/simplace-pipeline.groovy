@@ -54,8 +54,6 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     bat returnStatus: true, script: 'xcopy ..\\simplace_cloud\\lib\\webserver.jar console\\lib\\ /Y /H'
                 }
                 if (params.HIGH_MEM_USAGE) {
-                    ant.replace(file: "console/simplace", token: "-Xmx10g", value: "-Xmx24g")
-
                     def file = new File('console/simplace')
                     def newConfig = file.text.replace('-Xmx10g', '-Xmx24g')
                     file.text = newConfig
