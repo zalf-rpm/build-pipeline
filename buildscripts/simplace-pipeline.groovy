@@ -16,6 +16,9 @@ pipeline {
     booleanParam(defaultValue: true, 
         description: 'push docker image with Tag "version number" (e.g. zalfrpm/monica-cluster:2.0.3.148)', 
         name: 'VERSION')
+    booleanParam(defaultValue: true, 
+        description: 'set java max heap size to 26G RAM! (HPC version only)', 
+        name: 'HIGH_MEM_USAGE')
     // select workspace cleaning mode 
     // NO_CLEANUP may cause issues. Test only.
     choice(choices: ['CLEAN_GIT_CHECKOUT', 'NO_CLEANUP', 'CLEANUP_WORKSPACE'], 
@@ -49,6 +52,9 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     bat returnStatus: true, script: 'xcopy ..\\simplace_core\\lib\\commons-logging-1.1.1.jar console\\lib\\ /Y /H'
                     bat returnStatus: true, script: 'xcopy ..\\simplace_cloud\\lib\\javax.servlet-api-3.0.1.jar console\\lib\\ /Y /H'
                     bat returnStatus: true, script: 'xcopy ..\\simplace_cloud\\lib\\webserver.jar console\\lib\\ /Y /H'
+                }
+                if (params.HIGH_MEM_USAGE) {
+                    ant.replace(file: "console/simplace", token: "-Xmx10g", value: "-Xmx24g")
                 }
             }
         }
@@ -112,8 +118,13 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 def DOCKER_TAG = VERSION_NUMBER
                 if (params.SIMPLACE_BRANCH ==~ /Version_.*/)
                 {
-                    DOCKER_TAG = params.SIMPLACE_BRANCH - ~"Version_" + "." + VERSION_NUMBER
+                    if (params.HIGH_MEM_USAGE) {
+                        DOCKER_TAG = params.SIMPLACE_BRANCH - ~"Version_" + ".HM." + VERSION_NUMBER
+                    } else {
+                        DOCKER_TAG = params.SIMPLACE_BRANCH - ~"Version_" + "." + VERSION_NUMBER
+                    }
                 }
+
 
                 sh "echo Docker Tag: $DOCKER_TAG"
                 docker.withRegistry('', "zalffpm_docker_basic") {
