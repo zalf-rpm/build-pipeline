@@ -53,7 +53,7 @@ LINE_SPLITUPSTR=$( srun singularity run -B \
 $MOUNT_WORK:/simplace/SIMPLACE_WORK,\
 $MOUNT_DATA:/data,\
 $MOUNT_PROJECT:/projects \
-${IMAGE_DIR}/${SINGULARITY_IMAGE} /splitsimplaceproj/splitsimplaceproj /simplace/SIMPLACE_WORK/$PROJECT_PATH 4 $NODES _WORKDIR_?/simplace/SIMPLACE_WORK _PROJECTSDIR_?/projects _DATADIR_?/data)
+${IMAGE_DIR}/${SINGULARITY_IMAGE} /splitsimplaceproj/splitsimplaceproj /simplace/SIMPLACE_WORK/$PROJECT_PATH 1 $NODES _WORKDIR_?/simplace/SIMPLACE_WORK _PROJECTSDIR_?/projects _DATADIR_?/data)
 
 
 DEPENDENCY=afterany
