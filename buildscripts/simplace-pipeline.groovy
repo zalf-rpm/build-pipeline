@@ -52,13 +52,15 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                     bat returnStatus: true, script: 'xcopy ..\\simplace_core\\lib\\commons-logging-1.1.1.jar console\\lib\\ /Y /H'
                     bat returnStatus: true, script: 'xcopy ..\\simplace_cloud\\lib\\javax.servlet-api-3.0.1.jar console\\lib\\ /Y /H'
                     bat returnStatus: true, script: 'xcopy ..\\simplace_cloud\\lib\\webserver.jar console\\lib\\ /Y /H'
+
+                    if (params.HIGH_MEM_USAGE) {
+
+                        def file = new File("console/simplace")
+                        def newConfig = file.text.replace('-Xmx10g', '-Xmx24g')
+                        file.text = newConfig
+                    }
                 }
-                if (params.HIGH_MEM_USAGE) {
-                    def CURRDir = pwd()
-                    def file = new File("${CURRDir}/console/simplace")
-                    def newConfig = file.text.replace('-Xmx10g', '-Xmx24g')
-                    file.text = newConfig
-                }
+
             }
         }
         post 
