@@ -55,7 +55,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 }
                 if (params.HIGH_MEM_USAGE) {
                     def CURRDir = pwd()
-                    def file = new File("${CURRDir}console/simplace")
+                    def file = new File("${CURRDir}/console/simplace")
                     def newConfig = file.text.replace('-Xmx10g', '-Xmx24g')
                     file.text = newConfig
                 }
