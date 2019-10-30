@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=compute
+
 
 MOUNT_DATA=$1
 MOUNT_WORK=$2

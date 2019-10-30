@@ -1,7 +1,7 @@
 #!/bin/bash
-#/ usage: start ?user? ?job_name? ?job_exec_id? ?solution_path? ?project_path? ?version? ?lines? ?debug? ?estimated_time? ?used_cpu? ?mount_data? ?mount_work? ?mount_out? ?mount_out_zip? ?mount_project? 
+#/ usage: start ?user? ?job_name? ?job_exec_id? ?solution_path? ?project_path? ?version? ?lines? ?debug? ?estimated_time? ?used_cpu? ?mount_data? ?mount_work? ?mount_out? ?mount_out_zip? ?mount_project? ?use_high_memory?
 set -eu
-[[ $# != 14 ]] && {
+[[ $# != 15 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -25,11 +25,17 @@ MOUNT_OUT=${11}
 MOUNT_OUT_ZIP=${12}
 MOUNT_PROJECT=${13}
 NODES=${14}
+USEHIGHMEM=${15}
 
 # check if job name is empty 
 if [ -z "$JOB_NAME" ] ; then 
     JOB_NAME="generic"
 fi 
+
+HPC_PARTITION="--partition=compute"
+if [ $USEHIGHMEM == "true" ] ; then 
+  HPC_PARTITION="--partition=highmem"
+fi
 
 #sbatch job name 
 SBATCH_JOB_NAME="simpl_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
@@ -67,7 +73,7 @@ for i in "${ADDR[@]}"; do # access each element of array
     STARTLINE=${SOME[0]}
     ENDLINE=${SOME[1]}
 	#sbatch commands
-	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=40 -o log/simplace-%j"
+	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=40 ${HPC_PARTITION} -o log/simplace-%j"
 	#simplace sbatch script commands
     SIMPLACE_INPUT="${MOUNT_DATA} ${MOUNT_WORK} ${MOUNT_OUT} ${MOUNT_OUT_ZIP} ${MOUNT_PROJECT} ${SOLUTION_PATH} ${PROJECT_PATH} ${IMAGE_DIR}/${SINGULARITY_IMAGE} ${DEBUG} ${STARTLINE} ${ENDLINE} ${SBATCH_JOB_NAME}_${i} false"
     echo "First  $STARTLINE"
