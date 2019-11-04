@@ -64,6 +64,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// for key, val := range projectMap {
+
+	// 	fmt.Printf("%d, %s :%d\n", key, string(val.ID), val.Count)
+	// }
 	numEntries := int64(len(projectMap))
 	if min == max {
 		maxSplit := numEntries
