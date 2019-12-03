@@ -61,23 +61,49 @@ func main() {
 	excludes := make(map[string]bool)
 	for internalPath, listOfTarGz := range listing {
 		if len(listOfTarGz) > 1 {
-			// make dir
+			// get the base filename + ext
 			base := filepath.Base(internalPath)
+			isZipped := filepath.Ext(base) == ".gz" // determine if content is gzipped
 			fullFileName := joinPath(outFolder, base)
-			file, err := os.OpenFile(fullFileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+
+			// open a temporary file
+			file, err := os.OpenFile(fullFileName, os.O_CREATE|os.O_TRUNC, 0600)
 			if err != nil {
 				log.Fatalf("Error occured while opening temp file: %s   \n", fullFileName)
 			}
+			var tempFileWriter io.Writer
+			tempFileWriter = file
+			// if file is gzipped, create a gzip writer for the merged output
+			var gzipWriter *gzip.Writer
+			if isZipped {
+				// if a
+				gzipWriter = gzip.NewWriter(file)
+				gzipWriter.Name = base[0 : len(base)-3]
+				tempFileWriter = gzipWriter
+			}
+			// join the files into one
 			for i, fileTarGz := range listOfTarGz {
 				skippFirstLine := i != 0
-				joinInternalFile(fileTarGz, internalPath, skippFirstLine, file)
+				joinInternalFile(fileTarGz, internalPath, skippFirstLine, tempFileWriter, isZipped)
 			}
-			outFile, outWriter = merge(internalPath, nil, fullFileName)
+			if isZipped {
+				// close gzipWriter to finalize writing into tempfile
+				err = gzipWriter.Close()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
 			file.Close()
+
+			// merge the temp file into tar
+			outFile, outWriter = merge(internalPath, nil, fullFileName)
+
+			// remove the temporary file
 			err = os.Remove(fullFileName)
 			if err != nil {
 				log.Printf("Failed to delete %v %v", fullFileName, err)
 			}
+			// add this path to exclues, these files will not be added
 			excludes[internalPath] = true
 		}
 	}
@@ -118,7 +144,7 @@ func main() {
 
 }
 
-func joinInternalFile(tarGzInFile, internalFile string, skippFirstLine bool, tempFile *os.File) {
+func joinInternalFile(tarGzInFile, internalFile string, skippFirstLine bool, tempFile io.Writer, isZipped bool) {
 
 	f, err := os.Open(tarGzInFile)
 	if err != nil {
@@ -151,14 +177,25 @@ func joinInternalFile(tarGzInFile, internalFile string, skippFirstLine bool, tem
 			fmt.Printf("Directory %s \n", header.Name)
 			continue
 		case tar.TypeReg:
-			fmt.Printf("Contents of %s %d %d\n", header.Name, header.Mode, header.Size)
 			if header.Name == internalFile {
+				fmt.Printf("Contents of %s %d %d\n", header.Name, header.Mode, header.Size)
+				var src io.Reader
+				if isZipped {
+					gzInternal, err := gzip.NewReader(tarReader)
+					if err != nil {
+						log.Fatal(err)
+					}
+					src = gzInternal
+				} else {
+					src = tarReader
+				}
+
 				if skippFirstLine {
 					lineSep := []byte{'\n'}
 					size := 32 * 1024
 					buf := make([]byte, size)
 					for {
-						nr, er := tarReader.Read(buf)
+						nr, er := src.Read(buf)
 						if nr > 0 {
 							index := bytes.Index(buf[:nr], lineSep)
 							if index != -1 {
@@ -169,7 +206,7 @@ func joinInternalFile(tarGzInFile, internalFile string, skippFirstLine bool, tem
 										break
 									}
 								}
-								if _, err := io.CopyBuffer(tempFile, tarReader, buf); err != nil {
+								if _, err := io.CopyBuffer(tempFile, src, buf); err != nil {
 									log.Fatal(err)
 								}
 								break
@@ -183,10 +220,11 @@ func joinInternalFile(tarGzInFile, internalFile string, skippFirstLine bool, tem
 						}
 					}
 				} else {
-					if _, err := io.Copy(tempFile, tarReader); err != nil {
+					if _, err := io.Copy(tempFile, src); err != nil {
 						log.Fatal(err)
 					}
 				}
+
 			}
 		default:
 			fmt.Printf("%s : %c %s %s\n",
@@ -268,8 +306,10 @@ func mergeTarGzipFile(targetFile string) func(string, map[string]bool, string) (
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer f.Close()
-		if filepath.Ext(filename) != ".gz" {
+		//defer f.Close()
+
+		fmt.Printf("File '%s' \n", filename)
+		if !strings.HasSuffix(filename, ".tar.gz") {
 			fileInfo, _ := f.Stat()
 			hdr := &tar.Header{
 				Name: internalFilename,
@@ -277,16 +317,19 @@ func mergeTarGzipFile(targetFile string) func(string, map[string]bool, string) (
 				Size: fileInfo.Size(),
 			}
 			if err := tarball.WriteHeader(hdr); err != nil {
+				f.Close()
 				log.Fatal(err)
 			}
 
 			if _, err := io.Copy(tarball, f); err != nil {
+				f.Close()
 				log.Fatal(err)
 			}
 		} else {
 			// open gzip reader
 			gzf, err := gzip.NewReader(f)
 			if err != nil {
+				f.Close()
 				log.Fatal(err)
 			}
 			// open tar reader
@@ -299,6 +342,7 @@ func mergeTarGzipFile(targetFile string) func(string, map[string]bool, string) (
 					break
 				}
 				if err != nil {
+					f.Close()
 					log.Fatal(err)
 				}
 
@@ -314,12 +358,14 @@ func mergeTarGzipFile(targetFile string) func(string, map[string]bool, string) (
 					fmt.Printf("Contents of %s %d %d\n", header.Name, header.Mode, header.Size)
 					if !excludes[header.Name] {
 						if fileLookup[header.Name] {
+							f.Close()
 							log.Fatalf("duplicated file '%s' in '%s'\n", header.Name, filename)
 						}
 						fileLookup[header.Name] = true
 						tarball.WriteHeader(header)
 
 						if _, err := io.Copy(tarball, tarReader); err != nil {
+							f.Close()
 							log.Fatal(err)
 						}
 					}
@@ -333,6 +379,7 @@ func mergeTarGzipFile(targetFile string) func(string, map[string]bool, string) (
 				}
 			}
 		}
+		f.Close()
 		return tarfile, tarball
 	}
 }
