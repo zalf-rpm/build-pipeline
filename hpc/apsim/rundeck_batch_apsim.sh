@@ -1,7 +1,7 @@
 #!/bin/bash -x
-#/ usage: start ?user? ?job_name? ?job_exec_id? ?project_folder? ?sim_folder? ?estimated_time? ?use_nodes? ?use_task? 
+#/ usage: start ?user? ?job_name? ?job_exec_id? ?project_folder? ?sim_folder? ?estimated_time? ?use_nodes?
 set -eu
-[[ $# < 8 ]] && {
+[[ $# < 7 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -16,11 +16,11 @@ PROJECT_FOLDER=$4
 SIM_FOLDER=$5
 TIME=$6
 NUM_NODES=$7 
-PARALLEL_JOBS=$8
 
-SBATCH_JOB_NAME=SBATCH_JOB_NAME="apsim_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
-APSIM_TEMP=~/apsim_run
+SBATCH_JOB_NAME="apsim_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
+DATE=`date +%Y-%d-%B_%H%M%S`
 
+APSIM_TEMP=~/apsim_run${DATE}
 
 SINGULARITY_IMAGE=/home/rpm/singularity/apsim/apsim-classic_79.1.sif
 SOURCE_FOLDER=${PROJECT_FOLDER}/${SIM_FOLDER}
