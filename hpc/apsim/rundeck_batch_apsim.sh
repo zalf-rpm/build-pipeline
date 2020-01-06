@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -x 
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?project_folder? ?sim_folder? ?estimated_time? ?use_nodes?
 set -eu
 [[ $# < 7 ]] && {
@@ -52,7 +52,7 @@ for file in ${FILES}; do
 		echo $JOBFILE
 	fi
 	
-	#echo `basename "${file}"` >> $JOBFILE
+	echo `basename "${file}"` >> $JOBFILE
 	#echo $INDEX_SIMFILE `basename "${file}"`
 	if [ "${INDEX_SIMFILE}" -eq "${NUM_PER_JOB}" ] ; then 
 		INDEX_SIMFILE=0
