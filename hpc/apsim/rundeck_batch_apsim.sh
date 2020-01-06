@@ -24,6 +24,8 @@ APSIM_TEMP=~/apsim_run${DATE}
 
 SINGULARITY_IMAGE=/home/rpm/singularity/apsim/apsim-classic_79.1.sif
 SOURCE_FOLDER=${PROJECT_FOLDER}/${SIM_FOLDER}
+OUT_FOLDER=${PROJECT_FOLDER}/out_${DATE}
+
 
 COUNT=`ls ${SOURCE_FOLDER}/*.apsim | wc -l`
 
@@ -36,6 +38,7 @@ echo "max simulation per job:" $NUM_PER_JOB
 
 FILES=${SOURCE_FOLDER}/*.apsim
 mkdir -p $APSIM_TEMP
+mkdir $OUT_FOLDER
 
 INDEX_SIMFILE=0
 JOBFILE=jobfile.txt
@@ -49,11 +52,11 @@ for file in ${FILES}; do
 		echo $JOBFILE
 	fi
 	
-	echo `basename "${file}"` >> $JOBFILE
-	echo $INDEX_SIMFILE `basename "${file}"`
+	#echo `basename "${file}"` >> $JOBFILE
+	#echo $INDEX_SIMFILE `basename "${file}"`
 	if [ "${INDEX_SIMFILE}" -eq "${NUM_PER_JOB}" ] ; then 
 		INDEX_SIMFILE=0
-		echo "reset job" 
+		#echo "reset job" 
 	fi
 done
 
@@ -68,5 +71,5 @@ for jobfile in ${JOBFILES}; do
   	echo "DEPENDENCY: $DEPENDENCY"
 done
 
-sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_cleanup --time=00:15:00 -o log/apsim_batch-_cleanup%j batch/sbatch_apsim_batch_cleanup.sh $APSIM_TEMP
+sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_cleanup --time=01:00:00 -o log/apsim_batch-_cleanup%j batch/sbatch_apsim_batch_cleanup.sh $APSIM_TEMP $SOURCE_FOLDER $OUT_FOLDER
 
