@@ -10,6 +10,7 @@ PARALLEL_JOBS=40
 WORKDIR=/storage/apsim
 
 export LD_LIBRARY_PATH=/apsim/Temp/Model
+export MAX_APSIM_OUTPUT_LINES=100
 
 CMD="singularity run -B \
 $MOUNT_STORAGE:$WORKDIR \
