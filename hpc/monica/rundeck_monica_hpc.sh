@@ -86,7 +86,7 @@ nohup singularity run instance://${PROXY_NAME} > /dev/null 2>&1 &
 # start worker
 
 #sbatch commands
-SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n ${NUM_NODES} -c 40 -o log/monica-%j"
+SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n ${NUM_NODES} -c 40 -o log/monica-%j"
 
 #sbatch script commands
 PROXY_SERVER=$HOSTNAME
@@ -94,4 +94,8 @@ SCRIPT_INPUT="${MOUNT_DATA} ${IMAGE_PATH} ${NUM_WORKER} ${PROXY_SERVER} ${ADDR[1
 
 
 echo "sbatch $SBATCH_COMMANDS batch/sbatch_monica.sh $SCRIPT_INPUT"
-sbatch $SBATCH_COMMANDS batch/sbatch_monica.sh $SCRIPT_INPUT
+BATCHID=$( sbatch $SBATCH_COMMANDS batch/sbatch_monica.sh $SCRIPT_INPUT )
+
+DEPENDENCY="afterany:"$BATCHID
+
+sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_CLEANUP --time=00:5:00 -o log/monica_cleanup-%j batch/sbatch_monica_proxy_cleanup.sh ${PROXY_NAME} login01
