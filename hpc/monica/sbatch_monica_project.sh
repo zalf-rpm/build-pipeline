@@ -25,7 +25,7 @@ NODE_CONSUMER=${ADDR[1]}
 NODE_PROXY=${ADDR[2]}
 NODE_ARRAY_WORKER=("${ADDR[@]:3}")
 
-echo "worker array: " $ADDR
+echo "worker array: " $NODE_ARRAY_WORKER
 DATE=`date +%Y-%d-%B_%H%M%S`
 
 # start proxy
@@ -37,8 +37,7 @@ srun --exclusive -w $NODE_PROXY -N1 -n1 -o ~/log/monica_proxy_%j batch/sbatch_mo
 # start worker
 $MOUNT_LOG_WORKER=$MOUNT_LOG_WORKER/${DATE}
 mkdir -p $MOUNT_LOG_WORKER
-for node in ${NODE_ARRAY_WORKER}; do
-
+for node in "${NODE_ARRAY_WORKER[@]}"; do
     echo "worker: " ${node}
     srun --exclusive -w ${node} -N1 -n1 -o ~/log/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER &
 done
@@ -48,6 +47,7 @@ PATH_TO_CONSUMER="${CONSUMER%/*}"
 FILENAME_CONSUMER="${CONSUMER##*/}"
 
 cd $MONICA_WORKDIR/$PATH_TO_CONSUMER
+mkdir out
 # start consumer
 srun --exclusive -w ${NODE_CONSUMER} -N1 -n1 -o ~/log/monica_proj_clog-%j -e ~/log/monica_proj_eclog-%j python $FILENAME_CONSUMER mode=remoteConsumer-remoteMonica server=$NODE_PROXY port=7777 &
 consumer_process_id=$!
