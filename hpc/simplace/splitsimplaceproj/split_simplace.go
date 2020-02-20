@@ -14,6 +14,8 @@ import (
 	"strings"
 )
 
+var version = "undefined"
+
 type projectIDCount struct {
 	ID    []byte
 	Count int64
@@ -24,6 +26,7 @@ func main() {
 	args := os.Args[1:]
 
 	if len(args) < 3 {
+		fmt.Println("Version: ", version)
 		fmt.Println("usage:")
 		fmt.Println("splitsimplaceproj <project_file or project_data> <max cpu> <max nodes> (optional: placeholder?directory ...")
 		fmt.Println("Example:")

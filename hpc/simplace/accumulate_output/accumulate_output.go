@@ -16,6 +16,8 @@ import (
 	"strings"
 )
 
+var version = "undefined"
+
 // accumulate each file, with the same filename
 func main() {
 
@@ -31,6 +33,9 @@ func main() {
 		}
 		if arg == "-outfolder" && i+1 < num {
 			outFolder = argsWithoutExe[i+1]
+		}
+		if arg == "-v" {
+			fmt.Println("Version: ", version)
 		}
 	}
 	fmt.Printf("In: %s\n", inFolder)
