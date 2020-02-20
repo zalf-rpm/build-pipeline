@@ -6,6 +6,7 @@ RUN apk update && apk add --no-cache binutils git curl unzip tar
 WORKDIR /go/src/zalf-rpm
 RUN git clone https://github.com/zalf-rpm/build-pipeline.git
 
+WORKDIR /go/src/zalf-rpm/build-pipeline
 RUN git describe --always --long > /version.txt
 WORKDIR /go/src/zalf-rpm/build-pipeline/hpc/simplace/splitsimplaceproj
 RUN VERSION=$(cat /version.txt) && go build -v -ldflags "-X main.version=${VERSION}"
