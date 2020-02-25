@@ -92,4 +92,4 @@ mkdir $MOUNT_OUT_ZIP_ACC
 
 echo sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=00:15:00 -o log/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
 
-sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=00:15:00 -o log/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
+sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 -o log/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
