@@ -16,6 +16,8 @@ import (
 	"strings"
 )
 
+var version = "undefined"
+
 // accumulate each file, with the same filename
 func main() {
 
@@ -31,6 +33,9 @@ func main() {
 		}
 		if arg == "-outfolder" && i+1 < num {
 			outFolder = argsWithoutExe[i+1]
+		}
+		if arg == "-v" {
+			fmt.Println("Version: ", version)
 		}
 	}
 	fmt.Printf("In: %s\n", inFolder)
@@ -67,7 +72,7 @@ func main() {
 			fullFileName := joinPath(outFolder, base)
 
 			// open a temporary file
-			file, err := os.OpenFile(fullFileName, os.O_CREATE|os.O_TRUNC, 0600)
+			file, err := os.OpenFile(fullFileName, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 			if err != nil {
 				log.Fatalf("Error occured while opening temp file: %s   \n", fullFileName)
 			}

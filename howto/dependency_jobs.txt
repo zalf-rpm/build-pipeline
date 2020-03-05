@@ -1,0 +1,44 @@
+How to do dependency jobs in slurm:
+
+sbatch --dependency=<type:job_id[:job_id][,type:job_id[:job_id]]> ...
+
+after:jobid[:jobid...]	job can begin after the specified jobs have started
+afterany:jobid[:jobid...]	job can begin after the specified jobs have terminated
+afternotok:jobid[:jobid...]	job can begin after the specified jobs have failed
+afterok:jobid[:jobid...]	job can begin after the specified jobs have run to completion with an exit code of zero (see the user guide for caveats).
+singleton	jobs can begin execution after all previously launched jobs with the same name and user have ended. This is useful to collate results of a swarm or to send a notification at the end of a swarm.
+
+Example:
+To get the ID from a sbatch run, use '--parsable'
+
+BATCHID=$( sbatch --parsable batch/job1.sh )
+sbatch --dependency=afterany:$BATCHID --job-name=someJob --time=00:15:00 -o log/myjob-%j batch/my_cleanup_job.sh 
+
+b2$ sbatch job1.sh
+11254323
+b2$ sbatch --dependency=afterok:11254323 job2.sh
+
+
+#! /bin/bash
+
+# first job - no dependencies
+jid1=$(sbatch --parsable --mem=12g --cpus-per-task=4 job1.sh)
+
+# multiple jobs can depend on a single job
+jid2=$(sbatch --parsable --dependency=afterany:$jid1 --mem=20g job2.sh)
+jid3=$(sbatch --parsable --dependency=afterany:$jid1 --mem=20g job3.sh)
+
+# a single job can depend on multiple jobs
+jid4=$(sbatch --parsable --dependency=afterany:$jid2:$jid3 job4.sh)
+
+# a single job can depend on an array job
+# it will start executing when all arrayjobs have finished
+jid6=$(sbatch --parsable --dependency=afterany:$jid4 job6.sh)
+
+# a single job can depend on all jobs by the same user with the same name
+jid7=$(sbatch --parsable --dependency=afterany:$jid6 --job-name=dtest job7.sh)
+jid8=$(sbatch --parsable --dependency=afterany:$jid6 --job-name=dtest job8.sh)
+sbatch --dependency=singleton --job-name=dtest job9.sh
+
+# show dependencies in squeue output:
+squeue -u $USER -o "%.8A %.4C %.10m %.20E"
