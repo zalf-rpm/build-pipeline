@@ -1,7 +1,7 @@
 #!/bin/bash -x
-#/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_data? ?num_instance? ?version? ?estimated_time? ?mode? ?source? ?consumer? ?producer?
+#/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_climate_data? ?mount_project_data? ?num_instance? ?version? ?estimated_time? ?mode? ?source? ?consumer? ?producer?
 set -eu
-[[ $# < 11 ]] && {
+[[ $# < 12 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -13,13 +13,14 @@ USER=$1
 JOB_NAME=$2
 JOB_EXEC_ID=$3
 MOUNT_DATA_CLIMATE=$4
-NUM_MONICA=$5
-VERSION=$6
-TIME=$7
-MODE=$8
-SCRIPT_SOURCE=$9
-CONSUMER=${10}
-PRODUCER=${11}
+MOUNT_DATA_PROJECT=$5
+NUM_MONICA=$6
+VERSION=$7
+TIME=$8
+MODE=$9
+SCRIPT_SOURCE=${10}
+CONSUMER=${11}
+PRODUCER=${12}
 
 MONICA_PER_NODE=40
 
@@ -50,14 +51,26 @@ echo "Worker per Node: ${NUM_WORKER}"
 # get monica image from docker
 IMAGE_DIR=~/singularity/monica
 SINGULARITY_IMAGE=monica-cluster_${VERSION}.sif
-IMAGE_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
+IMAGE_MONICA_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
 mkdir -p $IMAGE_DIR
-if [ ! -e ${IMAGE_PATH} ] ; then
-echo "File '${IMAGE_PATH}' not found"
+if [ ! -e ${IMAGE_MONICA_PATH} ] ; then
+echo "File '${IMAGE_MONICA_PATH}' not found"
 cd $IMAGE_DIR
 singularity pull docker://zalfrpm/monica-cluster:${VERSION}
 cd ~
 fi
+
+IMAGE_DIR_PYTHON=~/singularity/python
+SINGULARITY_PYTHON_IMAGE=python3.7_1.0.sif
+IMAGE_PYTHON_PATH=${IMAGE_DIR_PYTHON}/${SINGULARITY_PYTHON_IMAGE}
+mkdir -p $IMAGE_DIR_PYTHON
+if [ ! -e ${IMAGE_PYTHON_PATH} ] ; then
+echo "File '${IMAGE_PYTHON_PATH}' not found"
+cd $IMAGE_DIR_PYTHON
+singularity pull docker://zalfrpm/python3.7:1.0
+cd ~
+fi
+
 
 # create output log
 MOUNT_LOG_PROXY=~/log/supervisor/monica/proxy
@@ -85,8 +98,8 @@ fi
 # required nodes (1 monica proxy node)+(1 producer)+(1 consumer)+(n monica worker)
 NUM_SLURM_NODES=$(($NUM_NODES + 3))
 CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N $NUM_SLURM_NODES -c 40 -o log/monica_proj-%j"
-SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MONICA_WORKDIR} ${IMAGE_PATH} ${NUM_NODES} ${NUM_WORKER} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} ${CONSUMER} ${PRODUCER} ${SBATCH_JOB_NAME}"
+SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${CONSUMER} ${PRODUCER} ${SBATCH_JOB_NAME}"
 
 BATCHID=$( sbatch $CMD_LINE_SLURM batch/sbatch_monica_project.sh $SCRIPT_INPUT )
 DEPENDENCY="afterany:"$BATCHID
-sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_CLEANUP --time=00:15:00 -o log/monica_project_cleanup-%j batch/sbatch_monica_project_cleanup.sh ${MODE} ${MONICA_WORKDIR} ${CONSUMER} ${MONICA_OUT}
+sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_CLEANUP --time=00:15:00 -o log/monica_project_cleanup-%j batch/sbatch_monica_project_cleanup.sh ${MODE} ${MONICA_WORKDIR} 
