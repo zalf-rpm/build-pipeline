@@ -30,7 +30,7 @@ if [ -z "$JOB_NAME" ] ; then
 fi 
 
 #sbatch job name 
-SBATCH_JOB_NAME="monica_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
+SBATCH_JOB_NAME="${USER}_monica_${JOB_NAME}_${JOB_EXEC_ID}"
 
 #calculate distribution of monica on nodes
 NUM_NODES=$(($NUM_MONICA / $MONICA_PER_NODE))
@@ -80,15 +80,19 @@ MOUNT_LOG_WORKER=~/log/supervisor/monica/worker
 mkdir -p $MOUNT_LOG_WORKER
 
 DATE=`date +%Y-%d-%B_%H%M%S`
-MONICA_WORKDIR=~/monica_run${DATE}
-MONICA_OUT=/beegfs/rpm/projects/monica/out/monica_${USER}_${JOB_EXEC_ID}_${DATE}
+MONICA_WORKDIR=/beegfs/rpm/projects/monica/projectcheckouts/${USER}_${JOB_EXEC_ID}_${DATE}
+MONICA_OUT=/beegfs/rpm/projects/monica/out/${USER}_${JOB_EXEC_ID}_${DATE}
 mkdir $MONICA_OUT
+
+MONICA_LOG=/beegfs/rpm/projects/monica/log/${USER}_${JOB_EXEC_ID}_${DATE}
+mkdir $MONICA_LOG
 
 if [ $MODE == "git" ] ; then 
   # do a fresh git checkout
   mkdir $MONICA_WORKDIR
   cd  $MONICA_WORKDIR
   git clone $SCRIPT_SOURCE
+  git clone https://github.com/zalf-rpm/monica-parameters.git
   cd ~
 elif [ $MODE == "folder" ] ; then
   # use folder on the cluster
@@ -97,8 +101,8 @@ fi
 
 # required nodes (1 monica proxy node)+(1 producer)+(1 consumer)+(n monica worker)
 NUM_SLURM_NODES=$(($NUM_NODES + 3))
-CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N $NUM_SLURM_NODES -c 40 -o log/monica_proj-%j"
-SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${CONSUMER} ${PRODUCER} ${SBATCH_JOB_NAME}"
+CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N $NUM_SLURM_NODES -c 40 -o ${MONICA_LOG}/log/monica_proj-%j"
+SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${CONSUMER} ${PRODUCER} ${SBATCH_JOB_NAME}"
 
 BATCHID=$( sbatch $CMD_LINE_SLURM batch/sbatch_monica_project.sh $SCRIPT_INPUT )
 DEPENDENCY="afterany:"$BATCHID
