@@ -45,10 +45,6 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
     string(defaultValue: 'automatic version increased by jenkins', 
       description: '(optional) enter your tag message if you increased the build version', 
       name: 'TAG_MESSAGE') 
-    // upload to archive
-    booleanParam(defaultValue: false, 
-      description: 'Upload to archive. (upload build artifacts to ZALF samba archive)', 
-      name: 'UPLOAD_TO_ARCHIV')
     // create release 
     booleanParam(defaultValue: false, 
       description: 'Create git release.', 
@@ -69,6 +65,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
     booleanParam(defaultValue: true, 
         description: 'Push docker image with Tag "latest" (zalfrpm/monica-cluster:latest)', 
         name: 'LATEST')
+    // if PUSH_DOCKER_IMAGE is true, push as test version 
+    booleanParam(defaultValue: false, 
+        description: 'Push docker image with Tag "test" (zalfrpm/monica-cluster:test-2.0.3.148)', 
+        name: 'TEST')
     // if PUSH_DOCKER_IMAGE is true, push with current version number
     booleanParam(defaultValue: true, 
         description: 'push docker image with Tag "version number" (e.g. zalfrpm/monica-cluster:2.0.3.148)', 
@@ -77,72 +77,6 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
   stages {  
         stage('parallel stage') {
             parallel {
-                stage('BuildLinux') {
-                    // build it on a debian linux node 
-                    agent { label 'debian' }
-                    steps {
-                        cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
-                        // git checkout and optional cleanup
-                        script 
-                        {
-                            boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
-                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
-                            checkoutGitRepository('util', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")    
-                            checkoutGitRepository('capnproto_schemas', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_CAPNPROTO}")          
-                        }
-
-
-                        // create vcpkg package directory 
-                        doVcpkgCheckout()            
-
-                        // increase build version, but do not commit it, this will happen later, if the build is successfull
-                        script
-                        {
-                            increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "", "")     
-                        }
-                        // create cmake project in folder monica/_cmake_linux
-                        script 
-                        {
-                            dir('monica')
-                            {
-                                sh returnStatus: true, script: 'sh update_linux.sh'
-                            }
-                        }
-                        // compile project
-                        script 
-                        {
-                            dir('monica/_cmake_linux')
-                            {
-                                def returnValueMake = sh returnStatus: true, script: 'make'
-                                if (returnValueMake != 0)
-                                {
-                                    currentBuild.result = 'FAILURE'
-                                }
-                            }
-                        }
-                        script 
-                        {
-                            // get full version string for folder name
-                            def fullVersionStr = getFullVersionNumber()
-                            // extract linux executables and copy, tar zip into an artifact
-                            sh returnStatus: true, script: "sh build-pipeline/buildscripts/pack-monica-artifact.sh $fullVersionStr"
-                        }
-                    }
-                    post 
-                    {
-                        // if everything went well, there should be an artifact to store. 
-                        // if will be stored to jenkins master and can be retrieved by other jobs, or downloaded from jenkins job website
-                        success 
-                        {
-                            dir('deployartefact')
-                            {
-                                stash includes: '*.tar.gz', name: 'linux_executables'                                
-                            }
-                            archiveArtifacts artifacts: 'deployartefact/*.tar.gz', fingerprint: true
-                        }
-                    }
-                }
                 // build on windows node
                 stage('BuildWindows') {
                     agent { label 'windows' }
@@ -220,86 +154,91 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         }
                     }
                 }
-            }
-        }      
-        stage('build-cluster-image') {
-            agent { label 'dockerInstalled' }
-            when 
-            {
-                expression { currentBuild.result != 'FAILURE' }
-            }
-            environment { 
-                ARTIFACT_PATH = "monica/artifact"
-                def rootDir = pwd()
-                EXECUTABLE_SOURCE = "$rootDir/monica/monica-executables"
-            }            
-            steps {
-                checkoutGitRepository('build-pipeline', true, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
-                checkoutGitRepository('monica', true, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
-                checkoutGitRepository('monica-parameters', true, 'zalffpmbuild_basic', "${params.BRANCH_PARAMETER}")
-                checkoutGitRepository('util', true, 'zalffpmbuild_basic', "${params.BRANCH_UTIL}")    
-
-                // extract executables
-                sh "rm -rf $env.ARTIFACT_PATH"
-                sh "mkdir -p $env.ARTIFACT_PATH"
-
-                dir(env.ARTIFACT_PATH)
-                {
-                    unstash "linux_executables"
-                }
-
-                sh "sh build-pipeline/buildscripts/extract-monica-executables.sh $env.ARTIFACT_PATH $env.EXECUTABLE_SOURCE"
-
-                script {
-                    def VERSION_NUMBER = getVersion("$env.ARTIFACT_PATH"); 
-                    def dockerfilePathMonica = './monica'
-
-                    def DOCKER_TAG = VERSION_NUMBER
-                    if (!(params.BRANCH_MONICA == "origin/master" || params.BRANCH_MONICA == "master"))
+                stage('build-cluster-image') {
+                    agent { label 'dockerInstalled' }
+                    when 
                     {
-                        if (params.BRANCH_MONICA ==~ /origin\/.*/)
-                        {
-                            DOCKER_TAG = params.BRANCH_MONICA - ~"origin/" + "." + VERSION_NUMBER
-                        }
-                    }
-                    sh "echo Docker Tag: $DOCKER_TAG"
+                        expression { currentBuild.result != 'FAILURE' }
+                    }  
+                    steps {
+                        checkoutGitRepository('build-pipeline', true, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
+                        checkoutGitRepository('monica', true, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
 
-                    docker.withRegistry('', "zalffpm_docker_basic") {
+                        script {
+                            def VERSION_NUMBER = increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalffpmbuild_basic', "", "", "")  
+                            def dockerfilePathMonica = './monica'
 
-
-                        def clusterImage = docker.build("zalfrpm/monica-cluster:$DOCKER_TAG", "-f $dockerfilePathMonica/Dockerfile --build-arg EXECUTABLE_SOURCE=monica-executables/monica_$VERSION_NUMBER ./monica" ) 
-
-                        def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
-                        def testImage = docker.build("dotnet-producer-consumer:$DOCKER_TAG", "-f $dockerfilePathTest/Dockerfile --build-arg EXECUTABLE_SOURCE=monica/monica-executables/monica_$VERSION_NUMBER .") 
-
-                        def climateFilePath = pwd() + "/monica/installer/Hohenfinow2"
-                        sh "echo ${climateFilePath}"
-                        def status = 1
-                        clusterImage.withRun("--env monica_instances=1 --mount type=bind,source=${climateFilePath},target=/monica_data/climate-data") { c ->
-                            testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
-                                sh "echo linked ${c.id}"
-                                status = sh returnStatus: true, script: "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
-                            }
-                        }                
-                        if (status != 0) {
-                            currentBuild.result = 'FAILURE'
-                        }        
-                        else {
-                            // push image to docker
-                            if (params.PUSH_DOCKER_IMAGE) {
-                                if (params.LATEST) {
-                                    clusterImage.push('latest')
+                            def DOCKER_TAG = VERSION_NUMBER
+                            if (!(params.BRANCH_MONICA == "origin/master" || params.BRANCH_MONICA == "master"))
+                            {
+                                if (params.BRANCH_MONICA ==~ /origin\/.*/)
+                                {
+                                    DOCKER_TAG = params.BRANCH_MONICA - ~"origin/" + "." + VERSION_NUMBER
                                 }
-                                if (params.VERSION) {
-                                    clusterImage.push() 
+                            }
+                            sh "echo Docker Tag: $DOCKER_TAG"
+
+                            docker.withRegistry('', "zalffpm_docker_basic") {
+
+                                def VERSION_MAYOR = "false"
+                                def VERSION_MINOR = "false"
+                                def VERSION_PATCH = "false"
+                                if (params.INCREASE_VERSION == 'PATCH')
+                                {
+                                    VERSION_PATCH = "true"
+                                } else if (params.INCREASE_VERSION == 'MINOR')
+                                {
+                                    VERSION_MINOR = "true"
+                                } else if (params.INCREASE_VERSION == 'MAYOR')
+                                {
+                                    VERSION_MAYOR = "true"
+                                }  
+
+                                def clusterImage = docker.build("zalfrpm/monica-cluster:$DOCKER_TAG", "-f $dockerfilePathMonica/Dockerfile --no-cache --build-arg VERSION_MAYOR=${VERSION_MAYOR} --build-arg VERSION_MINOR=${VERSION_MINOR} --build-arg VERSION_PATCH=${VERSION_PATCH} ./monica" ) 
+
+                                def dockerfilePathTest = './build-pipeline/docker/dotnet-producer-consumer'
+                                def testImage = docker.build("dotnet-producer-consumer:$DOCKER_TAG", "-f $dockerfilePathTest/Dockerfile --no-cache .") 
+
+                                def climateFilePath = pwd() + "/monica/installer/Hohenfinow2"
+                                sh "echo ${climateFilePath}"
+                                def status = 1
+                                clusterImage.withRun("--env monica_instances=1 --mount type=bind,source=${climateFilePath},target=/monica_data/climate-data") { c ->
+                                    testImage.inside("--env LINKED_MONICA_SERVICE=${c.id} --link ${c.id}") {
+                                        sh "echo linked ${c.id}"
+                                        status = sh returnStatus: true, script: "build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh"
+                                    }
+                                }          
+                                // if mode is test, ignore status result, just push
+                                if (params.TEST) {
+                                    // push image to docker
+                                    if (params.PUSH_DOCKER_IMAGE) {
+                                        if (params.VERSION) {
+                                            clusterImage.push("test-$DOCKER_TAG") 
+                                        }
+                                    }
+                                }
+                                else {
+                                    if (status != 0) {
+                                        currentBuild.result = 'FAILURE'
+                                    }        
+                                    else {
+                                        // push image to docker
+                                        if (params.PUSH_DOCKER_IMAGE) {
+                                            if (params.LATEST) {
+                                                clusterImage.push('latest')
+                                            }
+                                            if (params.VERSION) {
+                                                clusterImage.push() 
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
-
+        }   
         stage('commitVersion')
         {
             // has to be executed on linux, because this step is using sshagent, 
@@ -333,41 +272,6 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
         }
         stage('parallel deployment') {
             parallel {
-                stage('archiving')
-                {
-                    agent { label 'debian' }
-                    when 
-                    {
-                        expression { currentBuild.result != 'FAILURE' && params.UPLOAD_TO_ARCHIV }
-                    }
-                    steps 
-                    { 
-                        script 
-                        {
-                            // checkout pipeline scripts and monica version
-                            boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
-                            checkoutGitRepository('monica', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_MONICA}")
-                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalffpmbuild_basic', "${params.BRANCH_BUILD_PIPELINE}")
-                            def storageFolder = 'tostorage'
-                            def archivFolder = "../../archiv" // this should be a mounted folder
-                            sh "rm -rf $storageFolder"
-                            sh "mkdir -p $storageFolder"
-                            dir(storageFolder)
-                            {
-                                unstash 'win_installer'
-                                unstash 'linux_executables'
-                            }  
-
-                            def buildFolder = 'monica_' + getFullVersionNumber()
-                            def versionFolder = "workversion"
-                            if (params.INCREASE_VERSION != 'NONE')
-                            {
-                                versionFolder = 'monica_' + getVersionNumber()
-                            }
-                            sh "sh build-pipeline/buildscripts/move-artifacts-to-archive.sh $versionFolder $buildFolder $storageFolder $archivFolder"                    
-                        }          
-                    }
-                }
                 stage('Create Git release') {
                     agent { label 'debian' }  
                     when 
