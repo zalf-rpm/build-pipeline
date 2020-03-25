@@ -16,6 +16,7 @@ MONICA_OUT=${11}
 CONSUMER=${12}
 PRODUCER=${13}
 SBATCH_JOB_NAME=${14}
+RUN_SETUPS=${15}
 
 echo "SLURM NODES" ${SLURM_JOB_NODELIST}
 
@@ -58,5 +59,5 @@ PATH_TO_PRODUCER="${PRODUCER%/*}"
 FILENAME_PRODUCER="${PRODUCER##*/}"
 
 # start producer
-srun --exclusive -w ${NODE_PRODUCER} -N1 -n1 -o ${MONICA_LOG}/monica_proj_plog-%j -e ${MONICA_LOG}/monica_proj_eplog-%j batch/sbatch_monica_python.sh $SINGULARITY_PYTHON_IMAGE $MOUNT_DATA_CLIMATE $MOUNT_DATA_PROJECT $MONICA_OUT $MONICA_WORKDIR/$PATH_TO_PRODUCER $FILENAME_PRODUCER mode=remoteProducer-remoteMonica server=$NODE_PROXY server-port=6666 &
+srun --exclusive -w ${NODE_PRODUCER} -N1 -n1 -o ${MONICA_LOG}/monica_proj_plog-%j -e ${MONICA_LOG}/monica_proj_eplog-%j batch/sbatch_monica_python.sh $SINGULARITY_PYTHON_IMAGE $MOUNT_DATA_CLIMATE $MOUNT_DATA_PROJECT $MONICA_OUT $MONICA_WORKDIR/$PATH_TO_PRODUCER $FILENAME_PRODUCER mode=remoteProducer-remoteMonica server=$NODE_PROXY server-port=6666  run-setups=$RUN_SETUPS &
 wait $consumer_process_id
