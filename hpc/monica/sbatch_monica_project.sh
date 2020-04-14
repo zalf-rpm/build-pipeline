@@ -47,17 +47,18 @@ for node in "${NODE_ARRAY_WORKER[@]}"; do
     srun --exclusive -w ${node} -N1 -n1 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER &
 done
 
+MONICA_PARAMS=$MONICA_WORKDIR/monica-parameters
 
 PATH_TO_CONSUMER="${CONSUMER%/*}"
 FILENAME_CONSUMER="${CONSUMER##*/}"
 
 # start consumer
-srun --exclusive -w ${NODE_CONSUMER} -N1 -n1 -o ${MONICA_LOG}/monica_proj_clog-%j -e ${MONICA_LOG}/monica_proj_eclog-%j batch/sbatch_monica_python.sh $SINGULARITY_PYTHON_IMAGE $MOUNT_DATA_CLIMATE $MOUNT_DATA_PROJECT $MONICA_OUT $MONICA_WORKDIR/$PATH_TO_CONSUMER $FILENAME_CONSUMER mode=remoteConsumer-remoteMonica server=$NODE_PROXY port=7777 &
+srun --exclusive -w ${NODE_CONSUMER} -N1 -n1 -o ${MONICA_LOG}/monica_proj_clog-%j -e ${MONICA_LOG}/monica_proj_eclog-%j batch/sbatch_monica_python.sh $SINGULARITY_PYTHON_IMAGE $MOUNT_DATA_CLIMATE $MOUNT_DATA_PROJECT $MONICA_OUT $MONICA_PARAMS $MONICA_WORKDIR/$PATH_TO_CONSUMER $FILENAME_CONSUMER mode=remoteConsumer-remoteMonica server=$NODE_PROXY port=7777 &
 consumer_process_id=$!
 
 PATH_TO_PRODUCER="${PRODUCER%/*}"
 FILENAME_PRODUCER="${PRODUCER##*/}"
 
 # start producer
-srun --exclusive -w ${NODE_PRODUCER} -N1 -n1 -o ${MONICA_LOG}/monica_proj_plog-%j -e ${MONICA_LOG}/monica_proj_eplog-%j batch/sbatch_monica_python.sh $SINGULARITY_PYTHON_IMAGE $MOUNT_DATA_CLIMATE $MOUNT_DATA_PROJECT $MONICA_OUT $MONICA_WORKDIR/$PATH_TO_PRODUCER $FILENAME_PRODUCER mode=remoteProducer-remoteMonica server=$NODE_PROXY server-port=6666  run-setups=$RUN_SETUPS &
+srun --exclusive -w ${NODE_PRODUCER} -N1 -n1 -o ${MONICA_LOG}/monica_proj_plog-%j -e ${MONICA_LOG}/monica_proj_eplog-%j batch/sbatch_monica_python.sh $SINGULARITY_PYTHON_IMAGE $MOUNT_DATA_CLIMATE $MOUNT_DATA_PROJECT $MONICA_OUT $MONICA_PARAMS $MONICA_WORKDIR/$PATH_TO_PRODUCER $FILENAME_PRODUCER mode=remoteProducer-remoteMonica server=$NODE_PROXY server-port=6666  run-setups=$RUN_SETUPS &
 wait $consumer_process_id
