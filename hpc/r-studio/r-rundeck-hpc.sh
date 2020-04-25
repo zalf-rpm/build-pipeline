@@ -1,7 +1,7 @@
 #!/bin/bash -x
-#/ usage: start ?user? ?job_exec_id? ?host? ?mount_climate_data? ?mount_project_data? ?estimated_time? 
+#/ usage: start ?user? ?job_exec_id? ?host? ?mount_climate_data? ?mount_project_data? ?estimated_time? ?use_High_memory_node?
 set -eu
-[[ $# < 6 ]] && {
+[[ $# < 7 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -15,6 +15,7 @@ LOGIN_HOST=$3
 MOUNT_DATA=$4
 MOUNT_PROJECT=$5
 TIME=$6
+USEHIGHMEM=$7
 
 #sbatch job name 
 SBATCH_JOB_NAME="R_${USER}_${JOB_EXEC_ID}"
@@ -32,8 +33,12 @@ cd ~
 fi
 LOGS=~/log
 
+HPC_PARTITION="--partition=compute"
+if [ $USEHIGHMEM == "true" ] ; then 
+  HPC_PARTITION="--partition=highmem"
+fi
 # required nodes 1
-CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N 1 -c 80 -o ${LOGS}/rstudio-server_${USER}_%j.log"
+CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c 80 -o ${LOGS}/rstudio-server_${USER}_%j.log"
 SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA}"
 
 cd ${MOUNT_PROJECT}
