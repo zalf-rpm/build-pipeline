@@ -11,9 +11,10 @@ SCRIPT_USER=$1
 LOGIN_HOST_NAME=$2
 MOUNT_PROJECT=$3
 MOUNT_DATA=$4
+WORKINGDIR=$5
+SINGULARITY_IMAGE=$6
 PROJECT=/project
 DATA=/data
-SINGULARITY_IMAGE=~/singularity/R/rstudio.sif
 
 export RSTUDIO_SESSION_TIMEOUT='0'
 export PASSWORD=$(openssl rand -base64 15)
@@ -40,19 +41,21 @@ When done using RStudio Server, terminate the job by:
 
       scancel -f ${SLURM_JOB_ID}
 END
-
+R_HOME=/r_home 
 # User-installed R packages go into their home directory
-if [ ! -e ${HOME}/.Renviron ]
+if [ ! -e ${WORKINGDIR}/.Renviron ]
 then
-  printf '\nNOTE: creating ~/.Renviron file\n\n'
-  echo 'R_LIBS_USER=~/R/%p-library/%v' >> ${HOME}/.Renviron
+  printf '\nNOTE: creating '${WORKINGDIR}'/.Renviron file\n\n'
+  echo 'R_LIBS_USER='${R_HOME}'/R/%p-library/%v' >> ${WORKINGDIR}/.Renviron
 fi
-
+cd ${WORKINGDIR} 
+SINGULARITY_HOME=${WORKINGDIR}
+export SINGULARITY_HOME
 # bind /project directory  
 # bind /data directory on the host into the Singularity container.
 # By default the only host file systems mounted within the container are $HOME, /tmp, /proc, /sys, and /dev.
 singularity exec -B \
-    $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA \
+    $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA,$WORKINGDIR:$R_HOME \
     $SINGULARITY_IMAGE \
     rserver --www-port ${PORT} --auth-none=0 --auth-pam-helper-path=pam-helper
 printf 'rserver exited' 1>&2

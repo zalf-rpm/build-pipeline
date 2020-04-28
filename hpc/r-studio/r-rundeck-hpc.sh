@@ -31,7 +31,11 @@ cd $IMAGE_DIR
 singularity pull --name rstudio.sif docker://rocker/rstudio:latest
 cd ~
 fi
-LOGS=~/log
+
+WORKDIR=/beegfs/rpm/projects/R/${USER}
+mkdir -p $WORKDIR
+LOGS=/beegfs/rpm/projects/R/log
+mkdir -p $LOGS
 
 HPC_PARTITION="--partition=compute"
 if [ $USEHIGHMEM == "true" ] ; then 
@@ -39,12 +43,12 @@ if [ $USEHIGHMEM == "true" ] ; then
 fi
 # required nodes 1
 CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c 80 -o ${LOGS}/rstudio-server_${USER}_%j.log"
-SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA}"
+SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_RSTUDIO_PATH}"
 
 cd ${MOUNT_PROJECT}
 BATCHID=$( sbatch $CMD_LINE_SLURM ~/batch/r_studio_server.sh $SCRIPT_INPUT )
 
-LOG_NAME=~/log/rstudio-server_${USER}_${BATCHID}.log
+LOG_NAME=${LOGS}/rstudio-server_${USER}_${BATCHID}.log
 COUNTER=0
 while [ ! -f ${LOG_NAME} ] && [ ! $COUNTER -eq 30 ] ; do 
 sleep 10
