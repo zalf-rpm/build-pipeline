@@ -22,13 +22,13 @@ SBATCH_JOB_NAME="R_${USER}_${JOB_EXEC_ID}"
 
 # get r-studio image from docker
 IMAGE_DIR=~/singularity/R
-SINGULARITY_IMAGE=rstudio.sif
+SINGULARITY_IMAGE=tidyverse.sif
 IMAGE_RSTUDIO_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
 mkdir -p $IMAGE_DIR
 if [ ! -e ${IMAGE_RSTUDIO_PATH} ] ; then
 echo "File '${IMAGE_RSTUDIO_PATH}' not found"
 cd $IMAGE_DIR
-singularity pull --name rstudio.sif docker://rocker/rstudio:latest
+singularity pull --name ${SINGULARITY_IMAGE} docker://rocker/tidyverse:latest
 cd ~
 fi
 
