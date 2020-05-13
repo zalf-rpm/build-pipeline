@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,7 @@ import (
 // 		globalRadiationTest
 // 		temperatureTest
 // 		relativeHumidityTest
+// 		consistentUnitTests
 
 const (
 	continuesDatesTest int = iota
@@ -27,6 +29,7 @@ const (
 	globalRadiationTest
 	temperatureTest
 	relativeHumidityTest
+	consistentUnitTests
 	generalTest
 	numberOfTests
 )
@@ -38,12 +41,39 @@ var testNames = [...]string{
 	"globalRadiation",
 	"temperature",
 	"relativeHumidity",
+	"consistentUnits",
 	"generalTest",
+}
+
+// metaData to write a meta file
+type metaData struct {
+	name                string
+	tmin                float64
+	tmax                float64
+	globalRadMin        float64
+	globalRadMax        float64
+	relhumidMax         float64
+	relhumidMin         float64
+	precipationMax      float64
+	windMin             float64
+	windMax             float64
+	startDate           time.Time
+	endDate             time.Time
+	missingDataSets     bool
+	numberOfFailedTests int64
+	unitTypeTemp        string
+	unitTypeWind        string
+	unitTypeglobalRad   string
+	unitTypePrecip      string
+	unitTypeRelHumid    string
+
+	hasUnits bool
+	mux      sync.Mutex
 }
 
 func main() {
 
-	// command line
+	// command line flags
 	pathPtr := flag.String("path", "/climate/transformed/0/0_0", "path to climate file folder")
 	skipPtr := flag.String("skip", "someskiping", "folder to skip")
 	pathMetaPtr := flag.String("meta", "meta", "path to meta file")
@@ -52,8 +82,8 @@ func main() {
 	seperatorPtr := flag.String("seperator", ",", "colum seperator")
 
 	flag.Parse()
-	inputPath := *pathPtr
 
+	inputPath := *pathPtr
 	subDirToSkip := *skipPtr
 	outfile := *pathErrlogPtr + "/%s_errOut.log"
 	formatSeperator := *seperatorPtr
@@ -67,10 +97,12 @@ func main() {
 
 	for i := 0; i < numberOfTests; i++ {
 		errOut[i] = make(chan string)
-		// concurrent error out (error channel, close channel, outfile)
+		// concurrent error out (<error channel>, <output file>, <confirm file saved channel> )
 		go logOutput(errOut[i], fmt.Sprintf(outfile, testNames[i]), confirmSaved)
 	}
+
 	var metaOut chan string = nil
+	//var summary metaData
 	if pathMeta != "meta" {
 		metaOut = make(chan string) // write meta data
 		go logOutput(metaOut, pathMeta, confirmSaved)
@@ -113,8 +145,8 @@ func main() {
 		var filesNoError int
 		for {
 			select {
-			case isOK, ok := <-fileOk:
-				if !ok {
+			case isOK, isOpen := <-fileOk:
+				if !isOpen {
 					return
 				}
 				if !isOK {
@@ -185,7 +217,7 @@ func checkFile(path, formatSeperator string, formatHeaderLines int, info os.File
 		}
 		if lineCount > formatHeaderLines {
 			line := scanner.Text()
-			currClimateLine, err := newClimateDates(formatSeperator, line, &headerColumns)
+			currClimateLine, err := newClimateDates(formatSeperator, line, headerColumns)
 			if err != nil {
 				noErrFound = writeErrorMessage(generalTest, err)
 				fileOk <- noErrFound
@@ -295,19 +327,19 @@ func readHeader(line, seperator string) (map[Header]int, error) {
 	return headers, nil
 }
 
-func newClimateDates(seperator, line string, header *map[Header]int) (climateDates, error) {
+func newClimateDates(seperator, line string, h map[Header]int) (climateDates, error) {
 	tokens := strings.Split(line, seperator)
 
 	var dates climateDates
 	var err [8]error
-	dates.isodate = tokens[isodate]
-	dates.wind, err[0] = strconv.ParseFloat(tokens[wind], 10)
-	dates.precip, err[1] = strconv.ParseFloat(tokens[precip], 10)
-	dates.globrad, err[2] = strconv.ParseFloat(tokens[globrad], 10)
-	dates.tmax, err[3] = strconv.ParseFloat(tokens[tmax], 10)
-	dates.tmin, err[4] = strconv.ParseFloat(tokens[tmin], 10)
-	dates.tavg, err[5] = strconv.ParseFloat(tokens[tavg], 10)
-	dates.relhumid, err[6] = strconv.ParseFloat(tokens[relhumid], 10)
+	dates.isodate = tokens[h[isodate]]
+	dates.wind, err[0] = strconv.ParseFloat(tokens[h[wind]], 10)
+	dates.precip, err[1] = strconv.ParseFloat(tokens[h[precip]], 10)
+	dates.globrad, err[2] = strconv.ParseFloat(tokens[h[globrad]], 10)
+	dates.tmax, err[3] = strconv.ParseFloat(tokens[h[tmax]], 10)
+	dates.tmin, err[4] = strconv.ParseFloat(tokens[h[tmin]], 10)
+	dates.tavg, err[5] = strconv.ParseFloat(tokens[h[tavg]], 10)
+	dates.relhumid, err[6] = strconv.ParseFloat(tokens[h[relhumid]], 10)
 	dates.time, err[7] = time.Parse("2006-01-02", dates.isodate)
 	anyError := func(list [8]error) error {
 		for _, b := range list {
@@ -370,4 +402,65 @@ func relativeHumidity(data *climateDates) error {
 		return nil
 	}
 	return fmt.Errorf("Relative humidity out of bounds value: %f at date %s", data.relhumid, data.isodate)
+}
+
+func consistentUnits(line, seperator string, header map[Header]int, meta *metaData) error {
+	tokens := strings.Split(line, seperator)
+	uWind := tokens[header[wind]]
+	uPrecip := tokens[header[precip]]
+	uGloRad := tokens[header[globrad]]
+	uTmax := tokens[header[tmax]]
+	uTmin := tokens[header[tmin]]
+	uTavg := tokens[header[tavg]]
+	uRelHumid := tokens[header[relhumid]]
+	if uTmax != uTmin || uTmin != uTavg {
+		return fmt.Errorf("Inconsisted temperature units")
+	}
+	err := meta.SetAndVerifyUnits(uPrecip, uRelHumid, uTmax, uWind, uGloRad)
+	return err
+}
+
+func (m *metaData) SetAndVerifyUnits(precipU, relHumidU, tempU, windU, globalRadU string) error {
+	var err error = nil
+	m.mux.Lock()
+	if !m.hasUnits {
+		m.hasUnits = true
+		m.unitTypePrecip = precipU
+		m.unitTypeRelHumid = relHumidU
+		m.unitTypeTemp = tempU
+		m.unitTypeWind = windU
+		m.unitTypeglobalRad = globalRadU
+	} else {
+		if m.unitTypeWind != windU ||
+			m.unitTypePrecip != precipU ||
+			m.unitTypeglobalRad != globalRadU ||
+			m.unitTypeTemp != tempU ||
+			m.unitTypeRelHumid != relHumidU {
+			err = fmt.Errorf("Inconsisted units")
+		}
+	}
+	m.mux.Unlock()
+	return err
+}
+
+func (m *metaData) SetStartDate(startDate time.Time) error {
+	m.mux.Lock()
+	if m.startDate.IsZero() {
+		m.startDate = startDate
+	} else if m.startDate != startDate {
+		return fmt.Errorf("Variation in start date %v", startDate)
+	}
+	m.mux.Unlock()
+	return nil
+}
+
+func (m *metaData) SetEndDate(endDate time.Time) error {
+	m.mux.Lock()
+	if m.endDate.IsZero() {
+		m.endDate = endDate
+	} else if m.endDate != endDate {
+		return fmt.Errorf("Variation in end date %v", endDate)
+	}
+	m.mux.Unlock()
+	return nil
 }
