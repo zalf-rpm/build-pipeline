@@ -212,9 +212,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                                 if (params.TEST) {
                                     // push image to docker
                                     if (params.PUSH_DOCKER_IMAGE) {
-                                        if (params.VERSION) {
-                                            clusterImage.push("test-$DOCKER_TAG") 
-                                        }
+                                        clusterImage.push("test-$DOCKER_TAG") 
                                     }
                                 }
                                 else {
