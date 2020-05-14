@@ -200,7 +200,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                                 def testImage = docker.build("dotnet-producer-consumer:$DOCKER_TAG", "-f $dockerfilePathTest/Dockerfile --no-cache .") 
 
                                 def climateFilePath = pwd() + "/monica/installer/Hohenfinow2"
-                                def outPath = pwd() + /out
+                                def outPath = pwd() + "/out"
                                 sh "rm -rf ${outPath}"
                                 sh "mkdir ${outPath}"
                                 sh "echo ${climateFilePath}"
