@@ -75,20 +75,20 @@ func main() {
 
 	// command line flags
 	pathPtr := flag.String("path", "/climate/transformed/0/0_0", "path to climate file folder")
-	skipPtr := flag.String("skip", "someskiping", "folder to skip")
 	pathMetaPtr := flag.String("meta", "meta", "path to meta file")
 	pathErrlogPtr := flag.String("log", "./log", "path to error log folder")
 	headerLinesPtr := flag.Int("numHeader", 2, "number of header lines")
 	seperatorPtr := flag.String("seperator", ",", "colum seperator")
+	concurrentPtr := flag.Int("concurrent", 40, "number of concurrent analytics")
 
 	flag.Parse()
 
 	inputPath := *pathPtr
-	subDirToSkip := *skipPtr
 	outfile := *pathErrlogPtr + "/%s_errOut.log"
 	formatSeperator := *seperatorPtr
 	formatHeaderLines := *headerLinesPtr
 	pathMeta := *pathMetaPtr
+	concur := *concurrentPtr
 
 	// create error output / success
 	fileOk := make(chan bool)             // ok=1 err=0
@@ -110,6 +110,8 @@ func main() {
 
 	// count number of files check concurrently
 	numFilesToCheck := 0
+	var filesToCheck []os.FileInfo
+	var pathsToCheck []string
 	// file walker
 	err := filepath.Walk(inputPath, func(path string, info os.FileInfo, err error) error {
 
@@ -117,15 +119,10 @@ func main() {
 			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
 			return err
 		}
-		if info.IsDir() && info.Name() == subDirToSkip {
-			fmt.Printf("skipping a dir: %+v \n", info.Name())
-			return filepath.SkipDir
-		}
-		//fmt.Println(path)
 		if matched, _ := filepath.Match("*.csv", info.Name()); !info.IsDir() && matched {
 			numFilesToCheck++
-			// concurrent for each file
-			go checkFile(path, formatSeperator, formatHeaderLines, info, fileOk, errOut, metaOut)
+			filesToCheck = append(filesToCheck, info)
+			pathsToCheck = append(pathsToCheck, path)
 		}
 		return nil
 	})
@@ -141,6 +138,12 @@ func main() {
 		numberOfLogs++
 	}
 	if numFilesToCheck > 0 {
+		filesChecked := 0
+		currentFileIndex := 0
+		for i := 0; i < concur && currentFileIndex < numFilesToCheck; i++ {
+			go checkFile(pathsToCheck[currentFileIndex], formatSeperator, formatHeaderLines, filesToCheck[currentFileIndex], fileOk, errOut, metaOut)
+			currentFileIndex++
+		}
 		var filesWithError int
 		var filesNoError int
 		for {
@@ -154,8 +157,12 @@ func main() {
 				} else {
 					filesNoError++
 				}
-				numFilesToCheck--
-				if numFilesToCheck == 0 {
+				filesChecked++
+				if currentFileIndex < numFilesToCheck {
+					go checkFile(pathsToCheck[currentFileIndex], formatSeperator, formatHeaderLines, filesToCheck[currentFileIndex], fileOk, errOut, metaOut)
+					currentFileIndex++
+				}
+				if numFilesToCheck == filesChecked {
 					if metaOut != nil {
 						metaOut <- fmt.Sprintf("Files with errors : %d\n", filesWithError)
 						metaOut <- fmt.Sprintf("Files okay: %d\n", filesNoError)
