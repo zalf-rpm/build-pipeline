@@ -43,7 +43,7 @@ RUN mkdir -p ${MONICA_HOME}
 RUN mkdir -p ${MONICA_PARAMETERS}
 RUN mkdir -p ${MONICA_HOME}/monica-ini-to-json
 RUN mkdir -p ${MONICA_HOME}/Examples/Hohenfinow2
-RUN mkdir -p ${MONICA_HOME}/Examples/Hohenfinow2/python
+RUN mkdir -p ${MONICA_HOME}/Examples/Hohenfinow2/python3
 RUN mkdir -p ${MONICA_PARAMETERS}/crop-residues
 RUN mkdir -p ${MONICA_PARAMETERS}/crops
 RUN mkdir -p ${MONICA_PARAMETERS}/mineral-fertilisers
