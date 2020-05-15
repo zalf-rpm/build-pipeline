@@ -1,5 +1,5 @@
 #build test programm with + dotnet
-FROM microsoft/dotnet:2.1-sdk AS build-env
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build-env
 WORKDIR /CoreConsoleParser
 # Copy csproj and restore as distinct layers
 COPY /build-pipeline/testtools/CoreConsoleParser/CoreConsoleParser/*.csproj ./
@@ -7,16 +7,14 @@ RUN dotnet restore
 
 # Copy everything else and build
 COPY /build-pipeline/testtools/CoreConsoleParser/CoreConsoleParser/ ./
-RUN dotnet publish -c Release -o out -r debian.9-x64
+RUN dotnet publish -c Release -o out -r debian.10-x64
 
-FROM debian:9.5
+FROM debian:10.3
 
-# Update Ubuntu Software repository
+# Update Software repository
 RUN apt-get update
 # install monica prerequisites
-#RUN apt-get install -y apt-utils
-#RUN apt-get install -y libboost-all-dev
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git python-pip python-dev build-essential
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git python3-pip
 
 RUN mkdir /checkout
  
@@ -102,7 +100,7 @@ RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/run-consumer.py ${MONICA_
 RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/run-producer.py ${MONICA_HOME}/Examples/Hohenfinow2/python/
 RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/site-soil-profile-from-db.json ${MONICA_HOME}/Examples/Hohenfinow2/python/
 
-RUN pip install zmq
+RUN pip3 install zmq
 
 COPY ./build-pipeline/docker/dotnet-producer-consumer/start_producer_consumer.sh /start.sh
 
