@@ -58,10 +58,6 @@ RUN cp ${MONICA_RESOURCE}/installer/testing/testreference.csv ${MONICA_HOME}/tes
 RUN touch ${MONICA_HOME}/testing/1.csv
 RUN chmod a+w ${MONICA_HOME}/testing/1.csv
 
-RUN cp ${MONICA_RESOURCE}/src/python/monica_io.py ${MONICA_RUN}
-RUN cp ${MONICA_RESOURCE}/src/python/ascii_io.py ${MONICA_RUN}
-RUN cp ${UTIL_RESOURCE}/soil/soil_io.py ${MONICA_RUN}
-
 RUN cp ${MONICA_RESOURCE}/sqlite-db/ka5-soil-data.sqlite ${MONICA_RUN}/sqlite-db/
 RUN cp ${MONICA_RESOURCE}/sqlite-db/carbiocial.sqlite ${MONICA_RUN}/sqlite-db/
 RUN cp ${MONICA_RESOURCE}/sqlite-db/monica.sqlite ${MONICA_RUN}/sqlite-db/
@@ -93,12 +89,11 @@ RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/site+.json ${MONICA_HOME}/Exampl
 RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/sim+.json ${MONICA_HOME}/Examples/Hohenfinow2/
 RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/climate.csv ${MONICA_HOME}/Examples/Hohenfinow2/
 
-RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/carbiocial.sqlite ${MONICA_HOME}/Examples/Hohenfinow2/python/
-RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/db-connections.ini ${MONICA_HOME}/Examples/Hohenfinow2/python/
-RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/run-monica.py ${MONICA_HOME}/Examples/Hohenfinow2/python/
-RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/run-consumer.py ${MONICA_HOME}/Examples/Hohenfinow2/python/
-RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/run-producer.py ${MONICA_HOME}/Examples/Hohenfinow2/python/
-RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python/site-soil-profile-from-db.json ${MONICA_HOME}/Examples/Hohenfinow2/python/
+RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python3/run-consumer.py ${MONICA_HOME}/Examples/Hohenfinow2/python3/
+RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python3/run-producer.py ${MONICA_HOME}/Examples/Hohenfinow2/python3/
+RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python3/monica_io3.py ${MONICA_HOME}/Examples/Hohenfinow2/python3/
+RUN cp ${MONICA_RESOURCE}/installer/Hohenfinow2/python3/soil_io3.py ${MONICA_HOME}/Examples/Hohenfinow2/python3/
+
 
 RUN pip3 install zmq
 
