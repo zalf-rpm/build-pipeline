@@ -47,25 +47,21 @@ var testNames = [...]string{
 
 // metaData to write a meta file
 type metaData struct {
-	name                string
-	tmin                float64
-	tmax                float64
-	globalRadMin        float64
-	globalRadMax        float64
-	relhumidMax         float64
-	relhumidMin         float64
-	precipationMax      float64
-	windMin             float64
-	windMax             float64
-	startDate           time.Time
-	endDate             time.Time
-	missingDataSets     bool
-	numberOfFailedTests int64
-	unitTypeTemp        string
-	unitTypeWind        string
-	unitTypeglobalRad   string
-	unitTypePrecip      string
-	unitTypeRelHumid    string
+	name              string
+	tmin              [2]float64
+	tmax              [2]float64
+	globalRad         [2]float64
+	relhumid          [2]float64
+	precipation       [2]float64
+	wind              [2]float64
+	startDate         time.Time
+	endDate           time.Time
+	missingDataSets   bool
+	unitTypeTemp      string
+	unitTypeWind      string
+	unitTypeglobalRad string
+	unitTypePrecip    string
+	unitTypeRelHumid  string
 
 	hasUnits bool
 	mux      sync.Mutex
@@ -101,7 +97,8 @@ func main() {
 		go logOutput(errOut[i], fmt.Sprintf(outfile, testNames[i]), confirmSaved)
 	}
 
-	var metaOut chan string = nil
+	var metaOut chan string
+	var metaObj metaData
 	//var summary metaData
 	if pathMeta != "meta" {
 		metaOut = make(chan string) // write meta data
@@ -141,7 +138,7 @@ func main() {
 		filesChecked := 0
 		currentFileIndex := 0
 		for i := 0; i < concur && currentFileIndex < numFilesToCheck; i++ {
-			go checkFile(pathsToCheck[currentFileIndex], formatSeperator, formatHeaderLines, filesToCheck[currentFileIndex], fileOk, errOut, metaOut)
+			go checkFile(pathsToCheck[currentFileIndex], formatSeperator, formatHeaderLines, filesToCheck[currentFileIndex], fileOk, errOut, &metaObj)
 			currentFileIndex++
 		}
 		var filesWithError int
@@ -159,11 +156,12 @@ func main() {
 				}
 				filesChecked++
 				if currentFileIndex < numFilesToCheck {
-					go checkFile(pathsToCheck[currentFileIndex], formatSeperator, formatHeaderLines, filesToCheck[currentFileIndex], fileOk, errOut, metaOut)
+					go checkFile(pathsToCheck[currentFileIndex], formatSeperator, formatHeaderLines, filesToCheck[currentFileIndex], fileOk, errOut, &metaObj)
 					currentFileIndex++
 				}
 				if numFilesToCheck == filesChecked {
 					if metaOut != nil {
+						metaObj.writeMetaData(metaOut)
 						metaOut <- fmt.Sprintf("Files with errors : %d\n", filesWithError)
 						metaOut <- fmt.Sprintf("Files okay: %d\n", filesNoError)
 						close(metaOut)
@@ -185,7 +183,7 @@ func main() {
 	}
 }
 
-func checkFile(path, formatSeperator string, formatHeaderLines int, info os.FileInfo, fileOk chan bool, errOut map[int](chan string), metaout chan string) {
+func checkFile(path, formatSeperator string, formatHeaderLines int, info os.FileInfo, fileOk chan bool, errOut map[int](chan string), meta *metaData) {
 	// open a climate file
 	file, err := os.OpenFile(path, os.O_RDONLY, 0600)
 	if err != nil {
@@ -208,10 +206,29 @@ func checkFile(path, formatSeperator string, formatHeaderLines int, info os.File
 		}
 	}(path, info.Name(), errOut)
 
+	var tminLimit [2]float64
+	var tmaxLimit [2]float64
+	var globalRadLimit [2]float64
+	var relhumidLimit [2]float64
+	var precipationLimit [2]float64
+	var windLimit [2]float64
+	var startDateLimit time.Time
+	var endDateLimit time.Time
+	minMax := func(val float64, arr [2]float64) [2]float64 {
+		if val < arr[0] {
+			arr[0] = val
+		}
+		if val > arr[1] {
+			arr[1] = val
+		}
+		return arr
+	}
+
 	lineCount := 0
 	var headerColumns map[Header]int
 	var prevClimateLine climateDates
 	noErrFound := true
+	noDataMissing := true
 	for scanner.Scan() {
 		lineCount++
 		if lineCount == 1 {
@@ -222,6 +239,13 @@ func checkFile(path, formatSeperator string, formatHeaderLines int, info os.File
 				return
 			}
 		}
+		if formatHeaderLines > 1 && lineCount == 2 {
+			err := consistentUnits(scanner.Text(), formatSeperator, headerColumns, meta)
+			if err != nil {
+				writeErrorMessage(generalTest, err)
+				noErrFound = false
+			}
+		}
 		if lineCount > formatHeaderLines {
 			line := scanner.Text()
 			currClimateLine, err := newClimateDates(formatSeperator, line, headerColumns)
@@ -230,9 +254,27 @@ func checkFile(path, formatSeperator string, formatHeaderLines int, info os.File
 				fileOk <- noErrFound
 				return
 			}
+			if lineCount-1 == formatHeaderLines {
+				// first line
+				tminLimit = [2]float64{currClimateLine.tmin, currClimateLine.tmin}
+				tmaxLimit = [2]float64{currClimateLine.tmax, currClimateLine.tmax}
+				globalRadLimit = [2]float64{currClimateLine.globrad, currClimateLine.globrad}
+				relhumidLimit = [2]float64{currClimateLine.relhumid, currClimateLine.relhumid}
+				precipationLimit = [2]float64{currClimateLine.precip, currClimateLine.precip}
+				windLimit = [2]float64{currClimateLine.wind, currClimateLine.wind}
+				startDateLimit = currClimateLine.time
+				endDateLimit = currClimateLine.time
+			}
 			//	   	missing dates
 			if lineCount-1 > formatHeaderLines {
-				noErrFound = writeErrorMessage(continuesDatesTest, continuesDates(&currClimateLine, &prevClimateLine)) && noErrFound
+				noDataMissing = writeErrorMessage(continuesDatesTest, continuesDates(&currClimateLine, &prevClimateLine)) && noDataMissing
+				tminLimit = minMax(currClimateLine.tmin, tminLimit)
+				tmaxLimit = minMax(currClimateLine.tmax, tmaxLimit)
+				globalRadLimit = minMax(currClimateLine.globrad, globalRadLimit)
+				relhumidLimit = minMax(currClimateLine.relhumid, relhumidLimit)
+				windLimit = minMax(currClimateLine.wind, windLimit)
+				precipationLimit = minMax(currClimateLine.precip, precipationLimit)
+				endDateLimit = currClimateLine.time
 			}
 			noErrFound = writeErrorMessage(windSpeedTest, windSpeed(&currClimateLine)) && noErrFound
 			noErrFound = writeErrorMessage(precipationTest, precipation(&currClimateLine)) && noErrFound
@@ -246,6 +288,14 @@ func checkFile(path, formatSeperator string, formatHeaderLines int, info os.File
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+
+	meta.SetMinMax(tminLimit, tmaxLimit, globalRadLimit, relhumidLimit, precipationLimit, windLimit)
+	meta.SetStartDate(startDateLimit)
+	meta.SetEndDate(endDateLimit)
+	if !noDataMissing {
+		meta.SetDataMissing()
+	}
+
 	fileOk <- noErrFound
 }
 
@@ -277,15 +327,16 @@ func logOutput(input chan string, outfile string, confirmSaved chan bool) {
 }
 
 type climateDates struct {
-	isodate  string
-	wind     float64
-	precip   float64
-	globrad  float64
-	tmax     float64
-	tmin     float64
-	tavg     float64
-	relhumid float64
-	time     time.Time
+	isodate    string
+	wind       float64
+	precip     float64
+	globrad    float64
+	tmax       float64
+	tmin       float64
+	tavg       float64
+	relhumid   float64
+	vaporpress float64
+	time       time.Time
 }
 
 // iso-date,tmin,tavg,tmax,precip,globrad,wind,relhumid,vaporpress,dewpoint_temp,relhumid_tmin,relhumid_tmax
@@ -302,6 +353,7 @@ const (
 	globrad
 	wind
 	relhumid
+	vaporpress
 )
 
 var headerNames = [...]string{
@@ -312,7 +364,14 @@ var headerNames = [...]string{
 	"precip",
 	"globrad",
 	"wind",
-	"relhumid"}
+	"relhumid",
+	"vaporpress",
+}
+
+var optionalHeader = map[Header]bool{
+	relhumid:   true,
+	vaporpress: true,
+}
 
 func readHeader(line, seperator string) (map[Header]int, error) {
 	tokens := strings.Split(line, seperator)
@@ -327,7 +386,9 @@ func readHeader(line, seperator string) (map[Header]int, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("Column %s not found", header)
+			if _, ok := optionalHeader[Header(h)]; !ok {
+				return nil, fmt.Errorf("Column %s not found", header)
+			}
 		}
 	}
 
@@ -338,7 +399,7 @@ func newClimateDates(seperator, line string, h map[Header]int) (climateDates, er
 	tokens := strings.Split(line, seperator)
 
 	var dates climateDates
-	var err [8]error
+	err := make([]error, 9)
 	dates.isodate = tokens[h[isodate]]
 	dates.wind, err[0] = strconv.ParseFloat(tokens[h[wind]], 10)
 	dates.precip, err[1] = strconv.ParseFloat(tokens[h[precip]], 10)
@@ -346,9 +407,14 @@ func newClimateDates(seperator, line string, h map[Header]int) (climateDates, er
 	dates.tmax, err[3] = strconv.ParseFloat(tokens[h[tmax]], 10)
 	dates.tmin, err[4] = strconv.ParseFloat(tokens[h[tmin]], 10)
 	dates.tavg, err[5] = strconv.ParseFloat(tokens[h[tavg]], 10)
-	dates.relhumid, err[6] = strconv.ParseFloat(tokens[h[relhumid]], 10)
-	dates.time, err[7] = time.Parse("2006-01-02", dates.isodate)
-	anyError := func(list [8]error) error {
+	if _, ok := h[relhumid]; ok {
+		dates.relhumid, err[6] = strconv.ParseFloat(tokens[h[relhumid]], 10)
+	}
+	if _, ok := h[vaporpress]; ok {
+		dates.vaporpress, err[7] = strconv.ParseFloat(tokens[h[vaporpress]], 10)
+	}
+	dates.time, err[8] = time.Parse("2006-01-02", dates.isodate)
+	anyError := func(list []error) error {
 		for _, b := range list {
 			if b != nil {
 				return b
@@ -387,8 +453,8 @@ func globalRadiation(data *climateDates) error {
 	currMonth := data.time.Month()
 	if data.globrad == 0 && (currMonth > time.February && currMonth < time.October) {
 		return fmt.Errorf("Global Radiation < 1 MJ m-2 d-1, value %f at date %s", data.globrad, data.isodate)
-	} else if globrad > 38 {
-		return fmt.Errorf("Global Radiation > 38 MJ m-2 d-1, value %f at date %s", data.globrad, data.isodate)
+	} else if data.globrad > 43 {
+		return fmt.Errorf("Global Radiation > 43 MJ m-2 d-1, value %f at date %s", data.globrad, data.isodate)
 	}
 	return nil
 }
@@ -396,11 +462,14 @@ func globalRadiation(data *climateDates) error {
 func temperature(data *climateDates) error {
 	if data.tavg > data.tmax && data.tmin > data.tavg {
 		return fmt.Errorf("Tmin(%f) > Tavg(%f) > Tmax(%f) at date %s", data.tmin, data.tavg, data.tmax, data.isodate)
+	} else if data.tmin > data.tmax {
+		return fmt.Errorf("Tmin(%f) > Tmax(%f) at date %s", data.tmin, data.tmax, data.isodate)
 	} else if data.tavg > data.tmax {
 		return fmt.Errorf("Tavg(%f) > Tmax(%f) at date %s", data.tavg, data.tmax, data.isodate)
 	} else if data.tmin > data.tavg {
 		return fmt.Errorf("Tmin(%f) > Tavg(%f) at date %s", data.tmin, data.tavg, data.isodate)
 	}
+
 	return nil
 }
 
@@ -427,8 +496,49 @@ func consistentUnits(line, seperator string, header map[Header]int, meta *metaDa
 	return err
 }
 
+func (m *metaData) SetMinMax(tmin, tmax, globalRad, relhumid, precipation, wind [2]float64) {
+	m.mux.Lock()
+	if m.tmin[0] > tmin[0] {
+		m.tmin[0] = tmin[0]
+	}
+	if m.tmin[1] < tmin[1] {
+		m.tmin[1] = tmin[1]
+	}
+	if m.tmax[0] > tmax[0] {
+		m.tmax[0] = tmax[0]
+	}
+	if m.tmax[1] < tmax[1] {
+		m.tmax[1] = tmax[1]
+	}
+	if m.globalRad[0] > globalRad[0] {
+		m.globalRad[0] = globalRad[0]
+	}
+	if m.globalRad[1] < globalRad[1] {
+		m.globalRad[1] = globalRad[1]
+	}
+	if m.relhumid[0] > relhumid[0] {
+		m.relhumid[0] = relhumid[0]
+	}
+	if m.relhumid[1] < relhumid[1] {
+		m.relhumid[1] = relhumid[1]
+	}
+	if m.precipation[0] > precipation[0] {
+		m.precipation[0] = precipation[0]
+	}
+	if m.precipation[1] < precipation[1] {
+		m.precipation[1] = precipation[1]
+	}
+	if m.wind[0] > wind[0] {
+		m.wind[0] = wind[0]
+	}
+	if m.wind[1] < wind[1] {
+		m.wind[1] = wind[1]
+	}
+	m.mux.Unlock()
+}
+
 func (m *metaData) SetAndVerifyUnits(precipU, relHumidU, tempU, windU, globalRadU string) error {
-	var err error = nil
+	var err error
 	m.mux.Lock()
 	if !m.hasUnits {
 		m.hasUnits = true
@@ -448,6 +558,9 @@ func (m *metaData) SetAndVerifyUnits(precipU, relHumidU, tempU, windU, globalRad
 	}
 	m.mux.Unlock()
 	return err
+}
+func (m *metaData) SetDataMissing() {
+	m.missingDataSets = true
 }
 
 func (m *metaData) SetStartDate(startDate time.Time) error {
@@ -470,4 +583,25 @@ func (m *metaData) SetEndDate(endDate time.Time) error {
 	}
 	m.mux.Unlock()
 	return nil
+}
+
+func (m *metaData) writeMetaData(outChannel chan string) {
+
+	outChannel <- "Name: " + m.name
+	outChannel <- fmt.Sprintf("Temperatur min range: %.2f - %.2f", m.tmin[0], m.tmin[1])
+	outChannel <- fmt.Sprintf("Temperatur max range: %.2f - %.2f", m.tmax[0], m.tmax[1])
+	outChannel <- fmt.Sprintf("Global Radiation range: %.2f - %.2f", m.globalRad[0], m.globalRad[1])
+	outChannel <- fmt.Sprintf("Relative Humidity range: %.2f - %.2f", m.relhumid[0], m.relhumid[1])
+	outChannel <- fmt.Sprintf("Precipitation range: %.2f - %.2f", m.precipation[0], m.precipation[1])
+	outChannel <- fmt.Sprintf("Wind range: %.2f - %.2f", m.wind[0], m.wind[1])
+
+	outChannel <- "Start Date: " + m.startDate.Format("2006-01-02")
+	outChannel <- "End Date: " + m.endDate.Format("2006-01-02")
+	outChannel <- "Has Missing Data Rows: " + strconv.FormatBool(m.missingDataSets)
+	outChannel <- "Unit Temperature: " + m.unitTypeTemp
+	outChannel <- "Unit Wind: " + m.unitTypeWind
+	outChannel <- "Unit Radiation: " + m.unitTypeglobalRad
+	outChannel <- "Unit Precipitation: " + m.unitTypePrecip
+	outChannel <- "Unit Relative Humidity: " + m.unitTypeRelHumid
+
 }
