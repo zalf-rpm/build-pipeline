@@ -48,12 +48,12 @@ var testNames = [...]string{
 // metaData to write a meta file
 type metaData struct {
 	name              string
-	tmin              [2]float64
-	tmax              [2]float64
-	globalRad         [2]float64
-	relhumid          [2]float64
-	precipation       [2]float64
-	wind              [2]float64
+	tmin              []float64
+	tmax              []float64
+	globalRad         []float64
+	relhumid          []float64
+	precipation       []float64
+	wind              []float64
 	startDate         time.Time
 	endDate           time.Time
 	missingDataSets   bool
@@ -474,6 +474,7 @@ func temperature(data *climateDates) error {
 }
 
 func relativeHumidity(data *climateDates) error {
+
 	if data.relhumid >= 1 && data.relhumid <= 100 {
 		return nil
 	}
@@ -498,41 +499,51 @@ func consistentUnits(line, seperator string, header map[Header]int, meta *metaDa
 
 func (m *metaData) SetMinMax(tmin, tmax, globalRad, relhumid, precipation, wind [2]float64) {
 	m.mux.Lock()
-	if m.tmin[0] > tmin[0] {
-		m.tmin[0] = tmin[0]
-	}
-	if m.tmin[1] < tmin[1] {
-		m.tmin[1] = tmin[1]
-	}
-	if m.tmax[0] > tmax[0] {
-		m.tmax[0] = tmax[0]
-	}
-	if m.tmax[1] < tmax[1] {
-		m.tmax[1] = tmax[1]
-	}
-	if m.globalRad[0] > globalRad[0] {
-		m.globalRad[0] = globalRad[0]
-	}
-	if m.globalRad[1] < globalRad[1] {
-		m.globalRad[1] = globalRad[1]
-	}
-	if m.relhumid[0] > relhumid[0] {
-		m.relhumid[0] = relhumid[0]
-	}
-	if m.relhumid[1] < relhumid[1] {
-		m.relhumid[1] = relhumid[1]
-	}
-	if m.precipation[0] > precipation[0] {
-		m.precipation[0] = precipation[0]
-	}
-	if m.precipation[1] < precipation[1] {
-		m.precipation[1] = precipation[1]
-	}
-	if m.wind[0] > wind[0] {
-		m.wind[0] = wind[0]
-	}
-	if m.wind[1] < wind[1] {
-		m.wind[1] = wind[1]
+	if m.tmin == nil {
+		m.tmin = []float64{tmin[0], tmin[1]}
+		m.tmax = []float64{tmax[0], tmax[1]}
+		m.globalRad = []float64{globalRad[0], globalRad[1]}
+		m.relhumid = []float64{relhumid[0], relhumid[1]}
+		m.precipation = []float64{precipation[0], precipation[1]}
+		m.wind = []float64{wind[0], wind[1]}
+	} else {
+
+		if m.tmin[0] > tmin[0] {
+			m.tmin[0] = tmin[0]
+		}
+		if m.tmin[1] < tmin[1] {
+			m.tmin[1] = tmin[1]
+		}
+		if m.tmax[0] > tmax[0] {
+			m.tmax[0] = tmax[0]
+		}
+		if m.tmax[1] < tmax[1] {
+			m.tmax[1] = tmax[1]
+		}
+		if m.globalRad[0] > globalRad[0] {
+			m.globalRad[0] = globalRad[0]
+		}
+		if m.globalRad[1] < globalRad[1] {
+			m.globalRad[1] = globalRad[1]
+		}
+		if m.relhumid[0] > relhumid[0] {
+			m.relhumid[0] = relhumid[0]
+		}
+		if m.relhumid[1] < relhumid[1] {
+			m.relhumid[1] = relhumid[1]
+		}
+		if m.precipation[0] > precipation[0] {
+			m.precipation[0] = precipation[0]
+		}
+		if m.precipation[1] < precipation[1] {
+			m.precipation[1] = precipation[1]
+		}
+		if m.wind[0] > wind[0] {
+			m.wind[0] = wind[0]
+		}
+		if m.wind[1] < wind[1] {
+			m.wind[1] = wind[1]
+		}
 	}
 	m.mux.Unlock()
 }
