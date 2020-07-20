@@ -236,6 +236,14 @@ func (c *climateFile) correctErrors(seperator string) {
 				tminStr := tokens[c.header[tmin]]
 				tokens[c.header[tmax]] = tminStr
 				tokens[c.header[tmin]] = tmaxStr
+
+				if _, ok := c.header[relhumidTmax]; ok {
+					tHmaxStr := tokens[c.header[relhumidTmax]]
+					tHminStr := tokens[c.header[relhumidTmin]]
+					tokens[c.header[relhumidTmax]] = tHminStr
+					tokens[c.header[relhumidTmin]] = tHmaxStr
+				}
+
 				c.lines[errIndex].text = strings.Join(tokens, seperator)
 			} else if strings.HasPrefix(errMsg.Error(), "Rad0:") {
 				t, _ := time.Parse("2006-01-02", tokens[c.header[isodate]])
@@ -271,9 +279,36 @@ func (c *climateFile) correctErrors(seperator string) {
 					}
 				}
 				if num > 0 {
-					avg := relHSum / float64(num)
-					if avg > currentRelHum {
-						tokens[c.header[relhumid]] = fmt.Sprintf("%.1f", avg)
+					relHumAvg := relHSum / float64(num)
+					if relHumAvg > currentRelHum {
+
+						e0 := func(temp float64) float64 {
+							return 0.6108 * math.Exp(17.27*temp/(temp+237.3))
+						}
+						tmin, _ := strconv.ParseFloat(tokens[c.header[tmin]], 10)
+						tmax, _ := strconv.ParseFloat(tokens[c.header[tmax]], 10)
+
+						e0tmax := e0(tmax)
+						e0tmin := e0(tmin)
+
+						vaporpressDewPoint2 := relHumAvg * 2.0 * e0tmin / (100.0 * (1.0 + e0tmin/e0tmax))
+						tdew2 := (116.91 + 237.3*math.Log(vaporpressDewPoint2)) / (16.78 - math.Log(vaporpressDewPoint2))
+						relHumMax2 := math.Min(100, 100.0*vaporpressDewPoint2/e0tmax)
+						relHumMin2 := math.Min(100, 100.0*vaporpressDewPoint2/e0tmin)
+
+						if _, ok := c.header[vaporpress]; ok {
+							tokens[c.header[vaporpress]] = fmt.Sprintf("%.2f", vaporpressDewPoint2)
+						}
+						if _, ok := c.header[dewpointTemp]; ok {
+							tokens[c.header[dewpointTemp]] = fmt.Sprintf("%.1f", tdew2)
+						}
+						if _, ok := c.header[relhumidTmin]; ok {
+							tokens[c.header[relhumidTmin]] = fmt.Sprintf("%.1f", relHumMin2)
+						}
+						if _, ok := c.header[relhumidTmax]; ok {
+							tokens[c.header[relhumidTmax]] = fmt.Sprintf("%.1f", relHumMax2)
+						}
+						tokens[c.header[relhumid]] = fmt.Sprintf("%.1f", relHumAvg)
 						c.lines[errIndex].text = strings.Join(tokens, seperator)
 					}
 				}
@@ -343,16 +378,19 @@ func logOutput(input chan string, outfile string, confirmSaved chan bool) {
 }
 
 type climateDates struct {
-	isodate    string
-	wind       float64
-	precip     float64
-	globrad    float64
-	tmax       float64
-	tmin       float64
-	tavg       float64
-	relhumid   float64
-	vaporpress float64
-	time       time.Time
+	isodate      string
+	wind         float64
+	precip       float64
+	globrad      float64
+	tmax         float64
+	tmin         float64
+	tavg         float64
+	relhumid     float64
+	vaporpress   float64
+	dewpointTemp float64
+	relhumidTmin float64
+	relhumidTmax float64
+	time         time.Time
 }
 
 // iso-date,tmin,tavg,tmax,precip,globrad,wind,relhumid,vaporpress,dewpoint_temp,relhumid_tmin,relhumid_tmax
@@ -370,6 +408,9 @@ const (
 	wind
 	relhumid
 	vaporpress
+	dewpointTemp
+	relhumidTmin
+	relhumidTmax
 )
 
 var headerNames = [...]string{
@@ -382,6 +423,9 @@ var headerNames = [...]string{
 	"wind",
 	"relhumid",
 	"vaporpress",
+	"dewpoint_temp",
+	"relhumid_tmin",
+	"relhumid_tmax",
 }
 
 var optionalHeader = map[Header]bool{
@@ -415,7 +459,7 @@ func newClimateDates(seperator, line string, h map[Header]int) (climateDates, er
 	tokens := strings.Split(line, seperator)
 
 	var dates climateDates
-	err := make([]error, 9)
+	err := make([]error, 12)
 	dates.isodate = tokens[h[isodate]]
 	dates.wind, err[0] = strconv.ParseFloat(tokens[h[wind]], 10)
 	dates.precip, err[1] = strconv.ParseFloat(tokens[h[precip]], 10)
@@ -429,7 +473,16 @@ func newClimateDates(seperator, line string, h map[Header]int) (climateDates, er
 	if _, ok := h[vaporpress]; ok {
 		dates.vaporpress, err[7] = strconv.ParseFloat(tokens[h[vaporpress]], 10)
 	}
-	dates.time, err[8] = time.Parse("2006-01-02", dates.isodate)
+	if _, ok := h[dewpointTemp]; ok {
+		dates.dewpointTemp, err[8] = strconv.ParseFloat(tokens[h[dewpointTemp]], 10)
+	}
+	if _, ok := h[relhumidTmin]; ok {
+		dates.relhumidTmin, err[9] = strconv.ParseFloat(tokens[h[relhumidTmin]], 10)
+	}
+	if _, ok := h[relhumidTmax]; ok {
+		dates.relhumidTmax, err[10] = strconv.ParseFloat(tokens[h[relhumidTmax]], 10)
+	}
+	dates.time, err[11] = time.Parse("2006-01-02", dates.isodate)
 	anyError := func(list []error) error {
 		for _, b := range list {
 			if b != nil {
@@ -485,6 +538,7 @@ func relativeHumidity(data *climateDates, prevDates []float64) error {
 	}
 	return nil
 }
+
 func avgHumid(prevDates []float64) float64 {
 	if prevDates == nil || len(prevDates) == 0 {
 		return 10.0
