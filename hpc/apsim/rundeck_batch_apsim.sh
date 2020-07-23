@@ -1,4 +1,4 @@
-#!/bin/bash -x 
+#!/bin/bash 
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?project_folder? ?sim_folder? ?estimated_time? ?use_nodes?
 set -eu
 [[ $# < 7 ]] && {
@@ -16,6 +16,7 @@ PROJECT_FOLDER=$4
 SIM_FOLDER=$5
 TIME=$6
 NUM_NODES=$7 
+CLIMATE_FOLDER=$8
 
 SBATCH_JOB_NAME="apsim_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
 DATE=`date +%Y-%d-%B_%H%M%S`
@@ -27,7 +28,7 @@ SOURCE_FOLDER=${PROJECT_FOLDER}/${SIM_FOLDER}
 OUT_FOLDER=${PROJECT_FOLDER}/out_${DATE}
 
 
-COUNT=`ls ${SOURCE_FOLDER}/*.apsim | wc -l`
+COUNT=`ls ${SOURCE_FOLDER} | wc -l`
 
 NUM_PER_JOB=`expr $COUNT / $NUM_NODES`
 
@@ -49,7 +50,7 @@ for file in ${FILES}; do
 		FILE_INDEX=`expr $FILE_INDEX + 1`
 		JOBFILE=$APSIM_TEMP/jobfile${FILE_INDEX}.txt
 		touch $JOBFILE
-		echo $JOBFILE
+		#echo $JOBFILE
 	fi
 	
 	echo `basename "${file}"` >> $JOBFILE
@@ -65,8 +66,8 @@ JOBFILES=$APSIM_TEMP/*
 INDEX=0
 for jobfile in ${JOBFILES}; do
 	INDEX=`expr $INDEX + 1`
-	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${INDEX} --time=${TIME} -N 1 -c 40 -o log/apsim_batch-%j" 
-	BATCHID=$( sbatch $SBATCH_COMMANDS batch/sbatch_parallel_apsim2.sh $PROJECT_FOLDER $SIM_FOLDER $SINGULARITY_IMAGE $jobfile )
+	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${INDEX} --time=${TIME} -N 1 -c 80 -o log/apsim_batch-%j" 
+	BATCHID=$( sbatch $SBATCH_COMMANDS batch/sbatch_parallel_apsim2.sh $PROJECT_FOLDER $CLIMATE_FOLDER $SIM_FOLDER $SINGULARITY_IMAGE $jobfile )
 	DEPENDENCY=$DEPENDENCY":"$BATCHID
   	echo "DEPENDENCY: $DEPENDENCY"
 done
