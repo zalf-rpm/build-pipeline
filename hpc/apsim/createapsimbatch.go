@@ -12,7 +12,7 @@ import (
 
 // create jobfiles from a folder of apsim files
 
-const filesPerTurn = 100
+const filesPerTurn = 10000
 
 func main() {
 
