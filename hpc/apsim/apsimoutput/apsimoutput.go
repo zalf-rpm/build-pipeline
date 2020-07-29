@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -56,10 +57,8 @@ func main() {
 						break
 					}
 				}
-				continue
-			}
-			// delete *.sum files
-			if strings.HasSuffix(basename, ".sum") {
+				// delete *.sum files
+			} else if strings.HasSuffix(basename, ".sum") || strings.HasSuffix(basename, ".sim") {
 				for _, simName := range simNames {
 					if strings.HasPrefix(basename, simName) {
 						toDelete = append(toDelete, basename)
@@ -82,6 +81,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		//fmt.Println("Remove: ", basename)
+		fmt.Println("Remove: ", basename)
 	}
 }

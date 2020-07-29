@@ -46,7 +46,7 @@ done <${JOB_FILENAME}
 
 wait
 
-if [ -neq $LINE ${CMD} ] ; then 
+if [ `expr ${INDEX} % $PARALLEL_JOBS` -ne 0 ] ; then 
 	DATE=`date +%Y-%d-%B_%H%M%S`
 	echo ${DATE} ">" $LINE
 	$LINE 
