@@ -15,32 +15,40 @@ CLIMATEDIR=/met
 export LD_LIBRARY_PATH=/apsim/Temp/Model
 export MAX_APSIM_OUTPUT_LINES=100
 
+
+DATE=`date +%Y-%d-%B_%H%M%S`
+JOB=$( basename ${JOB_FILENAME} )
+TEMPWORKFOLDER=${SIM_FOLDER}_"${JOB%.*}"_TEMP_$DATE
+mkdir $MOUNT_STORAGE/$TEMPWORKFOLDER
+
 CMD="singularity run -B \
 $MOUNT_STORAGE:$WORKDIR,\
 $MOUNT_CLIMATE:$CLIMATEDIR \
 --pwd /apsim/Temp/Model ${SINGULARITY_IMAGE} Apsim.exe "
 
-EXECUTEFOLDER=`pwd`
+~/batch/copyinlargedir/copydirs -src=$MOUNT_STORAGE/${SIM_FOLDER} -dst=$MOUNT_STORAGE/$TEMPWORKFOLDER
 
 LINE=${CMD}
 # Execute x jobs in parallel
 INDEX=0
-ARRAY=" "
+SIMS=" "
 while read file; do
 	INDEX=`expr $INDEX + 1`
-	LINE="${LINE} ${WORKDIR}/${SIM_FOLDER}/${file}"
+	LINE="${LINE} ${WORKDIR}/${TEMPWORKFOLDER}/${file}"
 	name="${file%.*}"
-	ARRAY=$ARRAY" -sim "$name
+	SIMS=$SIMS" -sim "$name
+	mv $MOUNT_STORAGE/${SIM_FOLDER}/${file} $MOUNT_STORAGE/$TEMPWORKFOLDER/
 	if [ `expr ${INDEX} % $PARALLEL_JOBS` -eq 0 ] ; then 
 	 	DATE=`date +%Y-%d-%B_%H%M%S`
 	 	echo ${DATE} ">" $LINE
 	 	$LINE 
 	 	DATE=`date +%Y-%d-%B_%H%M%S`
 	 	echo ${DATE} "move *.out and *.sum "
-	 	~/batch/apsimmoveoutput/apsimoutput -source $MOUNT_STORAGE/${SIM_FOLDER} -out ${APSIM_OUT_FOLDER} $ARRAY &
+	 	~/batch/apsimmoveoutput/apsimoutput -source $MOUNT_STORAGE/${TEMPWORKFOLDER} -out ${APSIM_OUT_FOLDER} $SIMS 
 		echo ${DATE} "next batch"
 	 	LINE=${CMD}
-	 	ARRAY=" "
+	 	SIMS=" "
+		mv $MOUNT_STORAGE/$TEMPWORKFOLDER/*.apsim $MOUNT_STORAGE/${SIM_FOLDER}/
 	fi   
 done <${JOB_FILENAME}
 
@@ -52,8 +60,11 @@ if [ `expr ${INDEX} % $PARALLEL_JOBS` -ne 0 ] ; then
 	$LINE 
 	DATE=`date +%Y-%d-%B_%H%M%S`
 	echo ${DATE} "move *.out and *.sum "
-	~/batch/apsimmoveoutput/apsimoutput -source $MOUNT_STORAGE/${SIM_FOLDER} -out ${APSIM_OUT_FOLDER} $ARRAY
+	~/batch/apsimmoveoutput/apsimoutput -source $MOUNT_STORAGE/${TEMPWORKFOLDER} -out ${APSIM_OUT_FOLDER} $SIMS
+	mv $MOUNT_STORAGE/$TEMPWORKFOLDER/*.apsim $MOUNT_STORAGE/${SIM_FOLDER}/
 fi  
 
 DATE=`date +%Y-%d-%B_%H%M%S`
 echo ${DATE} "done"
+
+#rm -r $MOUNT_STORAGE/$TEMPWORKFOLDER
