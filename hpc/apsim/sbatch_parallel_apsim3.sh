@@ -28,6 +28,8 @@ $MOUNT_CLIMATE:$CLIMATEDIR \
 
 ~/batch/copyinlargedir/copydirs -src=$MOUNT_STORAGE/${SIM_FOLDER} -dst=$MOUNT_STORAGE/$TEMPWORKFOLDER
 
+NUMDEFAULTS=$( ls $MOUNT_STORAGE/$TEMPWORKFOLDER | wc -l )
+
 LINE=${CMD}
 # Execute x jobs in parallel
 INDEX=0
@@ -67,4 +69,10 @@ fi
 DATE=`date +%Y-%d-%B_%H%M%S`
 echo ${DATE} "done"
 
-#rm -r $MOUNT_STORAGE/$TEMPWORKFOLDER
+#check if folder is empty except for default files
+CURRFILES=$( ls $MOUNT_STORAGE/$TEMPWORKFOLDER | wc -l )
+echo "current Files $CURRFILES default $NUMDEFAULTS"
+if [ $CURRFILES == $NUMDEFAULTS ] ; then 
+	chmod -R u+w $MOUNT_STORAGE/$TEMPWORKFOLDER
+	rm -r $MOUNT_STORAGE/$TEMPWORKFOLDER
+fi
