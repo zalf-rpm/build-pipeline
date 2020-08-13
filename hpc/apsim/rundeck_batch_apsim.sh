@@ -43,5 +43,5 @@ for jobfile in ${JOBFILES}; do
   	echo "DEPENDENCY: $DEPENDENCY"
 done
 
-sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_cleanup --time=01:00:00 -o log/apsim_batch-_cleanup%j batch/sbatch_apsim_batch_cleanup.sh $APSIM_TEMP $SOURCE_FOLDER $OUT_FOLDER
+sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_cleanup --time=12:00:00 -o log/apsim_batch-_cleanup%j batch/sbatch_apsim_batch_cleanup.sh $APSIM_TEMP $SOURCE_FOLDER $OUT_FOLDER
 

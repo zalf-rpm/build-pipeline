@@ -12,9 +12,13 @@ rm -rf $APSIM_TEMP
 DATE=`date +%Y-%d-%B_%H%M%S`
 echo $DATE
 
+mkdir -p /scratch/rpm
 ZIPNAME=`basename ${APSIM_OUT_FOLDER}`
 cd ${APSIM_OUT_FOLDER}/..
-tar -czf ${ZIPNAME}.tar.gz ${ZIPNAME}
+tar -czf /scratch/rpm/${ZIPNAME}.tar.gz ${ZIPNAME}
+
+cp /scratch/rpm/${ZIPNAME}.tar.gz ./${ZIPNAME}.tar.gz 
+rm /scratch/rpm/${ZIPNAME}.tar.gz 
 
 DATE=`date +%Y-%d-%B_%H%M%S`
 echo $DATE
