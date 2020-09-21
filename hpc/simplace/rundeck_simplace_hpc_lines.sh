@@ -53,6 +53,8 @@ exit 1
 fi
 
 cd ~
+SIMPLACE_LOG=/beegfs/rpm/projects/simplace/log/${USER}_${JOB_EXEC_ID}_${DATE}
+mkdir $SIMPLACE_LOG
 
 IFS=',' # (,) is set as delimiter
 read -ra ADDR <<< "$LINE_SPLITUPSTR" # str is read into an array as tokens separated by IFS
@@ -64,7 +66,7 @@ for i in "${ADDR[@]}"; do # access each element of array
     STARTLINE=${SOME[0]}
     ENDLINE=${SOME[1]}
 	#sbatch commands
-	SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=40 ${HPC_PARTITION} -o log/simplace-%j"
+	SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=40 ${HPC_PARTITION} -o $SIMPLACE_LOG/simplace-%j"
 	#simplace sbatch script commands
     SIMPLACE_INPUT="${MOUNT_DATA} ${MOUNT_WORK} ${MOUNT_OUT} ${MOUNT_OUT_ZIP} ${MOUNT_PROJECT} ${SOLUTION_PATH} ${PROJECT_PATH} ${IMAGE_DIR}/${SINGULARITY_IMAGE} ${DEBUG} ${STARTLINE} ${ENDLINE} ${SBATCH_JOB_NAME}_${i} false"
     echo "First  $STARTLINE"

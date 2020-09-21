@@ -54,6 +54,10 @@ fi
 
 cd ~
 
+SIMPLACE_LOG=/beegfs/rpm/projects/simplace/log/${USER}_${JOB_EXEC_ID}_${DATE}
+mkdir $SIMPLACE_LOG
+
+
 #extract lines
 LINE_SPLITUPSTR=$( srun singularity run -B \
 $MOUNT_WORK:/simplace/SIMPLACE_WORK,\
@@ -73,7 +77,7 @@ for i in "${ADDR[@]}"; do # access each element of array
     STARTLINE=${SOME[0]}
     ENDLINE=${SOME[1]}
 	#sbatch commands
-	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=40 ${HPC_PARTITION} -o log/simplace-%j"
+	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=40 ${HPC_PARTITION} -o $SIMPLACE_LOG/simplace-%j"
 	#simplace sbatch script commands
     SIMPLACE_INPUT="${MOUNT_DATA} ${MOUNT_WORK} ${MOUNT_OUT} ${MOUNT_OUT_ZIP} ${MOUNT_PROJECT} ${SOLUTION_PATH} ${PROJECT_PATH} ${IMAGE_DIR}/${SINGULARITY_IMAGE} ${DEBUG} ${STARTLINE} ${ENDLINE} ${SBATCH_JOB_NAME}_${i} false"
     echo "First  $STARTLINE"
@@ -90,6 +94,6 @@ done
 MOUNT_OUT_ZIP_ACC=${MOUNT_OUT_ZIP}_acc
 mkdir $MOUNT_OUT_ZIP_ACC
 
-echo sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=00:15:00 -o log/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
+echo sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=00:15:00 -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
 
-sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 -o log/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
+sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
