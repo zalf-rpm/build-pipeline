@@ -3,7 +3,19 @@ pipeline {
   parameters {
     string(defaultValue: "Version_4.3_final", 
         description: 'build verion from branch, or use enter "trunk"', 
-        name: 'SIMPLACE_BRANCH')
+        name: 'SIMPLACE_BRANCH_LAPCLIENT')
+    string(defaultValue: "Version_4.3_final", 
+        description: 'build verion from branch, or use enter "trunk"', 
+        name: 'SIMPLACE_BRANCH_CORE')
+    string(defaultValue: "Version_4.3_final", 
+        description: 'build verion from branch, or use enter "trunk"', 
+        name: 'SIMPLACE_BRANCH_MODULES')
+    string(defaultValue: "Version_4.3_final", 
+        description: 'build verion from branch, or use enter "trunk"', 
+        name: 'SIMPLACE_BRANCH_CLOUD')
+    string(defaultValue: "4.3_final", 
+        description: 'please enter a version tag that fits your configuration of branches', 
+        name: 'VERSION_TAG')
     // push docker image on successfull build
     booleanParam(defaultValue: false, 
         description: 'Push/upload docker image (to https://hub.docker.com/r/zalfrpm)', 
@@ -40,10 +52,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
             script {
                 boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
 
-                checkoutSVNRepository("lapclient", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH}")
-                checkoutSVNRepository("simplace_core", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH}")
-                checkoutSVNRepository("simplace_modules", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH}")
-                checkoutSVNRepository("simplace_cloud", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH}")
+                checkoutSVNRepository("lapclient", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH_LAPCLIENT}")
+                checkoutSVNRepository("simplace_core", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH_CORE}")
+                checkoutSVNRepository("simplace_modules", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH_MODULES}")
+                checkoutSVNRepository("simplace_cloud", doCleanupFirst, "", "", "${params.SIMPLACE_BRANCH_CLOUD}")
                 checkoutSVNRepository("simplace_run", doCleanupFirst, "${env.SVN_CREDS_USR}", "${env.SVN_CREDS_PSW}", "trunk")
 
                 dir("lapclient")
@@ -122,16 +134,10 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 
                 def VERSION_NUMBER = "${currentBuild.number}" // TODO: replace by a checked in number
                 def dockerfilePath = './build-pipeline/docker/simplace-hpc'
-                def DOCKER_TAG = VERSION_NUMBER
-                if (params.SIMPLACE_BRANCH ==~ /Version_.*/)
-                {
-                    if (params.HIGH_MEM_USAGE) {
-                        DOCKER_TAG = params.SIMPLACE_BRANCH - ~"Version_" + ".HM." + VERSION_NUMBER
-                    } else {
-                        DOCKER_TAG = params.SIMPLACE_BRANCH - ~"Version_" + "." + VERSION_NUMBER
-                    }
+                def DOCKER_TAG = params.VERSION_TAG "." + VERSION_NUMBER
+                if (params.HIGH_MEM_USAGE) {
+                    DOCKER_TAG = params.VERSION_TAG + ".HM." + VERSION_NUMBER
                 }
-
 
                 sh "echo Docker Tag: $DOCKER_TAG"
                 docker.withRegistry('', "zalffpm_docker_basic") {
