@@ -134,7 +134,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 
                 def VERSION_NUMBER = "${currentBuild.number}" // TODO: replace by a checked in number
                 def dockerfilePath = './build-pipeline/docker/simplace-hpc'
-                def DOCKER_TAG = params.VERSION_TAG "." + VERSION_NUMBER
+                def DOCKER_TAG = params.VERSION_TAG + "." + VERSION_NUMBER
                 if (params.HIGH_MEM_USAGE) {
                     DOCKER_TAG = params.VERSION_TAG + ".HM." + VERSION_NUMBER
                 }
