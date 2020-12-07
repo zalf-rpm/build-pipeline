@@ -16,20 +16,18 @@ MOUNT_DATA=$4
 MOUNT_PROJECT=$5
 TIME=$6
 USEHIGHMEM=$7
+VERSION=3.6.3_4
 
 #sbatch job name 
 SBATCH_JOB_NAME="R_${USER}_${JOB_EXEC_ID}"
 
 # get r-studio image from docker
 IMAGE_DIR=~/singularity/R
-SINGULARITY_IMAGE=tidyverse.sif
+SINGULARITY_IMAGE=rstudio_dev_${VERSION}.sif
 IMAGE_RSTUDIO_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
-mkdir -p $IMAGE_DIR
+
 if [ ! -e ${IMAGE_RSTUDIO_PATH} ] ; then
 echo "File '${IMAGE_RSTUDIO_PATH}' not found"
-cd $IMAGE_DIR
-singularity pull --name ${SINGULARITY_IMAGE} docker://rocker/tidyverse:latest
-cd ~
 fi
 
 WORKDIR=/beegfs/rpm/projects/R/${USER}
@@ -62,4 +60,3 @@ sleep 5
 if [ -f ${LOG_NAME} ] ; then
     cat ${LOG_NAME}
 fi 
-
