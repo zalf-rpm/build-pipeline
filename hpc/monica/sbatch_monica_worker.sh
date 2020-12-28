@@ -1,5 +1,4 @@
 #!/bin/bash -x
-#SBATCH --partition=compute
 
 MOUNT_DATA=$1
 SINGULARITY_IMAGE=$2

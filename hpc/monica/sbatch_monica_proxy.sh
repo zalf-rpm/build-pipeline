@@ -1,5 +1,4 @@
 #!/bin/bash -x
-#SBATCH --partition=compute
 
 SINGULARITY_IMAGE=$1
 MOUNT_LOG=$2

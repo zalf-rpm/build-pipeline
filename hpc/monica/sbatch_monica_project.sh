@@ -1,5 +1,4 @@
 #!/bin/bash -x
-#SBATCH --partition=compute
 #SBATCH --cpus-per-task=40
 
 MOUNT_DATA_CLIMATE=${1}
