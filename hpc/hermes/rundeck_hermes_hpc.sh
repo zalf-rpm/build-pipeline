@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_project? ?mount_climate? ?mount_output? ?batch_file? ?version? ?estimated_time? ?num_nodes? 
 set -eu
-[[ $# < 10 ]] && {
+[[ $# < 9 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -15,12 +15,10 @@ JOB_NAME=$2
 JOB_EXEC_ID=$3
 MOUNT_PROJECT=$4
 MOUNT_DATA=$5
-MOUNT_OUTPUT=$6
-BATCH_LIST_FILE=$7
-VERSION=$8
-TIME=$9
-NUM_NODES=${10}
-
+BATCH_LIST_FILE=$6
+VERSION=$7
+TIME=$8
+NUM_NODES=${9}
 
 # check if job name is empty 
 if [ -z "$JOB_NAME" ] ; then 
@@ -31,28 +29,35 @@ fi
 SBATCH_JOB_NAME="hermes_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
 
 #check if the singularity image exists 
-SINGULARITY_IMAGE=hermes-to-go_${VERSION}.sif
-IMAGE_DIR=~/singularity/hermes
+SINGULARITY_IMAGE=hermes2go_${VERSION}.sif
+IMAGE_DIR=~/singularity/hermes2go
 IMAGE_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
 
 mkdir -p $IMAGE_DIR
 if [ ! -e ${IMAGE_PATH} ] ; then
 echo "File '${IMAGE_PATH}' not found"
 cd $IMAGE_DIR
-singularity pull docker://zalfrpm/hermes-to-go:${VERSION}
+singularity pull docker://zalfrpm/hermes2go:${VERSION}
 cd ~
 
 fi
 
+DATE=`date +%Y-%d-%B_%H%M%S`
+HERMES_PROJECTDIR=/beegfs/rpm/projects/hermes2go/projects/${MOUNT_PROJECT}
+HERMES_OUT=/beegfs/rpm/projects/hermes2go/out/${MOUNT_PROJECT}_${USER}_${JOB_EXEC_ID}_${DATE}
+mkdir $HERMES_OUT
 
-ARRAYSIZE=`singularity run -B ${MOUNT_PROJECT}:/hermes/project ${IMAGE_PATH} calcHermesBatch -size ${NUM_NODES} ${BATCH_LIST_FILE}`
-ARRAYLIST=`singularity run -B ${MOUNT_PROJECT}:/hermes/project ${IMAGE_PATH} calcHermesBatch -list ${NUM_NODES} ${BATCH_LIST_FILE}`
+HERMES_LOG=/beegfs/rpm/projects/hermes2go/log/${MOUNT_PROJECT}_${USER}_${JOB_EXEC_ID}_${DATE}
+mkdir $HERMES_LOG
+BATCH_LIST_PATH=/hermes/project/${BATCH_LIST_FILE}
+
+ARRAYSIZE=`singularity run -B ${HERMES_PROJECTDIR}:/hermes/project ${IMAGE_PATH} calcHermesBatch -size ${NUM_NODES} ${BATCH_LIST_PATH}`
+ARRAYLIST=`singularity run -B ${HERMES_PROJECTDIR}:/hermes/project ${IMAGE_PATH} calcHermesBatch -list ${NUM_NODES} ${BATCH_LIST_PATH}`
 
 #sbatch commands
-SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME} --time=${TIME} --array=0-${ARRAYSIZE} -o log/hermes-%j.out"
+SBATCH_COMMANDS="--job-name=${SBATCH_JOB_NAME} --time=${TIME} --array=0-${ARRAYSIZE} -o $HERMES_LOG/hermes-%j.out"
 
 # sbatch script commands
-HERMES_INPUT="${MOUNT_PROJECT} ${MOUNT_DATA} ${MOUNT_OUTPUT} ${IMAGE_PATH} ${BATCH_LIST_FILE} ${ARRAYLIST}"
+HERMES_INPUT="${HERMES_PROJECTDIR} ${MOUNT_DATA} ${HERMES_OUT} ${IMAGE_PATH} ${BATCH_LIST_FILE} ${ARRAYLIST}"
 
-echo "sbatch $SBATCH_COMMANDS batch/sbatch_simplace.sh $HERMES_INPUT"
-#sbatch $SBATCH_COMMANDS batch/sbatch_hermes.sh $HERMES_INPUT 
+sbatch $SBATCH_COMMANDS batch/sbatch_hermes.sh $HERMES_INPUT 
