@@ -13,8 +13,10 @@ MOUNT_PROJECT=$3
 MOUNT_DATA=$4
 WORKINGDIR=$5
 SINGULARITY_IMAGE=$6
+MOUNT_TMP=$7
 PROJECT=/project
 DATA=/data
+TMP=/var/run
 
 export RSTUDIO_SESSION_TIMEOUT='0'
 export PASSWORD=$(openssl rand -base64 15)
@@ -55,7 +57,7 @@ export SINGULARITY_HOME
 # bind /data directory on the host into the Singularity container.
 # By default the only host file systems mounted within the container are $HOME, /tmp, /proc, /sys, and /dev.
 singularity exec -B \
-    $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA,$WORKINGDIR:$R_HOME \
+    $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA,$WORKINGDIR:$R_HOME,$MOUNT_TMP:$TMP \
     $SINGULARITY_IMAGE \
     rserver --www-port ${PORT} --auth-none=0 --auth-pam-helper-path=pam-helper
 printf 'rserver exited' 1>&2
