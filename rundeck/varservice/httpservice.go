@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -21,6 +22,53 @@ var port uint64 = 6080
 var sshKey []byte
 var sshDefaultUserName string
 var sshPassPhrase string
+
+// main
+// args optional: -sshkey Ssh/File/Path -sshuser defaultUser -port 6080
+func main() {
+	sshkeyPtr := flag.String("sshkey", "", "ssh key file path")
+	sshuserPtr := flag.String("sshuser", "", "ssh user")
+	sshphrasePtr := flag.String("sshphrase", "", "ssh phrase file path")
+	portPtr := flag.Uint64("port", port, "ssh phrase file path")
+	storePtr := flag.String("store", "", "passphase path")
+	phrasePtr := flag.String("phrase", "", "passphase")
+
+	flag.Parse()
+
+	if len(*sshkeyPtr) > 0 {
+		body, err := ioutil.ReadFile(*sshkeyPtr)
+		if err != nil {
+			log.Fatal("ERROR: Failed to load ssh key")
+			return
+		}
+		sshKey = body
+	}
+	if len(*sshphrasePtr) > 0 {
+		body, err := ioutil.ReadFile(*sshphrasePtr)
+		if err != nil {
+			log.Fatal("ERROR: Failed to load ssh pass phrase")
+			return
+		}
+		sshPassPhrase = string(body)
+	}
+
+	sshDefaultUserName = *sshuserPtr
+	port = *portPtr
+
+	if len(*storePtr) > 0 && len(*phrasePtr) > 0 {
+		println("varservice: store to file")
+		err := ioutil.WriteFile(*storePtr, []byte(*phrasePtr), os.ModePerm)
+		if err != nil {
+			println(err.Error)
+			log.Fatal("ERROR: Failed to write pw file")
+		}
+		return
+	}
+
+	println("varservice started")
+	http.HandleFunc("/rundeckvar/", rundeckVarHandler)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+}
 
 // fetch docker tags, return them as json format string
 // baseurl = e.g. https://hub.docker.com
@@ -238,7 +286,7 @@ func validatePortRange(session *ssh.Session, portRangeObj interface{}) (string, 
 func parseLscpu(lscpuOut string) (int, error) {
 
 	numCPUline := strings.SplitAfter(lscpuOut, "CPU(s):")
-	cpus, err := strconv.ParseInt(strings.Trim(numCPUline[1], "  \n"), 10, 64)
+	cpus, err := strconv.ParseInt(strings.Trim(numCPUline[1], " \n"), 10, 64)
 	if err != nil {
 		return -1, err
 	}
@@ -296,7 +344,7 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `["ERROR"]`)
 			return
 		}
-		fmt.Fprintf(w, taglist)
+		fmt.Fprint(w, taglist)
 		return
 	} else if strings.HasPrefix(requestType, "clusterstatus") {
 		coreValues, ok := r.URL.Query()["cores"]
@@ -345,7 +393,10 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 			(endOk && len(endports[0]) > 0) &&
 			(clusterOk && len(clusterIDs[0]) > 0) {
 			sshUserName, clusterID, err := extractClusterCredentials(clusterIDs[0])
-
+			if err != nil {
+				fmt.Fprintf(w, `["ERROR:  failed to read credentials"]`)
+				return
+			}
 			var ports portRange
 			startport, err := strconv.ParseUint(startports[0], 10, 64)
 			if err != nil {
@@ -377,6 +428,10 @@ func rundeckVarHandler(w http.ResponseWriter, r *http.Request) {
 			clusterOk && len(clusterIDs[0]) > 0 {
 
 			sshUserName, clusterID, err := extractClusterCredentials(clusterIDs[0])
+			if err != nil {
+				fmt.Fprintf(w, `["ERROR:  failed to read credentials"]`)
+				return
+			}
 			cmdresult, err := remoteRun(sshUserName, clusterID, sshKey, sshPassPhrase, pattern[0], listDockerImages)
 			if err != nil {
 				serr := strings.Replace(err.Error(), `"`, "'", -1)
@@ -438,57 +493,4 @@ func sshWorker(c chan<- string, user string, clusterID string, sshKey []byte, re
 
 	cmdresult = fmt.Sprintf(`"%s": "%s"`, clusterID+cmdresult, clusterID)
 	c <- cmdresult
-}
-
-// main
-// args optional: -sshkey Ssh/File/Path -sshuser defaultUser -port 6080
-func main() {
-	argsWithoutProg := os.Args[1:]
-	for i, arg := range argsWithoutProg {
-		if arg == "-sshkey" && i+1 < len(argsWithoutProg) {
-			sshFileName := argsWithoutProg[i+1]
-			body, err := ioutil.ReadFile(sshFileName)
-			if err != nil {
-				log.Fatal("ERROR: Failed to load ssh key")
-				return
-			}
-			sshKey = body
-		}
-		if arg == "-sshuser" && i+1 < len(argsWithoutProg) {
-			sshDefaultUserName = argsWithoutProg[i+1]
-		}
-		if arg == "-sshphrase" && i+1 < len(argsWithoutProg) {
-			sshPassPhraseFileName := argsWithoutProg[i+1]
-			body, err := ioutil.ReadFile(sshPassPhraseFileName)
-			if err != nil {
-				log.Fatal("ERROR: Failed to load ssh pass phrase")
-				return
-			}
-			sshPassPhrase = string(body)
-		}
-		if arg == "-port" && i+1 < len(argsWithoutProg) {
-			p, err := strconv.ParseUint(argsWithoutProg[i+1], 10, 64)
-			if err != nil {
-				log.Fatal("ERROR: Failed to parse port number")
-				return
-			}
-			port = p
-		}
-		if arg == "-store" && i+2 < len(argsWithoutProg) {
-
-			tempfile := argsWithoutProg[i+1]
-			password := argsWithoutProg[i+2]
-			println("varservice: store to file")
-			err := ioutil.WriteFile(tempfile, []byte(password), os.ModePerm)
-			if err != nil {
-				println(err.Error)
-				log.Fatal("ERROR: Failed to write pw file")
-			}
-			return
-		}
-	}
-
-	println("varservice started")
-	http.HandleFunc("/rundeckvar/", rundeckVarHandler)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }
