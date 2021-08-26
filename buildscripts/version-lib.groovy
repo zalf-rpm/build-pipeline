@@ -2,13 +2,13 @@ def commitVersionFileToGit(versionString, relVersionFilePath, reporsitory_Url, g
 {
     dir(gitCheckoutFolder)
     {
-        withCredentials([usernamePassword(credentialsId: credentials, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) 
+        withCredentials([string(credentialsId: credentials, variable: 'GITHUB_ACCESS_TOKEN')]) 
         {
             def gitCommitCmd = """git commit $relVersionFilePath -m \"auto commit version file version $versionString\" """
             def setAuthor = """git config --global user.name \"$authorName\" """
             def setEmail = """git config --global user.email $authorEmail """
-            def pushToGit = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url $branch"""
-
+            //old def pushToGit = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url $branch"""
+            def pushToGit = '''git push https://${GITHUB_ACCESS_TOKEN}@github.com/''' + """$reporsitory_Url.git $branch"""
             if (isUnix())
             { 
                 sh setAuthor
