@@ -88,11 +88,11 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                             cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
                             // git checkout and optional cleanup
-                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_BUILD_PIPELINE}")
-                            checkoutGitRepository('monica', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_MONICA}")
-                            checkoutGitRepository('util', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_UTIL}")
-                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_PARAMETER}")
-                            checkoutGitRepository('mas-infrastructure', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_CAPNPROTO}")                             
+                            checkoutGitRepository('build-pipeline', doCleanupFirst,  "${params.BRANCH_BUILD_PIPELINE}")
+                            checkoutGitRepository('monica', doCleanupFirst,  "${params.BRANCH_MONICA}")
+                            checkoutGitRepository('util', doCleanupFirst,  "${params.BRANCH_UTIL}")
+                            checkoutGitRepository('monica-parameters', doCleanupFirst,  "${params.BRANCH_PARAMETER}")
+                            checkoutGitRepository('mas-infrastructure', doCleanupFirst,  "${params.BRANCH_CAPNPROTO}")                             
                         }
 
                         // create vcpkg package directory 
@@ -161,8 +161,8 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         expression { currentBuild.result != 'FAILURE' }
                     }  
                     steps {
-                        checkoutGitRepository('build-pipeline', true, 'git-zalf-rpm', "${params.BRANCH_BUILD_PIPELINE}")
-                        checkoutGitRepository('monica', true, 'git-zalf-rpm', "${params.BRANCH_MONICA}")
+                        checkoutGitRepository('build-pipeline', true,  "${params.BRANCH_BUILD_PIPELINE}")
+                        checkoutGitRepository('monica', true,  "${params.BRANCH_MONICA}")
 
                         script {
                             def VERSION_NUMBER = increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'gitapitoken2', "", "", "")  
@@ -257,9 +257,9 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 {
                     boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
                     // checkout version in monica
-                    def outVarMap = checkoutGitRepository('monica', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_MONICA}")
+                    def outVarMap = checkoutGitRepository('monica', doCleanupFirst,  "${params.BRANCH_MONICA}")
                     // checkout build script
-                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'git-zalf-rpm',"${params.BRANCH_BUILD_PIPELINE}")
+                    checkoutGitRepository('build-pipeline', doCleanupFirst, "${params.BRANCH_BUILD_PIPELINE}")
 
                     def branch = params.BRANCH_MONICA
                     if (params.BRANCH_MONICA ==~ /origin\/.*/)
@@ -437,7 +437,7 @@ def cleanUpAll(cleanWorkspace)
 }
 
 // checkout git repository 
-def checkoutGitRepository(repositoryName, cleanWorkspace, credentials, branch)
+def checkoutGitRepository(repositoryName, cleanWorkspace, branch)
 {
     // cleanup workspace
     if (cleanWorkspace) { 
@@ -453,7 +453,7 @@ def checkoutGitRepository(repositoryName, cleanWorkspace, credentials, branch)
     extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: repositoryName], 
     [$class: 'LocalBranch', localBranch: "**"]], 
     submoduleCfg: [], 
-    userRemoteConfigs: [[url: "git@github.com:zalf-rpm/$repositoryName", credentialsId: credentials ]]])
+    userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName" ]]])
 
     return outVarMap
 }
