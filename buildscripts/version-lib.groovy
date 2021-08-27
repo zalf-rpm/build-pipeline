@@ -8,7 +8,7 @@ def commitVersionFileToGit(versionString, relVersionFilePath, reporsitory_Url, g
             def setAuthor = """git config --global user.name \"$authorName\" """
             def setEmail = """git config --global user.email $authorEmail """
             //old def pushToGit = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url $branch"""
-            def pushToGit = """git push https://${GITHUB_ACCESS_TOKEN}@github.com/${reporsitory_Url}.git ${branch}"""
+            def pushToGit = """git push https://${GITHUB_ACCESS_TOKEN}@${reporsitory_Url}.git ${branch}"""
             if (isUnix())
             { 
                 sh setAuthor
@@ -70,7 +70,7 @@ def createGitTag(versionString, message, reporsitory_Url, gitCheckoutFolder, cre
                 def setAuthor = """git config --global user.name \"$authorName\" """
                 def setEmail = """git config --global user.email $authorEmail """
                 //def pushToGit = """git push https://${GIT_USERNAME}:${GIT_PASSWORD}@$reporsitory_Url $branch"""
-                def pushToGit = """git push https://${GITHUB_ACCESS_TOKEN}@github.com/${reporsitory_Url}.git ${branch}"""
+                def pushToGit = """git push https://${GITHUB_ACCESS_TOKEN}@${reporsitory_Url}.git ${branch}"""
         
                 if (isUnix())
                 { 
