@@ -88,11 +88,11 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                             cleanUpAll(params.CLEANUP == 'CLEANUP_WORKSPACE')
                             // git checkout and optional cleanup
-                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalfrpmgittoken', "${params.BRANCH_BUILD_PIPELINE}")
-                            checkoutGitRepository('monica', doCleanupFirst, 'zalfrpmgittoken', "${params.BRANCH_MONICA}")
-                            checkoutGitRepository('util', doCleanupFirst, 'zalfrpmgittoken', "${params.BRANCH_UTIL}")
-                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'zalfrpmgittoken', "${params.BRANCH_PARAMETER}")
-                            checkoutGitRepository('mas-infrastructure', doCleanupFirst, 'zalfrpmgittoken', "${params.BRANCH_CAPNPROTO}")                             
+                            checkoutGitRepository('build-pipeline', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_BUILD_PIPELINE}")
+                            checkoutGitRepository('monica', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_MONICA}")
+                            checkoutGitRepository('util', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_UTIL}")
+                            checkoutGitRepository('monica-parameters', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_PARAMETER}")
+                            checkoutGitRepository('mas-infrastructure', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_CAPNPROTO}")                             
                         }
 
                         // create vcpkg package directory 
@@ -100,7 +100,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
 
                         // increase build version, but do not check-in
                         println('increase version number')
-                        increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalfrpmgittoken', "", "", "")   
+                        increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'gitapitoken2', "", "", "")   
                         println('Full version number:')
                         getFullVersionNumber() // yes, this is just debug output
 
@@ -161,11 +161,11 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         expression { currentBuild.result != 'FAILURE' }
                     }  
                     steps {
-                        checkoutGitRepository('build-pipeline', true, 'zalfrpmgittoken', "${params.BRANCH_BUILD_PIPELINE}")
-                        checkoutGitRepository('monica', true, 'zalfrpmgittoken', "${params.BRANCH_MONICA}")
+                        checkoutGitRepository('build-pipeline', true, 'git-zalf-rpm', "${params.BRANCH_BUILD_PIPELINE}")
+                        checkoutGitRepository('monica', true, 'git-zalf-rpm', "${params.BRANCH_MONICA}")
 
                         script {
-                            def VERSION_NUMBER = increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'zalfrpmgittoken', "", "", "")  
+                            def VERSION_NUMBER = increaseVersionStr(false, false, "", params.INCREASE_VERSION, 'gitapitoken2', "", "", "")  
                             def dockerfilePathMonica = './monica'
 
                             def DOCKER_TAG = VERSION_NUMBER
@@ -257,9 +257,9 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                 {
                     boolean doCleanupFirst = params.CLEANUP == 'CLEANUP_WORKSPACE' || params.CLEANUP == 'CLEAN_GIT_CHECKOUT'
                     // checkout version in monica
-                    def outVarMap = checkoutGitRepository('monica', doCleanupFirst, 'zalfrpmgittoken', "${params.BRANCH_MONICA}")
+                    def outVarMap = checkoutGitRepository('monica', doCleanupFirst, 'git-zalf-rpm', "${params.BRANCH_MONICA}")
                     // checkout build script
-                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'zalfrpmgittoken',"${params.BRANCH_BUILD_PIPELINE}")
+                    checkoutGitRepository('build-pipeline', doCleanupFirst, 'git-zalf-rpm',"${params.BRANCH_BUILD_PIPELINE}")
 
                     def branch = params.BRANCH_MONICA
                     if (params.BRANCH_MONICA ==~ /origin\/.*/)
@@ -267,7 +267,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         branch = params.BRANCH_MONICA - ~"origin/"
                     }
                     // increase version, commit + push to git, <optional> create tag     
-                    increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'zalfrpmgittoken', branch, outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
+                    increaseVersionStr(true, params.TAG_BUILD, params.TAG_MESSAGE, params.INCREASE_VERSION, 'gitapitoken2', branch, outVarMap.GIT_AUTHOR_NAME, outVarMap.GIT_AUTHOR_EMAIL)             
                 }
             }                
         }
@@ -285,7 +285,7 @@ CLEANUP_WORKSPACE - wipe clean the workspace(including vcpkg) - Build will take 
                         owner = "zalf-rpm"
                         repository = "monica"
                         artifact_path = "artifact/monica/installer"
-                        credentials = 'zalfrpmgittoken'
+                        credentials = 'git-zalf-rpm'
                         commitHistory = 'patchhistory.txt'
                     }
                     steps {
@@ -453,7 +453,7 @@ def checkoutGitRepository(repositoryName, cleanWorkspace, credentials, branch)
     extensions: [   [$class: 'RelativeTargetDirectory', relativeTargetDir: repositoryName], 
     [$class: 'LocalBranch', localBranch: "**"]], 
     submoduleCfg: [], 
-    userRemoteConfigs: [[url: "https://github.com/zalf-rpm/$repositoryName", credentialsId: credentials ]]])
+    userRemoteConfigs: [[url: "git@github.com:zalf-rpm/$repositoryName", credentialsId: credentials ]]])
 
     return outVarMap
 }
