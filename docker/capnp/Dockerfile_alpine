@@ -1,0 +1,43 @@
+
+# alpine image does not work because capnproto 0.9.1 has dependencies to deprecated 
+# posix features that musl does not implement
+
+FROM alpine:latest
+
+RUN apk add --no-cache curl
+RUN apk add --no-cache g++
+RUN apk add --no-cache make
+RUN apk add --no-cache linux-headers
+RUN apk add --no-cache libucontext
+
+ENV TEMP_DIR="/tmp/capnproto"
+# download
+ARG VERSION="0.9.1"
+ENV URL="https://capnproto.org/capnproto-c++-$VERSION.tar.gz"
+RUN echo "Downloading Cap'n Proto form $URL ..."; \
+	mkdir -p "$TEMP_DIR" \
+	&& curl "$URL" \
+	| tar -xz -C "$TEMP_DIR"
+WORKDIR $TEMP_DIR/capnproto-c++-$VERSION
+
+# configure
+ARG CONFIGURE_CMD="./configure"
+RUN echo "Configuring Cap'n Proto source ($CONFIGURE_CMD)..." \
+	&& eval "$CONFIGURE_CMD"
+
+#RUN ./configure LIBS=-lucontext
+
+# make check
+ARG BUILD_CMD="make -j6 check"
+RUN echo "Building Cap'n Proto ($BUILD_CMD)..." \
+	&& eval "$BUILD_CMD"
+# make install
+ARG INSTALL_CMD="make install"
+RUN echo "Installing Cap'n Proto ($INSTALL_CMD)..." \
+	&& eval "$INSTALL_CMD"
+
+WORKDIR /
+# cleanup
+RUN echo "Cleaning up after Cap'n Proto installation..." \
+	&& rm -rf "$TEMP_DIR"
+    
