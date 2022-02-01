@@ -1,0 +1,62 @@
+version: '3'
+
+services:
+    rundeckMAS:
+        hostname: rundeckMAS
+        image: ${RUNDECK_IMAGE:?err}
+        links:
+          - ldap
+          - mysql
+        tty: true
+        environment:
+            RUNDECK_JAAS_MODULES_0: JettyCombinedLdapLoginModule
+            RUNDECK_JAAS_LDAP_FLAG: sufficient
+            RUNDECK_JAAS_LDAP_PROVIDERURL: ldap://ldap:389
+            RUNDECK_JAAS_LDAP_BINDDN: cn=admin,dc=rdtest,dc=com
+            RUNDECK_JAAS_LDAP_BINDPASSWORD: AdminPass123
+            RUNDECK_JAAS_LDAP_USERBASEDN: ou=users,dc=rdtest,dc=com
+            RUNDECK_JAAS_LDAP_ROLEBASEDN: ou=roles,dc=rdtest,dc=com
+
+            RUNDECK_STORAGE_CONVERTER_1_CONFIG_PASSWORD: supersecret
+            RUNDECK_CONFIG_STORAGE_CONVERTER_1_CONFIG_PASSWORD: supersecret
+
+            RUNDECK_JAAS_MODULES_1: PropertyFileLoginModule
+            RUNDECK_JAAS_FILE_FLAG: sufficient
+
+            RUNDECK_DATABASE_DRIVER: org.mariadb.jdbc.Driver
+            RUNDECK_DATABASE_USERNAME: rundeck
+            RUNDECK_DATABASE_PASSWORD: rundeck
+            RUNDECK_DATABASE_URL: jdbc:mysql://mysql/rundeck?autoReconnect=true&useSSL=false
+
+            RUNDECK_LOGGING_STRATEGY: FILE
+        volumes:
+          - ${RUNDECK_MOUNT_HOME:?err}/.ssh:/home/rundeck/.ssh
+          - ${RUNDECK_MOUNT_HOME:?err}/logs:/home/rundeck/server/logs
+        ports:
+          - 4440:4440
+    ldap:
+        hostname: ldap
+        image: osixia/openldap:1.2.1 
+        environment:
+          - LDAP_ORGANISATION=RD Test
+          - LDAP_DOMAIN=rdtest.com
+          - LDAP_ADMIN_PASSWORD=AdminPass123
+        volumes:
+          - ./ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom:rw
+        ports:
+          - "389:389"
+        command: --copy-service
+
+    mysql:
+        image: mysql:5.7
+        expose:
+          - 3306
+        environment:
+          - MYSQL_ROOT_PASSWORD=root
+          - MYSQL_DATABASE=rundeck
+          - MYSQL_USER=rundeck
+          - MYSQL_PASSWORD=rundeck
+        volumes:
+          - dbdata:/var/lib/mysql
+volumes:
+    dbdata:
