@@ -21,8 +21,10 @@ services:
           - logs:/home/rundeck/server/logs
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/jaas-loginmodule.conf:/home/rundeck/server/config/jaas-loginmodule.conf
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/realm.properties:/home/rundeck/server/config/realm.properties
-        ports:
-          - 4440:4440
+        expose: 
+          - 4440
+        #ports:
+          #- 4440:4440
     mysql:
         image: mysql:5.7
         expose:
@@ -34,6 +36,15 @@ services:
           - MYSQL_PASSWORD=${MAS_RUNDECK_DB_PASSWORD:?err}
         volumes:
           - dbdata:/var/lib/mysql
+    apache:
+      image: 'docker pull httpd:2.4'
+      links:
+          - rundeck
+      ports:
+        - '80:8080'
+        #- '443:8443'
+      volumes:
+        - /home/apache/htdocs:/usr/local/apache2/htdocs/
 
 volumes:
     dbdata:
