@@ -7,6 +7,10 @@ services:
         links:
           - mysql
         environment:
+            RUNDECK_GRAILS_URL: ${MAS_RUNDECK_GRAILS_URL:?err}/rundeck
+            RUNDECK_SERVER_FORWARDED: 'true'    
+            RUNDECK_SERVER_CONTEXTPATH: /rundeck   
+
             RUNDECK_DATABASE_DRIVER: org.mariadb.jdbc.Driver
             RUNDECK_DATABASE_USERNAME: rundeck
             RUNDECK_DATABASE_PASSWORD: ${MAS_RUNDECK_DB_PASSWORD:?err}
@@ -16,15 +20,12 @@ services:
             RUNDECK_CONFIG_STORAGE_CONVERTER_1_CONFIG_PASSWORD: ${MAS_RUNDECK_STORAGE_PASSWORD:?err}
 
             RUNDECK_LOGGING_STRATEGY: FILE
+
         volumes:
           - data:/home/rundeck/server/data
           - logs:/home/rundeck/server/logs
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/jaas-loginmodule.conf:/home/rundeck/server/config/jaas-loginmodule.conf
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/realm.properties:/home/rundeck/server/config/realm.properties
-        expose: 
-          - 4440
-        #ports:
-          #- 4440:4440
     mysql:
         image: mysql:5.7
         expose:
@@ -36,16 +37,14 @@ services:
           - MYSQL_PASSWORD=${MAS_RUNDECK_DB_PASSWORD:?err}
         volumes:
           - dbdata:/var/lib/mysql
-    apache:
-      image: 'docker pull httpd:2.4'
-      links:
+    nginx:
+        image: nginx
+        links:
           - rundeck
-      ports:
-        - '80:8080'
-        #- '443:8443'
-      volumes:
-        - /home/apache/htdocs:/usr/local/apache2/htdocs/
-
+        volumes:
+          - ${MAS_PROXY_MOUNT_HOME:?err}/nginx.conf:/etc/nginx/nginx.conf:ro
+        ports:
+          - 80:80
 volumes:
     dbdata:
       driver: local
