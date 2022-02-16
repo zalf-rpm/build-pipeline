@@ -43,8 +43,10 @@ services:
           - rundeck
         volumes:
           - ${MAS_PROXY_MOUNT_HOME:?err}/nginx.conf:/etc/nginx/nginx.conf:ro
+          - ${MAS_PROXY_MOUNT_HOME:?err}/ssl-certs:/etc/nginx/ssl-certs
         ports:
           - 80:80
+          - 443:443
 volumes:
     dbdata:
       driver: local
