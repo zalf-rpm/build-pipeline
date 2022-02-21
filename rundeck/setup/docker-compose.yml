@@ -6,6 +6,7 @@ services:
         image: ${MAS_RUNDECK_IMAGE:?err}
         links:
           - mysql
+          - varservice
         environment:
             RUNDECK_GRAILS_URL: ${MAS_RUNDECK_GRAILS_URL:?err}/rundeck
             RUNDECK_SERVER_FORWARDED: 'true'    
@@ -38,6 +39,10 @@ services:
           - MYSQL_PASSWORD=${MAS_RUNDECK_DB_PASSWORD:?err}
         volumes:
           - dbdata:/var/lib/mysql
+    varservice: 
+        image: varservice:1.0
+        expose:
+          - 6080
     nginx:
         image: nginx
         links:
