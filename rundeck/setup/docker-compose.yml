@@ -27,7 +27,6 @@ services:
           - logs:/home/rundeck/server/logs
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/jaas-loginmodule.conf:/home/rundeck/server/config/jaas-loginmodule.conf:ro
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/realm.properties:/home/rundeck/server/config/realm.properties:ro
-          - ${MAS_RUNDECK_MOUNT_SSH:?err}:/home/rundeck/.ssh
     mysql:
         image: mysql:5.7
         expose:
