@@ -34,13 +34,11 @@ echo "worker array: " $NODE_ARRAY_WORKER
 DATE=`date +%Y-%d-%B_%H%M%S`
 
 # start proxy
-$MOUNT_LOG_PROXY=$MOUNT_LOG_PROXY/${DATE}
 mkdir -p $MOUNT_LOG_PROXY
 srun --exclusive -w $NODE_PROXY -N1 -n1 -o ${MONICA_LOG}/monica_proxy_%j batch/sbatch_monica_proxy.sh ${SINGULARITY_MONICA_IMAGE} $MOUNT_LOG_PROXY &
 
 
 # start worker
-$MOUNT_LOG_WORKER=$MOUNT_LOG_WORKER/${DATE}
 mkdir -p $MOUNT_LOG_WORKER
 for node in "${NODE_ARRAY_WORKER[@]}"; do
     echo "worker: " ${node}
