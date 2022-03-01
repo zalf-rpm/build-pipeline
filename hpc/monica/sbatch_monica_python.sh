@@ -16,6 +16,12 @@ PROJECT=/project
 PARAMS=/monica-parameters
 
 cd $WORKDIR
+echo "set singularity home"
+SINGULARITY_HOME=${WORKDIR}
+export SINGULARITY_HOME
+
+echo "start python script"
+
 singularity run -B \
 $MOUNT_DATA:$DATA,\
 $MOUNT_DATA_PROJECT:$PROJECT,\
