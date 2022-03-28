@@ -22,5 +22,4 @@ func main() {
 	if err := ConvertHermesMetToMonica(cmdl.folderIn, cmdl.folderOut); err != nil {
 		fmt.Print(err)
 	}
-
 }

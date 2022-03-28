@@ -90,6 +90,9 @@ func ConvertHermesMetToMonica(folderIn, folderOut string) error {
 		}
 		return nil
 	})
+	if err != nil {
+		fmt.Print(err)
+	}
 
 	for _, entry := range fileList {
 		makeDir(entry.outputPath)
@@ -121,10 +124,7 @@ func ConvertHermesMetToMonica(folderIn, folderOut string) error {
 					continue
 				}
 				record := strings.FieldsFunc(scanner.Text(), func(r rune) bool {
-					if r == ';' {
-						return true
-					}
-					return false
+					return r == ';'
 				})
 
 				// date
