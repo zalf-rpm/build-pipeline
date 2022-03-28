@@ -1,7 +1,7 @@
 #!/bin/bash -x
-#/ usage: start ?user? ?job_exec_id? ?host? ?mount_climate_data? ?mount_project_data? ?estimated_time? ?use_High_memory_node?
+#/ usage: start ?user? ?job_exec_id? ?host? ?mount_climate_data? ?mount_project_data? ?estimated_time? ?use_High_memory_node? ?version?
 set -eu
-[[ $# < 7 ]] && {
+[[ $# < 8 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -16,7 +16,7 @@ MOUNT_DATA=$4
 MOUNT_PROJECT=$5
 TIME=$6
 USEHIGHMEM=$7
-VERSION=3.6.3_4
+VERSION=$8
 
 #sbatch job name 
 SBATCH_JOB_NAME="R_${USER}_${JOB_EXEC_ID}"
@@ -60,3 +60,4 @@ sleep 5
 if [ -f ${LOG_NAME} ] ; then
     cat ${LOG_NAME}
 fi 
+
