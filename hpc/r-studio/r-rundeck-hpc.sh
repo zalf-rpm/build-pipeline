@@ -44,7 +44,7 @@ CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time
 SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_RSTUDIO_PATH}"
 
 cd ${MOUNT_PROJECT}
-BATCHID=$( sbatch $CMD_LINE_SLURM ~/batch/r_studio_server.sh $SCRIPT_INPUT )
+BATCHID=$( sbatch $CMD_LINE_SLURM ~/batch/r_studio_server${VERSION}.sh $SCRIPT_INPUT )
 
 LOG_NAME=${LOGS}/rstudio-server_${USER}_${BATCHID}.log
 COUNTER=0
