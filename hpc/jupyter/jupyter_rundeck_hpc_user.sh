@@ -23,7 +23,7 @@ SBATCH_JOB_NAME="jupyter_${JOB_EXEC_ID}"
 
 # get jupyter as prepared docker image
 IMAGE_DIR=/beegfs/common/singularity/jupyter
-SINGULARITY_IMAGE=scipy-notebook_${VERSION}.sif
+SINGULARITY_IMAGE=${VERSION}.sif
 IMAGE_JUPYTER_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
 
 if [ ! -e ${IMAGE_JUPYTER_PATH} ] ; then
@@ -47,6 +47,11 @@ elif [ $PARTITION == "fat" ] ; then
   HPC_PARTITION="--partition=fat"
   CORES=160
 fi
+
+if  [[ $MOUNT_PROJECT == *"<username>"* ]] ; then
+  MOUNT_PROJECT=$(echo $MOUNT_PROJECT | sed "s/<username>/${USER}/")
+fi 
+
 # required nodes 1
 CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c ${CORES} -o ${LOGS}/jupyter_notebook_${USER}_%j.log"
 SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_JUPYTER_PATH}"
@@ -77,10 +82,23 @@ cat 1>&2 <<END
 
    ssh -N -L 8888:${NODEHOST}:${PORT} ${USER}@${LOGIN_HOST}
 
-   open the log file and copy the adress + token from this log:
-   http://localhost:8888/<token>
+2. login at http://localhost:8888/lab with your password
+  
+  For initial login, please find the token in your log file at:
+   ${LOG_NAME}
 
-   KEEP YOUR TOKEN SECRET!
+   Find line: 
+   "To access the server, open this file in a browser"
+    Extract token from URL
+    http://127.0.0.1:8888/lab?token=<some_token>
+
+  Open Browser
+   http://localhost:8888/
+  This will open a page to set a password using that token.
+
+   Please choose a different password from Zalf password!
+
+   KEEP YOUR TOKEN AND PASSWORD SECRET!
 END
 
 fi 
