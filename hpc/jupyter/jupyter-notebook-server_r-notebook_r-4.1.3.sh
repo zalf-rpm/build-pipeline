@@ -15,12 +15,15 @@ SINGULARITY_IMAGE=$6
 
 PROJECT=/project
 DATA=/data
+JOVYAN=/home/jovyan
 
+MOUNT_JOVYAN=~/jovyan/work
+mkdir -p $MOUNT_JOVYAN
 
 cd ${HOMEDIR}
 export SINGULARITYENV_USE_HTTPS=yes
 
 singularity run \
--B $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA \
+-B $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA,$MOUNT_JOVYAN:$JOVYAN \
 $SINGULARITY_IMAGE 
 printf 'jupyter exited' 1>&2
