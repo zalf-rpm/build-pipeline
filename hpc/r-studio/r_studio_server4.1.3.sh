@@ -81,7 +81,7 @@ END
 # bind /data directory on the host into the Singularity container.
 # By default the only host file systems mounted within the container are $HOME, /tmp, /proc, /sys, and /dev.
 singularity exec --cleanenv \
--B $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA \
+-B $MOUNT_PROJECT:$PROJECT:ro,$MOUNT_DATA:$DATA:ro \
 -H $SINGULARITY_HOME \
 -W $SINGULARITY_HOME \
 $SINGULARITY_IMAGE \

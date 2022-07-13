@@ -20,7 +20,7 @@ export monica_proxy_in_host=$PROXY_SERVER
 export monica_proxy_out_host=$PROXY_SERVER
 
 singularity run -B \
-$MOUNT_DATA:$DATADIR,\
+$MOUNT_DATA:$DATADIR:ro,\
 $MOUNT_LOG:$LOGOUT \
 --pwd / \
 ${SINGULARITY_IMAGE} 

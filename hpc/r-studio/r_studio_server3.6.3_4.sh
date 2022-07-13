@@ -57,7 +57,7 @@ export SINGULARITY_HOME
 # bind /data directory on the host into the Singularity container.
 # By default the only host file systems mounted within the container are $HOME, /tmp, /proc, /sys, and /dev.
 singularity exec -B \
-    $MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA,$WORKINGDIR:$R_HOME,$MOUNT_TMP:$TMP \
+    $MOUNT_PROJECT:$PROJECT:ro,$MOUNT_DATA:$DATA:ro,$WORKINGDIR:$R_HOME,$MOUNT_TMP:$TMP \
     $SINGULARITY_IMAGE \
     rserver --www-port ${PORT} --auth-none=0 --auth-pam-helper-path=pam-helper
 printf 'rserver exited' 1>&2
