@@ -15,7 +15,7 @@ LOGIN_HOST=$3
 MOUNT_DATA=$4
 MOUNT_PROJECT=$5
 TIME=$6
-USEHIGHMEM=$7
+PARTITION=$7
 VERSION=$8
 
 #sbatch job name 
@@ -36,11 +36,22 @@ LOGS=/beegfs/rpm/projects/R/log
 mkdir -p $LOGS
 
 HPC_PARTITION="--partition=compute"
-if [ $USEHIGHMEM == "true" ] ; then 
+CORES=80
+echo "warning..."
+if [ $PARTITION == "highmem" ] ; then 
   HPC_PARTITION="--partition=highmem"
+  CORES=80
+elif [ $PARTITION == "gpu" ] ; then 
+  HPC_PARTITION="--partition=gpu"
+  CORES=48
+elif [ $PARTITION == "fat" ] ; then 
+  HPC_PARTITION="--partition=fat"
+  CORES=160
 fi
+
+
 # required nodes 1
-CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c 80 -o ${LOGS}/rstudio-server_${USER}_%j.log"
+CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c $CORES -o ${LOGS}/rstudio-server_${USER}_%j.log"
 SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_RSTUDIO_PATH}"
 
 cd ${MOUNT_PROJECT}
