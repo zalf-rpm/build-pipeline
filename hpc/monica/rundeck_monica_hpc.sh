@@ -80,7 +80,7 @@ monica_auto_restart_proxies=true,\
 monica_auto_restart_worker=false
 
 singularity instance start --env ${ENV_VARS} -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} ${PROXY_NAME} 
-nohup singularity run instance://${PROXY_NAME} > /dev/null 2>&1 & 
+nohup singularity run --env ${ENV_VARS} instance://${PROXY_NAME} > /dev/null 2>&1 & 
 # start worker
 
 #sbatch commands
