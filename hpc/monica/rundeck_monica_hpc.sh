@@ -79,12 +79,12 @@ monica_autostart_worker=false,\
 monica_auto_restart_proxies=true,\
 monica_auto_restart_worker=false
 
-singularity instance start -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} ${PROXY_NAME} 
+singularity instance start --env ${ENV_VARS} -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} ${PROXY_NAME} 
 nohup singularity run instance://${PROXY_NAME} > /dev/null 2>&1 & 
 # start worker
 
 #sbatch commands
-SBATCH_COMMANDS="--parsable --env ${ENV_VARS} --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n ${NUM_NODES} -c 40 -o log/monica-%j"
+SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n ${NUM_NODES} -c 40 -o log/monica-%j"
 
 #sbatch script commands
 PROXY_SERVER=$HOSTNAME

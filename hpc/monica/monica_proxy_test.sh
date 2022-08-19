@@ -15,5 +15,5 @@ monica_autostart_worker=false,\
 monica_auto_restart_proxies=true,\
 monica_auto_restart_worker=false
 
-singularity instance start -B $MOUNT_LOG:$LOGOUT ${SINGULARITY_IMAGE} monica_proxy 
-singularity run --env ${ENV_VARS} instance://monica_proxy > /dev/null 2>&1 &
+singularity instance start --env ${ENV_VARS} -B $MOUNT_LOG:$LOGOUT ${SINGULARITY_IMAGE} monica_proxy 
+singularity run instance://monica_proxy > /dev/null 2>&1 &
