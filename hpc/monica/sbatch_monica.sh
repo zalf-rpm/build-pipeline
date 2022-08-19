@@ -12,17 +12,17 @@ LOGOUT=/var/log
 MOUNT_LOG=~/log/supervisor/monica/worker
 mkdir -p $MOUNT_LOG
 
-export monica_instances=$NUM_WORKER
-export monica_intern_in_port=${INTERN_IN_PORT}
-export monica_intern_out_port=${INTERN_OUT_PORT}
-export monica_autostart_proxies=false
-export monica_autostart_worker=true
-export monica_auto_restart_proxies=false
-export monica_auto_restart_worker=true
-export monica_proxy_in_host=$PROXY_SERVER
-export monica_proxy_out_host=$PROXY_SERVER
+ENV_VARS=monica_instances=$NUM_WORKER,\
+monica_intern_in_port=${INTERN_IN_PORT},\
+monica_intern_out_port=${INTERN_OUT_PORT},\
+monica_autostart_proxies=false,\
+monica_autostart_worker=true,\
+monica_auto_restart_proxies=false,\
+monica_auto_restart_worker=true,\
+monica_proxy_in_host=$PROXY_SERVER,\
+monica_proxy_out_host=$PROXY_SERVER
 
-srun singularity run -B \
+srun singularity run --env ${ENV_VARS} -B \
 $MOUNT_DATA:$DATADIR,\
 $MOUNT_LOG:$LOGOUT \
 --pwd / \

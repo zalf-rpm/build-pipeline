@@ -70,23 +70,21 @@ fi
 PROXY_NAME="monica_proxy_${ADDR[0]}"
 echo "proxy name: ${PROXY_NAME}"
 
-export monica_intern_in_port=${ADDR[1]}
-export monica_intern_out_port=${ADDR[2]}
-export monica_consumer_port=${ADDR[3]}
-export monica_producer_port=${ADDR[4]}
- 
-export monica_autostart_proxies=true
-export monica_autostart_worker=false
-export monica_auto_restart_proxies=true
-export monica_auto_restart_worker=false
-
+ENV_VARS=monica_intern_in_port=${ADDR[1]},\
+monica_intern_out_port=${ADDR[2]},\
+monica_consumer_port=${ADDR[3]},\
+monica_producer_port=${ADDR[4]},\
+monica_autostart_proxies=true,\
+monica_autostart_worker=false,\
+monica_auto_restart_proxies=true,\
+monica_auto_restart_worker=false
 
 singularity instance start -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} ${PROXY_NAME} 
 nohup singularity run instance://${PROXY_NAME} > /dev/null 2>&1 & 
 # start worker
 
 #sbatch commands
-SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n ${NUM_NODES} -c 40 -o log/monica-%j"
+SBATCH_COMMANDS="--parsable --env ${ENV_VARS} --job-name=${SBATCH_JOB_NAME} --time=${TIME} -N ${NUM_NODES} -n ${NUM_NODES} -c 40 -o log/monica-%j"
 
 #sbatch script commands
 PROXY_SERVER=$HOSTNAME

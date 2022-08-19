@@ -9,17 +9,17 @@ MOUNT_LOG=$5
 DATADIR=/monica_data/climate-data
 LOGOUT=/var/log
 
-export monica_instances=$NUM_WORKER
-export monica_intern_in_port=6677
-export monica_intern_out_port=7788
-export monica_autostart_proxies=false
-export monica_autostart_worker=true
-export monica_auto_restart_proxies=false
-export monica_auto_restart_worker=true
-export monica_proxy_in_host=$PROXY_SERVER
-export monica_proxy_out_host=$PROXY_SERVER
+ENV_VARS=monica_instances=$NUM_WORKER,\
+monica_intern_in_port=6677,\
+monica_intern_out_port=7788,\
+monica_autostart_proxies=false,\
+monica_autostart_worker=true,\
+monica_auto_restart_proxies=false,\
+monica_auto_restart_worker=true,\
+monica_proxy_in_host=$PROXY_SERVER,\
+monica_proxy_out_host=$PROXY_SERVER
 
-singularity run -B \
+singularity run --env ${ENV_VARS} -B \
 $MOUNT_DATA:$DATADIR:ro,\
 $MOUNT_LOG:$LOGOUT \
 --pwd / \
