@@ -6,11 +6,10 @@
 
 NUM_FILES=274
 PARALLEL_JOBS=20
-CMD="echo 'Hello World'"
-PARAMS=""
+CMD='./parallel_run -cores 4 -task '
 
 for  (( INDEX=1; INDEX<=${NUM_FILES}; INDEX++ )) ; do
-	${CMD} ${PARAMS} ${INDEX} &
+	${CMD} ${INDEX} &
 	if [ `expr ${INDEX} % $PARALLEL_JOBS` -eq 0 ] ; then 
 	 wait
 	 echo "next batch"
