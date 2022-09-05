@@ -42,7 +42,7 @@ srun --exclusive -w $NODE_PROXY -N1 -n1 -o ${MONICA_LOG}/monica_proxy_%j batch/s
 mkdir -p $MOUNT_LOG_WORKER
 for node in "${NODE_ARRAY_WORKER[@]}"; do
     echo "worker: " ${node}
-    srun --exclusive -w ${node} -N1 -n1 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER &
+    srun --exclusive -w ${node} -N1 -n1 -c40 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER &
 done
 
 MONICA_PARAMS=$MONICA_WORKDIR/monica-parameters
