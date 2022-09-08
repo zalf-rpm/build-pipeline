@@ -13,8 +13,8 @@ MOUNT_DATA=$4
 HOMEDIR=$5
 SINGULARITY_IMAGE=$6
 
-PROJECT=/project
-DATA=/data
+PROJECT=${HOMEDIR}/project
+DATA=${HOMEDIR}/data
 JOVYAN=/home/jovyan
 
 MOUNT_JOVYAN=~/jovyan/work
