@@ -16,7 +16,11 @@ mkdir -p $TEST_PATH_PROJECTS
 SIMPLACE_WORKDIR=/simplace/SIMPLACE_WORK
 OUTDIR=/outputs
 DATADIR=/data
-PROJECTDIR=/projectsl
+PROJECTDIR=/projects
+
+touch ${TEST_PATH_OUT}/myoutput.txt
+touch ${TEST_PATH_DATA}/mydata.txt
+touch ${TEST_PATH_PROJECTS}/myproject.txt
 
 SOLUTION=SimulationExperimentTemplate/solution/Lintul5.sol.xml
 PROJECT=SimulationExperimentTemplate/project/Lintul5All.proj.xml
