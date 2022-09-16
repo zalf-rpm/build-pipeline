@@ -11,3 +11,4 @@ testtools/simplace_output_verify/simplace_output_verify.exe
 rundeck/sim_schedule/sim_schedule.exe
 hpc/simplace/accumulate_output/accumulate_output.exe
 docker/apsimx/test
+docker/simplace-hpc/simplace
