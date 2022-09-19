@@ -74,6 +74,7 @@ RUN mkdir -p /simplace/SIMPLACE_WORK
 RUN mkdir -p /data
 RUN mkdir -p /projects
 RUN mkdir -p /outputs
+RUN mkdir -p /simplace/logs
 
 # copy pre-build executable
 COPY ${EXECUTABLE_SOURCE} ${SIMPLACE_DIR}
