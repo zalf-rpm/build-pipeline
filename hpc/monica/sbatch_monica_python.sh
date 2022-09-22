@@ -22,7 +22,7 @@ export SINGULARITY_HOME
 
 echo "start python script"
 
-singularity run -B \
+singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME -B \
 $MOUNT_DATA:$DATA:ro,\
 $MOUNT_DATA_PROJECT:$PROJECT:ro,\
 $MONICA_OUT:$OUT,\
