@@ -62,6 +62,22 @@ mkdir -p $LOGS
 
 cd $PLAYGROUND
 
+# check if jupyter is installed
+cp /beegfs/common/batch/installjupyter.sh .
+STATUS=$?
+if [ $STATUS != 0 ]; then                   
+   echo "Copy installjupyter.sh: $STATUS - failed" 
+   exit 1
+fi
+
+export SINGULARITYENV_USE_HTTPS=yes
+export SINGULARITY_HOME=$PLAYGROUND
+
+singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
+-B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
+$IMAGE_PATH /bin/bash installjupyter.sh $PLAYGROUND
+
+
 DATE=`date +%Y-%d-%B_%H%M%S`
 
 # required nodes 1
