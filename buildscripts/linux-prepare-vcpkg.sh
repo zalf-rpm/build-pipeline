@@ -36,5 +36,6 @@ cd vcpkg
 # zeromq
 ./vcpkg install zeromq:x64-linux
 ./vcpkg install capnproto:x64-linux
+./vcpkg install libsodium:x64-linux
 
 rm -rf buildtrees
