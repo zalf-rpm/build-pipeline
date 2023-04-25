@@ -41,8 +41,8 @@ END
 cat > ${workdir}/rsession.sh <<END
 #!/bin/sh
 export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE}
-export R_LIBS_USER=${HOMEDIR}/R/rocker-rstudio/4.0
-exec rsession "\${@}"
+export R_LIBS_USER=${HOMEDIR}/R/rocker-rstudio/4.2
+exec /usr/lib/rstudio-server/bin/rsession "\${@}"
 END
 
 chmod +x ${workdir}/rsession.sh
@@ -83,13 +83,12 @@ END
 singularity exec --cleanenv \
 -B $MOUNT_PROJECT:$PROJECT:ro,$MOUNT_DATA:$DATA:ro \
 -H $SINGULARITY_HOME \
--W $SINGULARITY_HOME \
-$SINGULARITY_IMAGE \
+-W $SINGULARITY_HOME $SINGULARITY_IMAGE \
 rserver --www-port ${PORT} \
  --server-user $SINGULARITYENV_USER \
  --auth-none=0 \
  --auth-pam-helper-path=pam-helper \
  --auth-stay-signed-in-days=30 \
  --auth-timeout-minutes=0 \
- --rsession-path=/etc/rstudio/rsession.sh
+ --rsession-path=/etc/rstudio/rsession.sh 
 printf 'rserver exited' 1>&2
