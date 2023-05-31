@@ -44,8 +44,8 @@ MOUNT_DATA=/beegfs/common/data
 WORKDIR=/beegfs/${USER}/R_playground${VERSION}
 LOGS=$WORKDIR/log
 
-mkdir -p $WORKDIR
-mkdir -p $LOGS
+mkdir -p -m 700 $WORKDIR
+mkdir -p -m 700 $LOGS
 
 HPC_PARTITION="--partition=compute"
 CORES=80
