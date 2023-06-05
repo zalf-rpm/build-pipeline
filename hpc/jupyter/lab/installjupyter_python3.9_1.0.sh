@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash 
 
 WORKDIR=$1
 PASSWORD=$2
@@ -15,6 +15,7 @@ conda create -y --name jupyterenv
 conda activate jupyterenv
 # install jupyterlab
 conda install -y -c conda-forge jupyterlab
+conda clean -y --all
 fi
 # create jupyter config if not already existing
 JUPYTER_PATH=$WORKDIR/.jupyter/jupyter_server_config.py

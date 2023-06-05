@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash 
 #SBATCH --time=00:015:00
 #SBATCH --signal=USR2
 #SBATCH --ntasks=1
@@ -22,7 +22,7 @@ DATA=${JWORK}/data
 USERHOME=${JWORK}/home
 
 cd ${PLAYGROUND}
-cp /beegfs/common/batch/startjupyter_${VERSION}.sh .
+cp -f /beegfs/common/batch/startjupyter_${VERSION}.sh .
 STATUS=$?
 if [ $STATUS != 0 ]; then                   
    echo "Copy startjupyter_${VERSION}.sh: $STATUS - failed" 
@@ -33,19 +33,19 @@ fi
 # if read_only_sources is true, mount data sources as read-only
 MOUNT_DATA_SOURCES=""
 if [ $MOUNT_DATA_SOURCE1 != "none" ] ; then
-  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE1:$MOUNT_DATA_SOURCE1"
+  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE1:${JWORK}/data1"
   if [ $READ_ONLY_SOURCES == "true" ] ; then
     MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
   fi
 fi
 if [ $MOUNT_DATA_SOURCE2 != "none" ] ; then
-  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE2:$MOUNT_DATA_SOURCE2"
+  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE2:${JWORK}/data2"
   if [ $READ_ONLY_SOURCES == "true" ] ; then
     MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
   fi
 fi
 if [ $MOUNT_DATA_SOURCE3 != "none" ] ; then
-  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE3:$MOUNT_DATA_SOURCE3"
+  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE3:${JWORK}/data3"
   if [ $READ_ONLY_SOURCES == "true" ] ; then
     MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
   fi
