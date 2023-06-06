@@ -72,3 +72,10 @@ RUN $CONDA_DIR/bin/conda clean -y --all && \
     ln -s $CONDA_DIR/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc
+
+#RUN conda update -n base -c defaults conda
+RUN $CONDA_DIR/bin/conda install -c conda-forge cartopy
+RUN $CONDA_DIR/bin/conda install -c conda-forge netcdf4
+RUN $CONDA_DIR/bin/conda install -c conda-forge pyzmq
+RUN $CONDA_DIR/bin/conda install -c conda-forge nco
+RUN $CONDA_DIR/bin/conda clean -y --all
