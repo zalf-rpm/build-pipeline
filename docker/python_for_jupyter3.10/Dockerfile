@@ -65,10 +65,10 @@ ENV SHELL=/bin/bash
 ARG MINICONDA_VERSION=py310_23.3.1
 
 # install miniconda
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERSION}-0-Linux-x86_64 -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p $CONDA_DIR && \
-    rm ~/miniconda.sh && \
-    $CONDA_DIR/bin/conda clean -tipsy && \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERSION}-0-Linux-x86_64.sh -O ~/miniconda.sh 
+RUN /bin/bash ~/miniconda.sh -b -p $CONDA_DIR && \
+    rm ~/miniconda.sh 
+RUN $CONDA_DIR/bin/conda clean -y --all && \
     ln -s $CONDA_DIR/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc
