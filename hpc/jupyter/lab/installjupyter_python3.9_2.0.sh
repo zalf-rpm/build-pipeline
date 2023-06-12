@@ -15,6 +15,15 @@ conda create -y --name jupyterenv python=3.9
 conda activate jupyterenv
 # install jupyterlab
 conda install -y -c conda-forge jupyterlab
+conda install -y -c conda-forge ipywidgets
+conda install -y -c conda-forge widgetsnbextension
+conda install -y -c conda-forge matplotlib-base
+conda install -y -c conda-forge pandas
+conda install -y -c conda-forge scipy
+conda install -y -c conda-forge seaborn
+conda install -y -c conda-forge jupyterlab-git
+conda install -y -c conda-forge jupyterlab-drawio
+
 conda clean -y --all
 fi
 # create jupyter config if not already existing
@@ -27,5 +36,7 @@ fi
 if [ ! -z "$PASSWORD" ] ; then
 conda activate jupyterenv
 HASH=$(python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSWORD','sha1'))\")")
-sed -i "s/# c.ServerApp.password = .*/c.ServerApp.password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
+sed -i "s/# c.ServerApp.password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
+sed -i "s/# c.ServerApp.password_required = .*/c.PasswordIdentityProvider.password_required = True/g" $WORKDIR/.jupyter/jupyter_server_config.py 
+
 fi

@@ -139,7 +139,15 @@ cat 1>&2 <<END
 
    ssh -N -L ${PORT}:${NODEHOST}:8888 ${USER}@${LOGIN_HOST}
 
-2. open http://localhost:${PORT}/lab in your web browser
+2. open in your web browser:
+   
+   http://localhost:${PORT}/lab 
+
+3. please shutdown your jupyter after finishing your work with
+   
+   'File->Shut Down' in the jupyterlab menu
+    or end the SLURM job with
+   scancel ${BATCHID}
     
 END
 
