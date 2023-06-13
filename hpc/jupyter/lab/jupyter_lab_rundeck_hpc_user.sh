@@ -33,106 +33,132 @@ if [ $PASSW == "none" ] ; then
     PASSW=""
 fi
 
-# check if additional directories are available (else set to none)
-if [ ! -d ${MOUNT_DATA_SOURCE1} ] ; then
-echo "Additional directory '${MOUNT_DATA_SOURCE1}' not found"
-MOUNT_DATA_SOURCE1=none
-fi
-if [ ! -d ${MOUNT_DATA_SOURCE2} ] ; then
-echo "Additional directory '${MOUNT_DATA_SOURCE2}' not found"
-MOUNT_DATA_SOURCE2=none
-fi
-if [ ! -d ${MOUNT_DATA_SOURCE3} ] ; then
-echo "Additional directory '${MOUNT_DATA_SOURCE3}' not found"
-MOUNT_DATA_SOURCE3=none
-fi
-
-# default mounts
-MOUNT_DATA=/beegfs/common/data
-MOUNT_PROJECT=/beegfs/$USER/
-MOUNT_HOME=/home/$USER
-
-# create required folder
-WORKDIR=/beegfs/${USER}/jupyter_playground${VERSION}
-LOGS=$WORKDIR/log
-JWORK=$WORKDIR/jupyter_work
-
-mkdir -p -m 700 $WORKDIR
-mkdir -p -m 700 $LOGS
-mkdir -p $JWORK
-
 #sbatch job name 
-SBATCH_JOB_NAME="jupyter_${JOB_EXEC_ID}"
+SBATCH_JOB_NAME="jupyter_rdk"
 
-# get jupyter as prepared docker image
-IMAGE_DIR=/beegfs/common/singularity/python
-SINGULARITY_IMAGE=${VERSION}.sif
-IMAGE_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
+#parse output of squeue for job name
+BATCHID=$(squeue --noheader -o "%.18i" -n $SBATCH_JOB_NAME -u $(whoami))
 
-if [ ! -e ${IMAGE_PATH} ] ; then
-echo "File '${IMAGE_PATH}' not found"
-fi
+# check if job is running
+if [ -z "$BATCHID" ] ; then
+   echo "No job running"
+   # check if additional directories are available (else set to none)
+   if [ ! -d ${MOUNT_DATA_SOURCE1} ] ; then
+   echo "Additional directory '${MOUNT_DATA_SOURCE1}' not found"
+   MOUNT_DATA_SOURCE1=none
+   fi
+   if [ ! -d ${MOUNT_DATA_SOURCE2} ] ; then
+   echo "Additional directory '${MOUNT_DATA_SOURCE2}' not found"
+   MOUNT_DATA_SOURCE2=none
+   fi
+   if [ ! -d ${MOUNT_DATA_SOURCE3} ] ; then
+   echo "Additional directory '${MOUNT_DATA_SOURCE3}' not found"
+   MOUNT_DATA_SOURCE3=none
+   fi
 
-HPC_PARTITION="--partition=compute"
-CORES=80
-echo "warning..."
-if [ $PARTITION == "highmem" ] ; then 
-  HPC_PARTITION="--partition=highmem"
-  CORES=80
-elif [ $PARTITION == "gpu" ] ; then 
-  HPC_PARTITION="--partition=gpu"
-  CORES=48
-elif [ $PARTITION == "fat" ] ; then 
-  HPC_PARTITION="--partition=fat"
-  CORES=160
-fi
+   # default mounts
+   MOUNT_DATA=/beegfs/common/data
+   MOUNT_PROJECT=/beegfs/$USER/
+   MOUNT_HOME=/home/$USER
 
-# switch to workdir
-cd $WORKDIR
+   # create required folder
+   WORKDIR=/beegfs/${USER}/jupyter_playground${VERSION}
+   LOGS=$WORKDIR/log
+   JWORK=$WORKDIR/jupyter_work
 
-# check if jupyter is installed
-# copy over the install script, and check if copied
-cp -f /beegfs/common/batch/installjupyter_${VERSION}.sh .
-STATUS=$?
-if [ $STATUS != 0 ]; then                   
-   echo "Copy installjupyter.sh: $STATUS - failed" 
-   exit 1
-fi
+   mkdir -p -m 700 $WORKDIR
+   mkdir -p -m 700 $LOGS
+   mkdir -p $JWORK
 
-# run jupyter install script, with the selected python version (if not already installed)
-export SINGULARITYENV_USE_HTTPS=yes
-export SINGULARITY_HOME=$WORKDIR
+   # get jupyter as prepared docker image
+   IMAGE_DIR=/beegfs/common/singularity/python
+   SINGULARITY_IMAGE=${VERSION}.sif
+   IMAGE_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
 
-singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
--B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
-$IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR $PASSW
+   if [ ! -e ${IMAGE_PATH} ] ; then
+   echo "File '${IMAGE_PATH}' not found"
+   fi
 
-# current date for log naming
-DATE=`date +%Y-%d-%B_%H%M%S`
+   HPC_PARTITION="--partition=compute"
+   CORES=80
+   echo "warning..."
+   if [ $PARTITION == "highmem" ] ; then 
+     HPC_PARTITION="--partition=highmem"
+     CORES=80
+   elif [ $PARTITION == "gpu" ] ; then 
+     HPC_PARTITION="--partition=gpu"
+     CORES=48
+   elif [ $PARTITION == "fat" ] ; then 
+     HPC_PARTITION="--partition=fat"
+     CORES=160
+   fi
 
-# required nodes 1
-CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c ${CORES} -o ${LOGS}/jupyter_lab_${DATE}_%j.log"
-SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${MOUNT_HOME} ${WORKDIR} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${JWORK} ${IMAGE_PATH} ${VERSION}"
+   # switch to workdir
+   cd $WORKDIR
 
-echo $CMD_LINE_SLURM
-echo $SCRIPT_INPUT
+   # check if jupyter is installed
+   # copy over the install script, and check if copied
+   cp -f /beegfs/common/batch/installjupyter_${VERSION}.sh .
+   STATUS=$?
+   if [ $STATUS != 0 ]; then                   
+      echo "Copy installjupyter.sh: $STATUS - failed" 
+      exit 1
+   fi
 
-BATCHID=$( sbatch $CMD_LINE_SLURM /beegfs/common/batch/jupyter-lab_${VERSION}.sh $SCRIPT_INPUT )
+   # run jupyter install script, with the selected python version (if not already installed)
+   export SINGULARITYENV_USE_HTTPS=yes
+   export SINGULARITY_HOME=$WORKDIR
 
-LOG_NAME=${LOGS}/jupyter_lab_${DATE}_${BATCHID}.log
-COUNTER=0
-while [ ! -f ${LOG_NAME} ] && [ ! $COUNTER -eq 30 ] ; do 
-sleep 10
-COUNTER=$(($COUNTER + 1))
-if [ $COUNTER == 30 ] ; then
-    scancel $BATCHID
-    echo "timeout: no free slot available. Try again later"
+   singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
+   -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
+   $IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR $PASSW
+
+   # current date for log naming
+   DATE=`date +%Y-%d-%B_%H%M%S`
+
+   # required nodes 1
+   CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c ${CORES} -o ${LOGS}/jupyter_lab_${DATE}_%j.log"
+   SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${MOUNT_HOME} ${WORKDIR} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${JWORK} ${IMAGE_PATH} ${VERSION}"
+
+   echo $CMD_LINE_SLURM
+   echo $SCRIPT_INPUT
+
+   BATCHID=$( sbatch $CMD_LINE_SLURM /beegfs/common/batch/jupyter-lab_${VERSION}.sh $SCRIPT_INPUT )
+
+   LOG_NAME=${LOGS}/jupyter_lab_${DATE}_${BATCHID}.log
+   COUNTER=0
+   while [ ! -f ${LOG_NAME} ] && [ ! $COUNTER -eq 30 ] ; do 
+   sleep 10
+   COUNTER=$(($COUNTER + 1))
+   if [ $COUNTER == 30 ] ; then
+       scancel $BATCHID
+       echo "timeout: no free slot available. Try again later"
+   fi 
+   done
+   sleep 5
+   if [ -f ${LOG_NAME} ] ; then
+      #cat ${LOG_NAME}
+      echo "Job started"
+      NODEHOST=$(squeue -j ${BATCHID} --noheader --format="%R" )   
+   else 
+      echo "Job not started"
+      exit 1
+   fi 
+else 
+      echo "Job is already running"
+      NODEHOST=$(squeue --noheader -o "%R" -n $SBATCH_JOB_NAME -u $(whoami) )
+      TIME=$(squeue --noheader -o "%.10M" -n $SBATCH_JOB_NAME -u $(whoami) )
+      TIMESPAN=$(squeue --noheader -o "%.9l" -n $SBATCH_JOB_NAME -u $(whoami) )
+
+      echo "Job ID: $BATCHID"
+      echo "Node: $NODEHOST"
+      echo "Running since: $TIME"
+      echo "Total time span: $TIMESPAN"
+
 fi 
-done
-sleep 5
-if [ -f ${LOG_NAME} ] ; then
-    #cat ${LOG_NAME}
-NODEHOST=$(squeue -j ${BATCHID} --noheader --format="%R" )
+
+
+
 cat 1>&2 <<END
 
 1. SSH tunnel from your workstation using the following command:
@@ -151,6 +177,5 @@ cat 1>&2 <<END
     
 END
 
-fi 
 
 
