@@ -62,7 +62,7 @@ ENV CONDA_DIR="/opt/conda"
 ENV PATH="$CONDA_DIR/bin:$PATH"
 ENV SHELL=/bin/bash
 
-ARG MINICONDA_VERSION=py310_23.3.1
+ARG MINICONDA_VERSION=py310_23.5.2
 
 # install miniconda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERSION}-0-Linux-x86_64.sh -O ~/miniconda.sh 
@@ -73,9 +73,12 @@ RUN $CONDA_DIR/bin/conda clean -y --all && \
     echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc
 
-#RUN conda update -n base -c defaults conda
+RUN conda update -n base -c defaults conda
 RUN $CONDA_DIR/bin/conda install -c conda-forge cartopy
 RUN $CONDA_DIR/bin/conda install -c conda-forge netcdf4
 RUN $CONDA_DIR/bin/conda install -c conda-forge pyzmq
 RUN $CONDA_DIR/bin/conda install -c conda-forge nco
+RUN $CONDA_DIR/bin/conda install -c conda-forge geopandas
+RUN $CONDA_DIR/bin/conda install -c conda-forge rasterio
 RUN $CONDA_DIR/bin/conda clean -y --all
+RUN python -V
