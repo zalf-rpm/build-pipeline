@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_climate_data? ?mount_project_data? ?num_instance? ?version? ?estimated_time? ?mode? ?usehighmem? ?source? ?consumer? ?producer?
 set -eu
-[[ $# < 13 ]] && {
+[[ $# < 14 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -16,14 +16,15 @@ MOUNT_DATA_CLIMATE=$4
 MOUNT_DATA_PROJECT=$5
 NUM_MONICA=$6
 VERSION=$7
-TIME=$8
-MODE=$9
-USEHIGHMEM=${10}
-SCRIPT_SOURCE=${11}
-CONSUMER=${12}
-PRODUCER=${13}
-RUN_SETUPS=${14}
-SETUPS_FILE=${15}
+PYTHON_VERSION=$8
+TIME=$9
+MODE=${10}
+USEHIGHMEM=${11}
+SCRIPT_SOURCE=${12}
+CONSUMER=${13}
+PRODUCER=${14}
+RUN_SETUPS=${15}
+SETUPS_FILE=${16}
 
 MONICA_PER_NODE=40
 
@@ -84,14 +85,18 @@ cd ~
 fi
 
 IMAGE_DIR_PYTHON=~/singularity/python
-SINGULARITY_PYTHON_IMAGE=python3.7_1.0.sif
+SINGULARITY_PYTHON_IMAGE=${PYTHON_VERSION}.sif #python3.7_1.0.sif
 IMAGE_PYTHON_PATH=${IMAGE_DIR_PYTHON}/${SINGULARITY_PYTHON_IMAGE}
 mkdir -p $IMAGE_DIR_PYTHON
 if [ ! -e ${IMAGE_PYTHON_PATH} ] ; then
-echo "File '${IMAGE_PYTHON_PATH}' not found"
-cd $IMAGE_DIR_PYTHON
-singularity pull docker://zalfrpm/python3.7:1.0
-cd ~
+  echo "File '${IMAGE_PYTHON_PATH}' not found"
+  cd $IMAGE_DIR_PYTHON
+  if [ $PYTHON_VERSION == "python3.7_1.0" ] ; then 
+    singularity pull docker://zalfrpm/python3.7:1.0
+  elif [ $PYTHON_VERSION == "python3.10_3" ] ; then 
+    singularity pull docker://zalfrpm/python3.10:3
+  fi
+  cd ~
 fi
 
 
