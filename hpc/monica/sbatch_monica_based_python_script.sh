@@ -26,15 +26,14 @@ IFS=' '
 
 NODE_PYTHON_SCRIPT=${ADDR[0]}
 NODE_PROXY=${ADDR[1]}
-NODE_ARRAY_WORKER=("${ADDR[@]:3}")
+NODE_ARRAY_WORKER=("${ADDR[@]:2}")
 
 echo "worker array: " $NODE_ARRAY_WORKER
 DATE=`date +%Y-%d-%B_%H%M%S`
 
 # start proxy
 mkdir -p $MOUNT_LOG_PROXY
-srun --exclusive -w $NODE_PROXY -N1 -n1 -o ${MONICA_LOG}/monica_proxy_%j batch/sbatch_monica_proxy.sh ${SINGULARITY_MONICA_IMAGE} $MOUNT_LOG_PROXY &
-
+srun --exclusive -w $NODE_PROXY -N1 -n1 -c2 -o ${MONICA_LOG}/monica_proxy_%j batch/sbatch_monica_proxy.sh ${SINGULARITY_MONICA_IMAGE} $MOUNT_LOG_PROXY &
 
 # start worker
 mkdir -p $MOUNT_LOG_WORKER
@@ -43,10 +42,10 @@ for node in "${NODE_ARRAY_WORKER[@]}"; do
     srun --exclusive -w ${node} -N1 -n1 -c40 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER &
 done
 
-MONICA_PARAMS=$MONICA_WORKDIR/monica-parameters
-
 PATH_TO_PYTHON_SCRIPT="${PYTHON_SCRIPT%/*}"
 FILENAME_PYTHON_SCRIPT="${PYTHON_SCRIPT##*/}"
 
-# start producer
-srun --exclusive -w ${NODE_PYTHON_SCRIPT} -N1 -n1 -o ${MONICA_LOG}/monica_proj_plog-%j -e ${MONICA_LOG}/monica_proj_eplog-%j batch/sbatch_monica_python.sh $SINGULARITY_PYTHON_IMAGE $MOUNT_DATA_CLIMATE $MOUNT_DATA_PROJECT $MONICA_OUT $MONICA_PARAMS $MONICA_WORKDIR/$PATH_TO_PYTHON_SCRIPT $FILENAME_PYTHON_SCRIPT server=$NODE_PROXY prod-server-port=6666 cons-server-port=7777 $SCRIPT_PARAMETERS &
+# start python script
+srun --exclusive -w ${NODE_PYTHON_SCRIPT} -N1 -n1 -c40 -o ${MONICA_LOG}/python_script_log_%j -e ${MONICA_LOG}/python_script_error_log_%j batch/sbatch_python.sh $MONICA_WORKDIR/$PATH_TO_PYTHON_SCRIPT $FILENAME_PYTHON_SCRIPT $MONICA_OUT server=$NODE_PROXY prod-port=6666 cons-port=7777 $SCRIPT_PARAMETERS #&
+#python_process_id=$!
+#wait $python_process_id
