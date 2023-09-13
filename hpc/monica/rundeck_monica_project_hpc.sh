@@ -121,6 +121,7 @@ if [ $MODE == "git" ] ; then
   cd  $MONICA_WORKDIR
   git clone $SCRIPT_SOURCE
   git clone https://github.com/zalf-rpm/monica-parameters.git
+  git clone https://github.com/zalf-rpm/mas-infrastructure.git
   cd ~
 elif [ $MODE == "folder" ] ; then
   # use folder on the cluster
