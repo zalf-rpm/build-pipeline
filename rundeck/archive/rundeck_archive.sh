@@ -19,7 +19,7 @@ WITHDATE=$7
 TIME=$8
 MAILONFAIL=$9
 
-ARCHIVE_PATH=/beegfs/rpm/archive/projects 
+ARCHIVE_PATH=/data01/FDS/rpm/archive/projects 
 JOB_NAME="archive"
 
 if [ -z "$PROJECTNAME" ]; then 
