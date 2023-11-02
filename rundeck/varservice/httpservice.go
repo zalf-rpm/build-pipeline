@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -36,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	if len(*sshkeyPtr) > 0 {
-		body, err := ioutil.ReadFile(*sshkeyPtr)
+		body, err := os.ReadFile(*sshkeyPtr)
 		if err != nil {
 			log.Fatal("ERROR: Failed to load ssh key")
 			return
@@ -44,7 +43,7 @@ func main() {
 		sshKey = body
 	}
 	if len(*sshphrasePtr) > 0 {
-		body, err := ioutil.ReadFile(*sshphrasePtr)
+		body, err := os.ReadFile(*sshphrasePtr)
 		if err != nil {
 			log.Fatal("ERROR: Failed to load ssh pass phrase")
 			return
@@ -57,7 +56,7 @@ func main() {
 
 	if len(*storePtr) > 0 && len(*phrasePtr) > 0 {
 		println("varservice: store to file")
-		err := ioutil.WriteFile(*storePtr, []byte(*phrasePtr), os.ModePerm)
+		err := os.WriteFile(*storePtr, []byte(*phrasePtr), os.ModePerm)
 		if err != nil {
 			println(err.Error)
 			log.Fatal("ERROR: Failed to write pw file")
