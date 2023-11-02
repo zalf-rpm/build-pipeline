@@ -88,7 +88,7 @@ if [ $ALL_EMPTY == "true" ] ; then
     do
         echo "FOLDER: $FOLDER"
         # check if folder is empty
-        if [ ! "$(ls -A $OUTFOLDER$FOLDER)" ] ; then 
+        if [ "$(ls -A $OUTFOLDER$FOLDER)" ] ; then 
             # remove folder from list
             FOLDERS=${FOLDERS//$FOLDER/}
         fi
@@ -127,7 +127,7 @@ if [ $ALL_EMPTY == "true" ] ; then
     do
         echo "FOLDER_LOG: $FOLDER_LOG"
         # check if folder is empty
-        if [ ! "$(ls -A $LOGFOLDER$FOLDER_LOG)" ] ; then 
+        if [ "$(ls -A $LOGFOLDER$FOLDER_LOG)" ] ; then 
             # remove folder from list
             FOLDERS_LOG=${FOLDERS_LOG//$FOLDER_LOG/}
         fi
@@ -153,8 +153,8 @@ for FOLDER in $FOLDERS
 do
     echo "FOLDER: $FOLDER"
     # remove folder
-    #rm -rf $OUTFOLDER$FOLDER
-    echo "rm -rf $OUTFOLDER$FOLDER"
+    rm -rf $OUTFOLDER$FOLDER
+    #echo "rm -rf $OUTFOLDER$FOLDER"
 done
 
 # remova all log folder on the list
@@ -162,6 +162,6 @@ for FOLDER_LOG in $FOLDERS_LOG
 do
     echo "FOLDER_LOG: $FOLDER_LOG"
     # remove folder
-    #rm -rf $LOGFOLDER$FOLDER_LOG
-    echo "rm -rf $LOGFOLDER$FOLDER_LOG"
+    rm -rf $LOGFOLDER$FOLDER_LOG
+    #echo "rm -rf $LOGFOLDER$FOLDER_LOG"
 done
