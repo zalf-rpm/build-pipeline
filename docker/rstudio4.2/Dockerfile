@@ -15,4 +15,6 @@ libnetcdf-dev \
 netcdf-bin \
 postgis \
 libhdf5-dev \
-libsqlite3-dev 
+libsqlite3-dev \
+gsl-bin \
+libgsl-dev
