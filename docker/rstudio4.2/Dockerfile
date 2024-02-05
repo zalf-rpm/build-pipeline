@@ -17,4 +17,6 @@ postgis \
 libhdf5-dev \
 libsqlite3-dev \
 gsl-bin \
-libgsl-dev
+libgsl-dev \
+libglpk-dev \
+libglpk40
