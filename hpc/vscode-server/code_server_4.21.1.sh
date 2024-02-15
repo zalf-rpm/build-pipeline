@@ -25,15 +25,17 @@ if [ -z "$PASSW" ] ; then
     exit 1
 fi
 # generate hashed password
-PYTHONIMG=/beegfs/common/singularity/jupyter/scipy-notebook_lab-3.4.2.sif
-HASH=$(singularity exec $PYTHONIMG python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSW','sha1'))\")")
+# PYTHONIMG=/beegfs/common/singularity/jupyter/scipy-notebook_lab-3.4.2.sif
+# HASH=$(singularity exec $PYTHONIMG python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSW','sha1'))\")")
+HASHIMG=/beegfs/common/singularity/code_server/hash_1.0.sif
+HASH=$(singularity exec $HASHIMG printf "$PASSW" | sha256sum | cut -d' ' -f1)
 
 mkdir -p ${HOMEDIR}/.config/code-server/
 # create config.yaml
 if [ ! -f ${HOMEDIR}/.config/code-server/config.yaml ] ; then
 
 cat <<EOF > ${HOMEDIR}/.config/code-server/config.yaml
-bind-addr: *:8443
+bind-addr: 0.0.0.0:8443
 auth: password
 hashed-password: $HASH
 cert: false
