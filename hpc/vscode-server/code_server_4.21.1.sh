@@ -16,19 +16,35 @@ SINGULARITY_IMAGE=$6
 MOUNT_DATA_SOURCE1=$7
 MOUNT_DATA_SOURCE2=$8
 MOUNT_DATA_SOURCE3=$9
-PASSW=${10}
-READ_ONLY_SOURCES=${11}
+READ_ONLY_SOURCES=${10}
+
+# read password from file
+TRANS=${HOMEDIR}/code_trans.yml
+# check if setup file exists
+if [ ! -f ${TRANS} ] ; then
+    echo "setup file not found"
+    exit 1
+fi
+# get the second argument from the setup file
+HASH=$( cat $TRANS | cut -d' ' -f2)
+
+# strip leading and trailing whitespaces
+HASH=$( echo $HASH | xargs )
+
+# remove setup file 
+rm -f $TRANS
 
 # fail if no password is given
-if [ -z "$PASSW" ] ; then
+if [ -z "$HASH" ] ; then
     echo "No password given"
     exit 1
 fi
+
 # generate hashed password
 # PYTHONIMG=/beegfs/common/singularity/jupyter/scipy-notebook_lab-3.4.2.sif
 # HASH=$(singularity exec $PYTHONIMG python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSW','sha1'))\")")
-HASHIMG=/beegfs/common/singularity/code_server/hash_1.0.sif
-HASH=$(singularity exec $HASHIMG printf "$PASSW" | sha256sum | cut -d' ' -f1)
+# HASHIMG=/beegfs/common/singularity/code_server/hash_1.0.sif
+# HASH=$(singularity exec $HASHIMG printf "$PASSW" | sha256sum | cut -d' ' -f1)
 
 mkdir -p ${HOMEDIR}/.config/code-server/
 # create config.yaml
@@ -40,7 +56,7 @@ auth: password
 hashed-password: $HASH
 cert: false
 EOF
-elif [ ! -z "$PASSW" ] ; then
+elif [ ! -z "$HASH" ] ; then
 # update password
 sed -i "s/hashed-password: .*/hashed-password: $HASH/g" ${HOMEDIR}/.config/code-server/config.yaml
 fi 
@@ -98,7 +114,7 @@ cat 1>&2 <<END
    password: your selected password 
 When done using Code Server, terminate the job by:
 
-1. Exit the Code Session ("File" -> "Exit" in the menu of the Code Server window)
+1. Exit the Code Session ("File" -> "Sign out of Code Server" in the menu of the Code Server window)
 2. Issue the following command on the login node:
 
       scancel -f ${SLURM_JOB_ID}
