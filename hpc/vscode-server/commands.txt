@@ -14,6 +14,9 @@ bash -c 'echo -n ${option.PassW} | openssl dgst -sha256 > /home/rundeck/server/d
 /beegfs/${job.username}/code_server_playground${option.version}
 code_trans.yml
 
+# remove transfer file
+rm /home/rundeck/server/data/tmp/code_trans.yml
+
 # execute actual script
 code_server_rundeck_hpc_user.sh
 
