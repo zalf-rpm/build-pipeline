@@ -25,7 +25,8 @@ fi
 if [ ! -d "./vcpkg" ]; then
     echo "vcpkg does not exist"
     # create vcpkg if it does not exist
-    git clone https://github.com/Microsoft/vcpkg.git
+    #git clone https://github.com/Microsoft/vcpkg.git
+    git clone -b 2024.02.14 https://github.com/Microsoft/vcpkg.git
     cd vcpkg
     ./bootstrap-vcpkg.sh 
     cd ..
