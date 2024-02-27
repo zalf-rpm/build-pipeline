@@ -1,7 +1,7 @@
 #!/bin/bash 
-#/ usage: start ?user? ?job_exec_id? ?host? ?mount_source1? ?mount_source2? ?mount_source3? ?estimated_time? ?partition? ?version? ?password? ?read_only_sources?
+#/ usage: start ?user? ?job_exec_id? ?host? ?mount_source1? ?mount_source2? ?mount_source3? ?estimated_time? ?partition? ?version? ?read_only_sources?
 set -eu
-[[ $# < 11 ]] && {
+[[ $# < 10 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -15,11 +15,10 @@ LOGIN_HOST=$3
 TIME=$4
 PARTITION=$5
 VERSION=$6
-PASSW=$7
-MOUNT_DATA_SOURCE1=$8 # e.g climate data
-MOUNT_DATA_SOURCE2=$9 # e.g. project data
-MOUNT_DATA_SOURCE3=${10} # e.g. other sources
-READ_ONLY_SOURCES=${11}
+MOUNT_DATA_SOURCE1=$7 # e.g climate data
+MOUNT_DATA_SOURCE2=$8 # e.g. project data
+MOUNT_DATA_SOURCE3=${9} # e.g. other sources
+READ_ONLY_SOURCES=${10}
 
 SBATCH_JOB_NAME="R_studio_rdk"
 
@@ -36,12 +35,6 @@ BATCHID=$(squeue --noheader -o "%i" -n $SBATCH_JOB_NAME -u $(whoami))
 
 # check if job is running
 if [ -z "$BATCHID" ] ; then
-
-  # fail if no password is given
-  if [ -z "$PASSW" ] ; then
-      echo "No password given"
-      exit 1
-  fi
 
   # get r-studio image from docker
   IMAGE_DIR=/beegfs/common/singularity/R
@@ -80,7 +73,7 @@ if [ -z "$BATCHID" ] ; then
 
   # required nodes 1
   CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c $CORES -o ${LOGS}/rstudio-server_${USER}_%j.log"
-  SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_RSTUDIO_PATH} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${PASSW} ${READ_ONLY_SOURCES}"
+  SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_RSTUDIO_PATH} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${READ_ONLY_SOURCES}"
 
   cd ${WORKDIR}
   BATCHID=$( sbatch $CMD_LINE_SLURM /beegfs/common/batch/r_studio_server${VERSION}.sh $SCRIPT_INPUT )

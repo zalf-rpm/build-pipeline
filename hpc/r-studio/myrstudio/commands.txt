@@ -1,0 +1,21 @@
+prepare transfer 
+myrstudio_rundeck_hpc_user_prepare.sh
+
+create temp directory
+mkdir -p /home/rundeck/server/data/tmp
+
+store transfer data
+bash -c 'echo -n ${option.PassW} > /home/rundeck/server/data/tmp/r_trans.yml'
+
+transfer to HPC
+/home/rundeck/server/data/tmp
+/beegfs/${job.username}/R_playground${option.version}/.rundeck
+r_trans.yml
+
+remove transfer file
+rm /home/rundeck/server/data/tmp/r_trans.yml
+
+Start RStudio file
+myrstudio_rundeck_hpc_user.sh
+
+Add Mask Passwords
