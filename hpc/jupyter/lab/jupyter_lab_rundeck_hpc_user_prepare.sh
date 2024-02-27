@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash 
 #/ usage: start ?user? ?version?
 [[ $# < 2 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;

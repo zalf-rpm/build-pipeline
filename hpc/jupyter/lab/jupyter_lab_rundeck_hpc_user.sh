@@ -1,8 +1,8 @@
 #!/bin/bash 
-#/ usage: start ?user? ?job_exec_id? ?host? ?estimated_time? ?partition? ?version? ?password? ?port? ?mount_source1? ?mount_source2? ?mount_source3? ?read_only_sources?
+#/ usage: start ?user? ?job_exec_id? ?host? ?estimated_time? ?partition? ?version? ?port? ?mount_source1? ?mount_source2? ?mount_source3? ?read_only_sources?
 
 set -eu
-[[ $# < 12 ]] && {
+[[ $# < 11 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -16,22 +16,11 @@ LOGIN_HOST=$3
 TIME=$4
 PARTITION=$5
 VERSION=$6
-PASSW=$7 #(optional/initial/reset password)
-PORT=$8 #(optional port on user PC)
-MOUNT_DATA_SOURCE1=$9 # e.g climate data
-MOUNT_DATA_SOURCE2=${10} # e.g. project data
-MOUNT_DATA_SOURCE3=${11} # e.g. other sources
-READ_ONLY_SOURCES=${12}
-
-# fail if no password is given
-if [ -z "$PASSW" ] ; then
-    echo "No password given"
-    exit 1
-fi
-# if password is none, set to empty string
-if [ $PASSW == "none" ] ; then
-    PASSW=""
-fi
+PORT=$7 #(optional port on user PC)
+MOUNT_DATA_SOURCE1=$8 # e.g climate data
+MOUNT_DATA_SOURCE2=${9} # e.g. project data
+MOUNT_DATA_SOURCE3=${10} # e.g. other sources
+READ_ONLY_SOURCES=${11}
 
 #sbatch job name 
 SBATCH_JOB_NAME="jupyter_rdk"
@@ -111,7 +100,7 @@ if [ -z "$BATCHID" ] ; then
 
    singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
    -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
-   $IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR $PASSW
+   $IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR
 
    # current date for log naming
    DATE=`date +%Y-%d-%B_%H%M%S`
