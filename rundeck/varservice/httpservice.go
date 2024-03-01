@@ -74,7 +74,7 @@ func main() {
 // project = <user/organisation>/<image name>
 func fetchDockerTags(project string, baseurl string) (string, error) {
 
-	url := fmt.Sprintf("%s/v2/repositories/%s/tags", baseurl, project)
+	url := fmt.Sprintf("%s/v2/repositories/%s/tags?page_size=1000", baseurl, project)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -103,6 +103,17 @@ func fetchDockerTags(project string, baseurl string) (string, error) {
 	for _, val := range content.Result {
 		tags = append(tags, val.Name)
 	}
+	// find all tags that contain the word release and put them in front
+	var releaseTags []string
+	var otherTags []string
+	for _, val := range tags {
+		if strings.Contains(val, "release") {
+			releaseTags = append(releaseTags, val)
+		} else {
+			otherTags = append(otherTags, val)
+		}
+	}
+	tags = append(releaseTags, otherTags...)
 
 	// export to rundeck json format
 	jsonText, err := json.Marshal(tags)
