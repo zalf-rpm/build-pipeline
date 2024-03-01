@@ -17,57 +17,19 @@ MOUNT_DATA_SOURCE1=$7
 MOUNT_DATA_SOURCE2=$8
 MOUNT_DATA_SOURCE3=$9
 READ_ONLY_SOURCES=${10}
+VERSION=${11}
 
-# read password from file
-TRANS=${HOMEDIR}/code_trans.yml
-# check if setup file exists
-if [ ! -f ${TRANS} ] ; then
-    echo "setup file not found"
-    exit 1
-fi
-# get the second argument from the setup file
-HASH=$( cat $TRANS | cut -d' ' -f2)
-
-# strip leading and trailing whitespaces
-HASH=$( echo $HASH | xargs )
-
-# remove setup file 
-rm -f $TRANS
-
-# fail if no password is given
-if [ -z "$HASH" ] ; then
-    echo "No password given"
-    exit 1
-fi
-
-# generate hashed password
-# PYTHONIMG=/beegfs/common/singularity/jupyter/scipy-notebook_lab-3.4.2.sif
-# HASH=$(singularity exec $PYTHONIMG python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSW','sha1'))\")")
-# HASHIMG=/beegfs/common/singularity/code_server/hash_1.0.sif
-# HASH=$(singularity exec $HASHIMG printf "$PASSW" | sha256sum | cut -d' ' -f1)
-
-mkdir -p ${HOMEDIR}/.config/code-server/
-# create config.yaml
-if [ ! -f ${HOMEDIR}/.config/code-server/config.yaml ] ; then
-
-cat <<EOF > ${HOMEDIR}/.config/code-server/config.yaml
-bind-addr: 0.0.0.0:8443
-auth: password
-hashed-password: $HASH
-cert: false
-EOF
-elif [ ! -z "$HASH" ] ; then
-# update password
-sed -i "s/hashed-password: .*/hashed-password: $HASH/g" ${HOMEDIR}/.config/code-server/config.yaml
-fi 
-
-PROJECT=/project
-DATA=/data
-CLUSTERHOME=/myhome
+PROJECT=$MOUNT_PROJECT
+DATA=$MOUNT_DATA
+CLUSTERHOME=/home/$SCRIPT_USER
 MOUNT_CLUSTERHOME=/home/$SCRIPT_USER
 CONFIG=/config
 MOUNT_CONFIG=$HOMEDIR/.config
 mkdir -p $MOUNT_CONFIG
+
+EXTENSIONS=/extensions
+MOUNT_EXT=/beegfs/common/singularity/code_server/extensions/v${VERSION}
+
 
 # if MOUNT_DATA_SOURCEx is not none, add to MOUNT_DATA_SOURCES
 # if read_only_sources is true, mount data sources as read-only
@@ -114,15 +76,15 @@ cat 1>&2 <<END
    password: your selected password 
 When done using Code Server, terminate the job by:
 
-1. Exit the Code Session ("File" -> "Sign out of Code Server" in the menu of the Code Server window)
+1. Exit the Code Session ("File" -> "Sign out of Code-Server" in the menu of the Code Server window)
 2. Issue the following command on the login node:
 
       scancel -f ${SLURM_JOB_ID}
 END
 
 singularity exec --cleanenv \
--B $MOUNT_CONFIG:$CONFIG,$MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA:ro,$MOUNT_CLUSTERHOME:${CLUSTERHOME}${MOUNT_DATA_SOURCES} \
+-B $MOUNT_EXT:$EXTENSIONS,$MOUNT_CONFIG:$CONFIG,$MOUNT_PROJECT:$PROJECT,$MOUNT_DATA:$DATA:ro,$MOUNT_CLUSTERHOME:${CLUSTERHOME}${MOUNT_DATA_SOURCES} \
 -H $SINGULARITY_HOME \
 -W $SINGULARITY_HOME $SINGULARITY_IMAGE \
-/app/code-server/bin/code-server 
+/app/code-server/bin/code-server > $HOMEDIR/log/code-server.log
 printf 'code sever exited' 1>&2

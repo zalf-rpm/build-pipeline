@@ -1,28 +1,32 @@
 #!/bin/bash -x
 
 WORKDIR=$1
+READ_HASH=$2
 cd $WORKDIR
 
-# read password from file
-TRANS=${WORKDIR}/.rundeck/jupyter_trans.yml
-# check if setup file exists
-if [ ! -f ${TRANS} ] ; then
-    echo "setup file not found"
-    exit 1
-fi
-# get the second argument from the setup file
-PASSWORD=$( cat $TRANS | cut -d' ' -f2)
+HASH=""
+# check if READ_HASH is true
+if [ $READ_HASH == "true" ] ; then
+    # read hash from file
+    TRANS=${WORKDIR}/.rundeck/jupyter_trans.yml
+    # check if setup file exists
+    if [ ! -f ${TRANS} ] ; then
+        echo "setup file not found"
+        exit 1
+    fi
+    HASH=$( cat $TRANS)
 
-# strip leading and trailing whitespaces
-PASSWORD=$( echo $PASSWORD | xargs )
+    # strip leading and trailing whitespaces
+    HASH=$( echo $HASH | xargs )
 
-# remove setup file 
-rm -f $TRANS
+    # remove setup file 
+    rm -f $TRANS
 
-# fail if no password is given
-if [ -z "$PASSWORD" ] ; then
-    echo "No password given"
-    exit 1
+    # fail if no HASH is given
+    if [ -z "$HASH" ] ; then
+        echo "No HASH given"
+        exit 1
+    fi
 fi
 
 source /opt/conda/etc/profile.d/conda.sh
@@ -61,15 +65,13 @@ if [ ! -e ${JUPYTER_PATH} ] ; then
 conda activate jupyterenv
 jupyter server --generate-config
 
-echo "set password hash"
-HASH=$(python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSWORD','sha1'))\")")
+# initialize password hash
+if [ -z "$HASH" ] ; then
+ # fail if no hash is given
+    echo "No hash given"
+    exit 1
+fi
+
 sed -i "s/# c.ServerApp.password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
 sed -i "s/# c.ServerApp.password_required = .*/c.PasswordIdentityProvider.password_required = True/g" $WORKDIR/.jupyter/jupyter_server_config.py 
-else
-
-# set(reset) password after installation
-echo "update password hash"
-conda activate jupyterenv
-HASH=$(python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSWORD','sha1'))\")")
-sed -i "s/c.PasswordIdentityProvider.hashed_password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
 fi

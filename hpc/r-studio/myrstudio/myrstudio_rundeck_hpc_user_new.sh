@@ -36,6 +36,22 @@ BATCHID=$(squeue --noheader -o "%i" -n $SBATCH_JOB_NAME -u $(whoami))
 # check if job is running
 if [ -z "$BATCHID" ] ; then
 
+  SERVER_PASS=@option.PassW@
+
+  RD_DIR=/beegfs/${USER}/R_playground${VERSION}/.rundeck
+  mkdir -p -m 700 $RD_DIR
+  # make sure the directory can only be accessed by the user
+  # change permissions
+  chmod 700 $RD_DIR
+
+  TRANS=${RD_DIR}/r_trans.yml
+  # delete file if it exists
+  rm -f $TRANS
+
+cat <<EOF > ${TRANS}
+$SERVER_PASS
+EOF
+
   # get r-studio image from docker
   IMAGE_DIR=/beegfs/common/singularity/R
   SINGULARITY_IMAGE=rstudio_dev_${VERSION}.sif

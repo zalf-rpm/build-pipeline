@@ -59,6 +59,39 @@ if [ -z "$BATCHID" ] ; then
    mkdir -p -m 700 $LOGS
    mkdir -p $JWORK
 
+   PASSW=@option.password@
+
+   # fail if no password is given
+   if [ -z "$PASSW" ] ; then
+      echo "No password given"
+      exit 1
+   fi
+
+   # create hash 
+   IMG_FOR_HASH=/beegfs/common/singularity/jupyter/scipy-notebook_lab-3.4.2.sif
+   HASH=$(singularity exec $IMG_FOR_HASH python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSW','sha256'))\")")
+   JUPYTER_CONFIG_PATH=$WORKDIR/.jupyter/jupyter_server_config.py
+   REQUIRE_SETUP=false
+   if [ -e ${JUPYTER_CONFIG_PATH} ] ; then
+      # make sure the directory can only be accessed by the user
+      chmod 700 $WORKDIR/.jupyter/
+      # update password hash
+      sed -i "s/c.PasswordIdentityProvider.hashed_password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $JUPYTER_CONFIG_PATH
+   else 
+      # configuration file does not exist, initial installation required 
+      # store password hash to file for later use
+      REQUIRE_SETUP=true
+      RD_DIR=/beegfs/${USER}/jupyter_playground${VERSION}/.rundeck
+      TRANS=${RD_DIR}/jupyter_trans.yml
+      mkdir -p -m 700 $RD_DIR
+      # make sure the directory can only be accessed by the user
+      chmod 700 $RD_DIR
+      # write password hash to file
+cat <<EOF > ${TRANS}
+$HASH
+EOF
+   fi
+
    # get jupyter as prepared docker image
    IMAGE_DIR=/beegfs/common/singularity/python
    SINGULARITY_IMAGE=${VERSION}.sif
@@ -100,7 +133,7 @@ if [ -z "$BATCHID" ] ; then
 
    singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
    -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
-   $IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR
+   $IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR $REQUIRE_SETUP
 
    # current date for log naming
    DATE=`date +%Y-%d-%B_%H%M%S`

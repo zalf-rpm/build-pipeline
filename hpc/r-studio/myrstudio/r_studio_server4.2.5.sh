@@ -27,7 +27,7 @@ if [ ! -f ${TRANS} ] ; then
     exit 1
 fi
 # get the second argument from the setup file
-PASSW=$( cat $TRANS | cut -d' ' -f2)
+PASSW=$( cat $TRANS )
 
 # strip leading and trailing whitespaces
 PASSW=$( echo $PASSW | xargs )
