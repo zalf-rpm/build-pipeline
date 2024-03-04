@@ -16,8 +16,24 @@ SINGULARITY_IMAGE=$6
 MOUNT_DATA_SOURCE1=$7
 MOUNT_DATA_SOURCE2=$8
 MOUNT_DATA_SOURCE3=$9
-PASSW=${10}
-READ_ONLY_SOURCES=${11}
+READ_ONLY_SOURCES=${10}
+
+
+# read password from file
+TRANS=${HOMEDIR}/.rundeck/r_trans.yml
+# check if setup file exists
+if [ ! -f ${TRANS} ] ; then
+    echo "setup file not found"
+    exit 1
+fi
+# get the second argument from the setup file
+PASSW=$( cat $TRANS )
+
+# strip leading and trailing whitespaces
+PASSW=$( echo $PASSW | xargs )
+
+# remove setup file 
+rm -f $TRANS
 
 # fail if no password is given
 if [ -z "$PASSW" ] ; then
