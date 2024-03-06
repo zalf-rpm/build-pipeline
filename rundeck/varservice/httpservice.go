@@ -103,18 +103,27 @@ func fetchDockerTags(project string, baseurl string) (string, error) {
 	for _, val := range content.Result {
 		tags = append(tags, val.Name)
 	}
+	// special case for monica-cluster
 	// find all tags that contain the word release and put them in front
-	var releaseTags []string
-	var otherTags []string
-	for _, val := range tags {
-		if strings.Contains(val, "release") {
-			releaseTags = append(releaseTags, val)
-		} else {
-			otherTags = append(otherTags, val)
+	// remove all tags that do not start with a number or are less than major version 3
+	if project == "zalfrpm/monica-cluster" {
+		var releaseTags []string
+		var otherTags []string
+		for _, val := range tags {
+			if strings.Contains(val, "release") {
+				releaseTags = append(releaseTags, val)
+			} else {
+				// check if tag starts with a number
+				majorVersion := strings.Split(val, ".")[0]
+				if majorVersionInt, err := strconv.Atoi(majorVersion); err == nil {
+					if majorVersionInt > 2 {
+						otherTags = append(otherTags, val)
+					}
+				}
+			}
 		}
+		tags = append(releaseTags, otherTags...)
 	}
-	tags = append(releaseTags, otherTags...)
-
 	// export to rundeck json format
 	jsonText, err := json.Marshal(tags)
 	if err != nil {
