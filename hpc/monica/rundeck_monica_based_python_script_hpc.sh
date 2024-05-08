@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_climate_data? ?mount_project_data? ?num_instance? ?version? ?estimated_time? ?mode? ?usehighmem? ?source? ?python_script?
 set -eu
-[[ $# < 13 ]] && {
+[[ $# < 14 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -22,10 +22,16 @@ MODE=${10}
 USEHIGHMEM=${11}
 SCRIPT_SOURCE=${12}
 PYTHON_SCRIPT=${13}
-shift 13
+MAS_TAG=${14}
+shift 14
 SCRIPT_PARAMETERS=$@
 
 MONICA_PER_NODE=40
+
+# check if mas tag is empty
+if [ -z "$MAS_TAG" ] ; then 
+    MAS_TAG="main"
+fi
 
 # resolve path
 MOUNT_DATA_CLIMATE=$( realpath $MOUNT_DATA_CLIMATE )
@@ -89,13 +95,7 @@ IMAGE_PYTHON_PATH=${IMAGE_DIR_PYTHON}/${SINGULARITY_PYTHON_IMAGE}
 mkdir -p $IMAGE_DIR_PYTHON
 if [ ! -e ${IMAGE_PYTHON_PATH} ] ; then
   echo "File '${IMAGE_PYTHON_PATH}' not found"
-  cd $IMAGE_DIR_PYTHON
-  if [ $PYTHON_VERSION == "python3.7_1.0" ] ; then 
-    singularity pull docker://zalfrpm/python3.7:1.0
-  elif [ $PYTHON_VERSION == "python3.10_3" ] ; then 
-    singularity pull docker://zalfrpm/python3.10:3
-  fi
-  cd ~
+  exit 1
 fi
 
 
@@ -118,8 +118,17 @@ if [ $MODE == "git" ] ; then
   # do a fresh git checkout
   mkdir $MONICA_WORKDIR
   cd  $MONICA_WORKDIR
+
+  # get script source
   git clone $SCRIPT_SOURCE
-  git clone https://github.com/zalf-rpm/mas-infrastructure.git
+  # check if tag is main
+  if [ $MAS_TAG == "main" ] ; then 
+    git clone https://github.com/zalf-rpm/mas-infrastructure.git
+  else
+    # check if tag exists on git for mas-infrastructure
+    git clone --depth 1 --branch $MAS_TAG https://github.com/zalf-rpm/mas-infrastructure.git
+  fi
+
   cd ~
 elif [ $MODE == "folder" ] ; then
   # use folder on the cluster

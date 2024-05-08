@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-PYTHON=/home/rpm/.conda/envs/py39/bin/python
+PYTHON=/home/rpm/.conda/envs/py39_2/bin/python
 
 WORKDIR=$1
 SCRIPT=$2
