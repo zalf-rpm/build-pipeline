@@ -1,9 +1,10 @@
 #!/bin/bash -x
 #/ usage: start ?user? ?job_exec_id? ?host? ?mount_source1? ?mount_source2? ?mount_source3? ?estimated_time? ?partition? ?version? ?read_only_sources?
 set -eu
-[[ $# < 9 ]] && {
+echo $#
+if [ $# -lt 9 ] ; then
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
-}
+fi
 
 echo "Set env"
 

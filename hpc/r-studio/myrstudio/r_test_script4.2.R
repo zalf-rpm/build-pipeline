@@ -12,6 +12,12 @@ library(this.path)
 current_dir <- getwd()
 print(current_dir)
 
+# read command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+# print command line arguments
+print(args)
+
 # create a data frame
 data <- data.frame(
     name = c("A", "B", "C", "D"),
