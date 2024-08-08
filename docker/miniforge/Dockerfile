@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update --yes && \
@@ -77,6 +77,7 @@ conda clean --force-pkgs-dirs --all --yes  && \
 echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> /etc/skel/.bashrc && \
 echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> ~/.bashrc
 
+RUN conda update -n base -c defaults conda
 RUN $CONDA_DIR/bin/conda install cartopy
 RUN $CONDA_DIR/bin/conda install netcdf4
 RUN $CONDA_DIR/bin/conda install pyzmq
@@ -88,4 +89,4 @@ RUN python -V
 
 COPY ./python_version.sh /start.sh
 
-CMD ["./start.sh"]
+CMD ["sh", "./start.sh"]
