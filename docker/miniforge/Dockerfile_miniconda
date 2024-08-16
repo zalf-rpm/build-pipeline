@@ -68,29 +68,29 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH=${CONDA_DIR}/bin:${PATH}
 ENV SHELL=/bin/bash
 
-ARG MINIFORGE_NAME=Miniforge3
-ARG MINIFORGE_VERSION=24.3.0-0
+# ARG MINIFORGE_NAME=Miniforge3
+# ARG MINIFORGE_VERSION=24.3.0-0
 
-RUN wget --no-hsts --quiet https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE_VERSION}/${MINIFORGE_NAME}-${MINIFORGE_VERSION}-Linux-$(uname -m).sh -O /tmp/miniforge.sh && \
-/bin/bash /tmp/miniforge.sh -b -p ${CONDA_DIR} && \
-rm /tmp/miniforge.sh && \
-conda clean --tarballs --index-cache --packages --yes && \
-find ${CONDA_DIR} -follow -type f -name '*.a' -delete && \
-find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete && \
-conda clean --force-pkgs-dirs --all --yes  && \
-echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> /etc/skel/.bashrc && \
-echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> ~/.bashrc
+# RUN wget --no-hsts --quiet https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE_VERSION}/${MINIFORGE_NAME}-${MINIFORGE_VERSION}-Linux-$(uname -m).sh -O /tmp/miniforge.sh && \
+# /bin/bash /tmp/miniforge.sh -b -p ${CONDA_DIR} && \
+# rm /tmp/miniforge.sh && \
+# conda clean --tarballs --index-cache --packages --yes && \
+# find ${CONDA_DIR} -follow -type f -name '*.a' -delete && \
+# find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete && \
+# conda clean --force-pkgs-dirs --all --yes  && \
+# echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> /etc/skel/.bashrc && \
+# echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> ~/.bashrc
 
-#ARG MINICONDA_VERSION=py310_23.5.2
+ARG MINICONDA_VERSION=py310_23.5.2
 
-# # install miniconda
-# RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERSION}-0-Linux-x86_64.sh -O ~/miniconda.sh 
-# RUN /bin/bash ~/miniconda.sh -b -p $CONDA_DIR && \
-#     rm ~/miniconda.sh 
-# RUN $CONDA_DIR/bin/conda clean -y --all && \
-#     ln -s $CONDA_DIR/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-#     echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.bashrc && \
-#     echo "conda activate base" >> ~/.bashrc
+# install miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERSION}-0-Linux-x86_64.sh -O ~/miniconda.sh 
+RUN /bin/bash ~/miniconda.sh -b -p $CONDA_DIR && \
+    rm ~/miniconda.sh 
+RUN $CONDA_DIR/bin/conda clean -y --all && \
+    ln -s $CONDA_DIR/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate base" >> ~/.bashrc
 
 RUN conda update -n base -c conda-forge conda
 RUN conda install mamba -c conda-forge --force-reinstall -y
