@@ -55,6 +55,7 @@ RUN apt-get update --yes && \
     python3 \
     python3-dev \
     python3-pip \
+    python3.10-venv \
     libsqlite3-dev && \
     apt-get install gdal-bin -y && \
     apt-get install proj-bin -y && \
