@@ -52,6 +52,9 @@ RUN apt-get update --yes && \
     netcdf-bin \
     postgis \
     libhdf5-dev \
+    python3 \
+    python3-dev \
+    python3-pip \
     libsqlite3-dev && \
     apt-get install gdal-bin -y && \
     apt-get install proj-bin -y && \
@@ -62,46 +65,25 @@ RUN apt-get update --yes && apt-get install --yes htop
 RUN apt-get install --yes libarchive13
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-
-ENV CONDA_DIR=/opt/conda
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-ENV PATH=${CONDA_DIR}/bin:${PATH}
 ENV SHELL=/bin/bash
 
-ARG MINIFORGE_NAME=Miniforge3
-ARG MINIFORGE_VERSION=24.3.0-0
+# ARG PYTHON_VERSION=3.12.5
 
-RUN wget --no-hsts --quiet https://github.com/conda-forge/miniforge/releases/download/${MINIFORGE_VERSION}/${MINIFORGE_NAME}-${MINIFORGE_VERSION}-Linux-$(uname -m).sh -O /tmp/miniforge.sh && \
-/bin/bash /tmp/miniforge.sh -b -p ${CONDA_DIR} && \
-rm /tmp/miniforge.sh && \
-conda clean --tarballs --index-cache --packages --yes && \
-find ${CONDA_DIR} -follow -type f -name '*.a' -delete && \
-find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete && \
-conda clean --force-pkgs-dirs --all --yes  && \
-echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> /etc/skel/.bashrc && \
-echo ". ${CONDA_DIR}/etc/profile.d/conda.sh && conda activate base" >> ~/.bashrc
+# # download and unpack python
 
-#ARG MINICONDA_VERSION=py310_23.5.2
+# RUN wget --no-hsts --quiet https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz -O /tmp/python_${PYTHON_VERSION}.tgz && \
+#     mkdir -p ${PYTHON_DIR} && \
+#     tar -xzf /tmp/python_${PYTHON_VERSION}.tgz -C ${PYTHON_DIR} --strip-components=1 && \
+#     rm /tmp/python_${PYTHON_VERSION}.tgz
 
-# # install miniconda
-# RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${MINICONDA_VERSION}-0-Linux-x86_64.sh -O ~/miniconda.sh 
-# RUN /bin/bash ~/miniconda.sh -b -p $CONDA_DIR && \
-#     rm ~/miniconda.sh 
-# RUN $CONDA_DIR/bin/conda clean -y --all && \
-#     ln -s $CONDA_DIR/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-#     echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.bashrc && \
-#     echo "conda activate base" >> ~/.bashrc
+RUN pip install cartopy
+RUN pip install netcdf4
+RUN pip install pyzmq
+RUN pip install nco
+RUN pip install geopandas
+RUN pip install rasterio
 
-RUN conda update -n base -c conda-forge conda
-RUN conda install mamba -c conda-forge --force-reinstall -y
-#RUN conda install -n base conda-libmamba-solver --solver=classic
-RUN $CONDA_DIR/bin/conda install -c conda-forge cartopy
-RUN $CONDA_DIR/bin/conda install -c conda-forge netcdf4
-RUN $CONDA_DIR/bin/conda install -c conda-forge pyzmq
-RUN $CONDA_DIR/bin/conda install -c conda-forge nco
-RUN $CONDA_DIR/bin/conda install -c conda-forge geopandas
-RUN $CONDA_DIR/bin/conda install -c conda-forge rasterio
-RUN $CONDA_DIR/bin/conda clean -y --all
 
 COPY ./python_version.sh /start.sh
 
