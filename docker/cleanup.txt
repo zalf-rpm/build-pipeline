@@ -1,0 +1,5 @@
+#check usage
+docker system df
+#cleanup 
+docker builder prune
+docker system prune
