@@ -66,6 +66,14 @@ RUN apt-get update --yes && apt-get install --yes htop
 RUN apt-get install --yes libarchive13
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# install other Python versions, to chose from
+RUN add-apt-repository ppa:deadsnakes/ppa && apt-get update -y
+RUN apt-get install python3.7 -y
+RUN apt-get install python3.8 -y
+RUN apt-get install python3.9 -y
+RUN apt-get install python3.11 -y
+RUN apt-get install python3.12 -y
+
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV SHELL=/bin/bash
 
