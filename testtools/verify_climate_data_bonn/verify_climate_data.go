@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/csv"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,10 +135,12 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 	wrongDateFormatCount := 0
 	wrongDateOrderCount := 0
 	nextDate := startDate
+	lineCounter := 0
 	for record, err := csvReader.Read(); err == nil; record, err = csvReader.Read() {
+		lineCounter++
 		// check if the line is a duolicate of the header
 		if compareSlices(header, record) {
-			errorStr = append(errorStr, "line is a duplicate of the header")
+			errorStr = append(errorStr, fmt.Sprintf("line is a duplicate of the header - line: %d", lineCounter))
 			continue
 		}
 
@@ -146,7 +149,7 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 		// check if date is in the correct format (YYYY-MM-DD)
 		dateTime, err := time.Parse("2006-01-02", date)
 		if err != nil {
-			errorStr = append(errorStr, "date is not in the correct format: "+date)
+			errorStr = append(errorStr, fmt.Sprintf("date is not in the correct format: %s - line: %d", date, lineCounter))
 			wrongDateFormatCount++
 			if wrongDateFormatCount > 3 {
 				errorStr = append(errorStr, "too many dates in the wrong format")
@@ -155,11 +158,11 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 			continue
 		}
 		if dateTime.Before(startDate) || dateTime.After(endDate) {
-			errorStr = append(errorStr, "date is not in the correct range: "+date)
+			errorStr = append(errorStr, fmt.Sprintf("date is not in the correct range: %s - line: %d", date, lineCounter))
 			continue
 		}
 		if dateTime.Compare(nextDate) != 0 {
-			errorStr = append(errorStr, "date is not in the correct order: "+date)
+			errorStr = append(errorStr, fmt.Sprintf("date is not in the correct order: %s - line: %d", date, lineCounter))
 			wrongDateOrderCount++
 			if wrongDateOrderCount > 10 {
 				errorStr = append(errorStr, "too many dates in the wrong order")
