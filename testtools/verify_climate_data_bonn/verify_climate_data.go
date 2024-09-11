@@ -75,7 +75,13 @@ func main() {
 		if err != nil {
 			return err
 		}
-		checkFile(path, info, startDateT, endDateT)
+		errors := checkFile(path, info, startDateT, endDateT)
+		if errors != nil {
+			println(path + ":")
+		}
+		for _, e := range errors {
+			println(e)
+		}
 		return nil
 	})
 	if err != nil {
@@ -83,21 +89,21 @@ func main() {
 	}
 }
 
-func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time.Time) {
+func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time.Time) []string {
 
 	// skip if file is a directory
 	if fileI.IsDir() {
-		return
+		return nil
 	}
 	// check if file is csv.gz, if not skip it
 	if !strings.HasSuffix(fileI.Name(), ".csv.gz") {
-		return
+		return nil
 	}
-	println("checking file: " + fileI.Name())
+	errorStr := make([]string, 0)
 
 	// check if file name contains grid row and column
 	if !strings.Contains(fileI.Name(), "C") || !strings.Contains(fileI.Name(), "R") {
-		print("file name does not contain column and row")
+		errorStr = append(errorStr, "file name does not contain column and row")
 	}
 
 	// open gz file
@@ -123,7 +129,7 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 	// check if header contains the correct columns
 	header := []string{"Date", "Precipitation", "TempMin", "TempMean", "TempMax", "Radiation", "SunshineDuration", "SoilMoisture", "SoilTemperature", "Windspeed", "RefETcalc", "RefETdwd", "RelHumCalc", "Gridcell"}
 	if !compareSlices(header, record) {
-		print("header does not contain the correct columns")
+		errorStr = append(errorStr, "header does not contain the correct columns")
 	}
 	wrongDateFormatCount := 0
 	wrongDateOrderCount := 0
@@ -131,7 +137,7 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 	for record, err := csvReader.Read(); err == nil; record, err = csvReader.Read() {
 		// check if the line is a duolicate of the header
 		if compareSlices(header, record) {
-			print("line is a duplicate of the header")
+			errorStr = append(errorStr, "line is a duplicate of the header")
 			continue
 		}
 
@@ -140,29 +146,33 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 		// check if date is in the correct format (YYYY-MM-DD)
 		dateTime, err := time.Parse("2006-01-02", date)
 		if err != nil {
-			print("date is not in the correct format: " + date)
+			errorStr = append(errorStr, "date is not in the correct format: "+date)
 			wrongDateFormatCount++
 			if wrongDateFormatCount > 3 {
-				print("too many dates in the wrong format")
+				errorStr = append(errorStr, "too many dates in the wrong format")
 				break
 			}
 			continue
 		}
 		if dateTime.Before(startDate) || dateTime.After(endDate) {
-			print("date is not in the correct range: " + date)
+			errorStr = append(errorStr, "date is not in the correct range: "+date)
 			continue
 		}
 		if dateTime.Compare(nextDate) != 0 {
-			print("date is not in the correct order: " + date)
+			errorStr = append(errorStr, "date is not in the correct order: "+date)
 			wrongDateOrderCount++
 			if wrongDateOrderCount > 10 {
-				print("too many dates in the wrong order")
+				errorStr = append(errorStr, "too many dates in the wrong order")
 				break
 			}
 			continue
 		}
 		nextDate = nextDate.AddDate(0, 0, 1) // add one day
 	}
+	if len(errorStr) > 0 {
+		return errorStr
+	}
+	return nil
 }
 
 func compareSlices(a []string, b []string) bool {
