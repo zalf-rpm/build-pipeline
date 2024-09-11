@@ -151,7 +151,7 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 		if err != nil {
 			errorStr = append(errorStr, fmt.Sprintf("date is not in the correct format: %s - line: %d", date, lineCounter))
 			wrongDateFormatCount++
-			if wrongDateFormatCount > 3 {
+			if wrongDateFormatCount > 2 {
 				errorStr = append(errorStr, "too many dates in the wrong format")
 				break
 			}
@@ -164,7 +164,7 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 		if dateTime.Compare(nextDate) != 0 {
 			errorStr = append(errorStr, fmt.Sprintf("date is not in the correct order: %s - line: %d", date, lineCounter))
 			wrongDateOrderCount++
-			if wrongDateOrderCount > 10 {
+			if wrongDateOrderCount > 2 {
 				errorStr = append(errorStr, "too many dates in the wrong order")
 				break
 			}
