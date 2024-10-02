@@ -74,26 +74,15 @@ RUN apt-get install python3.9 -y
 RUN apt-get install python3.11 -y
 RUN apt-get install python3.12 -y
 
+# install pipx
+RUN apt-get update --yes && apt-get install --yes pipx
+
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV SHELL=/bin/bash
 
-# ARG PYTHON_VERSION=3.12.5
+# install poetry
+RUN pipx install poetry 
 
-# # download and unpack python
-
-# RUN wget --no-hsts --quiet https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz -O /tmp/python_${PYTHON_VERSION}.tgz && \
-#     mkdir -p ${PYTHON_DIR} && \
-#     tar -xzf /tmp/python_${PYTHON_VERSION}.tgz -C ${PYTHON_DIR} --strip-components=1 && \
-#     rm /tmp/python_${PYTHON_VERSION}.tgz
-
-RUN pip install cartopy
-RUN pip install netcdf4
-RUN pip install pyzmq
-RUN pip install nco
-RUN pip install geopandas
-RUN pip install rasterio
-
-
-COPY ./python_version.sh /start.sh
+COPY ./python_version_noconda.sh /start.sh
 
 CMD ["sh", "./start.sh"]
