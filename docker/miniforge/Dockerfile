@@ -62,7 +62,7 @@ RUN apt-get update --yes && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # tools
-RUN apt-get update --yes && apt-get install --yes htop gnupg
+RUN apt-get update --yes && apt-get install --yes htop gnupg curl
 RUN apt-get install --yes libarchive13
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
