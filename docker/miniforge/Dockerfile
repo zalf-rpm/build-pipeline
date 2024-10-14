@@ -68,12 +68,12 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # install other Python versions, to chose from
 RUN add-apt-repository ppa:deadsnakes/ppa && apt-get update -y
-RUN apt-get install python3.7 -y
-RUN apt-get install python3.8 -y
-RUN apt-get install python3.9 -y
-RUN apt-get install python3.11 -y
-RUN apt-get install python3.12 -y
-RUN apt-get install python3.13 -y
+RUN apt-get install -y python3.7 python3.7-dev python3.7-venv
+RUN apt-get install -y python3.8 python3.8-dev python3.8-venv
+RUN apt-get install -y python3.9 python3.9-dev python3.9-venv
+RUN apt-get install -y python3.11 python3.11-dev python3.11-venv
+RUN apt-get install -y python3.12 python3.12-dev python3.12-venv
+RUN apt-get install -y python3.13 python3.13-dev python3.13-venv
 
 
 RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
