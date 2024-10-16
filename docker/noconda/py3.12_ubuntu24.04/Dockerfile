@@ -25,9 +25,6 @@ RUN apt-get update --yes && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install software-properties-common -y
-RUN add-apt-repository ppa:ubuntugis/ppa && apt-get update
-RUN apt-get install gdal-bin -y && apt-get install libgdal-dev -y
-RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal && export C_INCLUDE_PATH=/usr/include/gdal
 
 # R pre-requisites
 RUN apt-get update --yes && \
@@ -56,10 +53,14 @@ RUN apt-get update --yes && \
     python3-dev \
     python3-pip \
     python3.12-venv \
+    python3.12-dev \
     libsqlite3-dev && \
     apt-get install gdal-bin -y && \
     apt-get install proj-bin -y && \
+    apt-get install python3-gdal -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal && export C_INCLUDE_PATH=/usr/include/gdal
 
 # tools
 RUN apt-get update --yes && apt-get install --yes htop gnupg curl
