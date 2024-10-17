@@ -88,13 +88,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 && \
     dpkg -i cuda-keyring_1.0-1_all.deb && \
     rm -rf /var/lib/apt/lists/*
 
+# install CUDA 12.1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cuda-cudart-12-1=12.1.105-1 \
     cuda-compat-12-1 \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
-ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
+# install CUDA 11.8
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cuda-cudart-11-8=11.8.89-1 \
+    cuda-compat-11-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV LD_LIBRARY_PATH /usr/local/cuda-12/lib64:/usr/local/cuda-11/lib64:$LD_LIBRARY_PATH
 
 # install pipx
 RUN apt-get update --yes && apt-get install --yes pipx
