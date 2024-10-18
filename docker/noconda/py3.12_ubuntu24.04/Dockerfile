@@ -86,6 +86,7 @@ RUN apt-get update && apt-get install -y nvidia-container-toolkit
 
 # install pipx
 RUN apt-get update --yes && apt-get install --yes pipx
+RUN apt-get update --yes && apt-get install --yes nvtop
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV SHELL=/bin/bash
