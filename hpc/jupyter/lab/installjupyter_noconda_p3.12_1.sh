@@ -32,7 +32,7 @@ if [ $READ_HASH == "true" ] ; then
     fi
 fi
 # check if jupyter venv exists, if not install jupyter
-ENVPATH=$WORKDIR/.local/pipx/venvs/jupyter
+ENVPATH=$WORKDIR/.local/share/pipx/venvs/jupyter
 if [ ! -e ${ENVPATH} ] ; then
     pipx install jupyter --include-deps --python python3.12
     pipx inject jupyter jupyterlab-git jupyterlab-drawio matplotlib pandas ipykernel ipyparallel jupyterlab-nvdashboard
