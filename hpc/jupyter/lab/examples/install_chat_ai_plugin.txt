@@ -1,0 +1,14 @@
+open terminal
+install plugin jupyter-ai and gpt4all as model framework
+> pipx inject jupyter jupyter-ai gpt4all 
+
+pip install nvidia-cublas-cu11
+pip install nvidia-cuda-runtime-cu11
+
+download the model
+python script:
+
+from gpt4all import GPT4All
+model = GPT4All("Meta-Llama-3-8B-Instruct.Q4_0.gguf") # downloads / loads a 4.66GB LLM
+with model.chat_session():
+    print(model.generate("How can I run LLMs efficiently on my laptop?", max_tokens=1024))
