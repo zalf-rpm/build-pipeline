@@ -107,9 +107,6 @@ EOF
    if [ $PARTITION == "highmem" ] ; then 
      HPC_PARTITION="--partition=highmem"
      CORES=80
-   elif [ $PARTITION == "gpu" ] ; then 
-     HPC_PARTITION="--partition=gpu"
-     CORES=48
    elif [ $PARTITION == "fat" ] ; then 
      HPC_PARTITION="--partition=fat"
      CORES=160

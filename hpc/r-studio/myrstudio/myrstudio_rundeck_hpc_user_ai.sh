@@ -67,7 +67,13 @@ EOF
   if [ $PARTITION == "highmem" ] ; then 
      HPC_PARTITION="--partition=highmem"
      CORES=80
-  elif [ $PARTITION == "fat" ] ; then 
+   elif [ $PARTITION == "gpu-Tesla-V100" ] ; then 
+     HPC_PARTITION="--partition=gpu -x gpu005"
+     CORES=48
+   elif [ $PARTITION == "gpu-Nvidia-H100" ] ; then 
+     HPC_PARTITION="--partition=gpu -x gpu001,gpu002,gpu003,gpu004"
+     CORES=128
+   elif [ $PARTITION == "fat" ] ; then 
      HPC_PARTITION="--partition=fat"
      CORES=160
   fi

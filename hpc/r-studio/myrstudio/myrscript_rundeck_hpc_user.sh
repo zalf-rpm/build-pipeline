@@ -42,15 +42,13 @@ fi
 
 HPC_PARTITION="--partition=compute"
 CORES=80
+echo "warning..."
 if [ $PARTITION == "highmem" ] ; then 
-  HPC_PARTITION="--partition=highmem"
-  CORES=80
-elif [ $PARTITION == "gpu" ] ; then 
-  HPC_PARTITION="--partition=gpu"
-  CORES=48
-elif [ $PARTITION == "fat" ] ; then 
-  HPC_PARTITION="--partition=fat"
-  CORES=160
+   HPC_PARTITION="--partition=highmem"
+   CORES=80
+ elif [ $PARTITION == "fat" ] ; then 
+   HPC_PARTITION="--partition=fat"
+   CORES=160
 fi
 
 if [ ! -d ${MOUNT_DATA_SOURCE1} ] ; then
