@@ -54,7 +54,7 @@ func main() {
 	// start date
 	startDate := flag.String("startDate", "1951-01-01", "start date of the climate data")
 	// end date
-	endDate := flag.String("endDate", "2023-12-31", "end date of the climate data")
+	endDate := flag.String("endDate", "2024-08-30", "end date of the climate data")
 	flag.Parse()
 
 	// check if input folder is provided
@@ -94,6 +94,7 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 
 	// skip if file is a directory
 	if fileI.IsDir() {
+		fmt.Println("scan directory:", path)
 		return nil
 	}
 	// check if file is csv.gz, if not skip it
