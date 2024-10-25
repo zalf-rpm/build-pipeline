@@ -1,5 +1,5 @@
 #!/bin/bash -x
-#/ usage: start ?user? ?job_exec_id? ?host? ?estimated_time? ?partition? ?version? ?port? ?mount_source1? ?mount_source2? ?mount_source3? ?read_only_sources? ?install_pytorch?
+#/ usage: start ?user? ?job_exec_id? ?host? ?estimated_time? ?partition? ?version? ?port? ?mount_source1? ?mount_source2? ?mount_source3? ?read_only_sources? 
 
 set -eu
 [[ $# < 11 ]] && {
@@ -21,7 +21,7 @@ MOUNT_DATA_SOURCE1=$8 # e.g climate data
 MOUNT_DATA_SOURCE2=${9} # e.g. project data
 MOUNT_DATA_SOURCE3=${10} # e.g. other sources
 READ_ONLY_SOURCES=${11}
-INSTALL_PYTORCH=${12}
+
 
 #sbatch job name 
 SBATCH_JOB_NAME="jupyter_rdk_ai"
@@ -137,7 +137,7 @@ EOF
 
    singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
    -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
-   $IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR $REQUIRE_SETUP $INSTALL_PYTORCH
+   $IMAGE_PATH /bin/bash installjupyter_$VERSION.sh $WORKDIR $REQUIRE_SETUP true
 
    # current date for log naming
    DATE=`date +%Y-%d-%B_%H%M%S`
