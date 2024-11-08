@@ -65,9 +65,15 @@ if [[ ! $SCRIPT_NAME =~ ^[a-zA-Z0-9_/.-]+$ ]] ; then
 echo "Invalid characters in script name"
 exit 1
 fi 
-
-
+# check if script path is a relative path or an absolute path
+if [[ $SCRIPT_NAME =~ ^/ ]] ; then
+echo "Absolute path detected"
+else
+echo "Relative path detected"
 SCRIPT_NAME=$WORKDIR/$SCRIPT_NAME
+fi
+
+
 
 # check if script exists
 if [ ! -f ${SCRIPT_NAME} ] ; then
