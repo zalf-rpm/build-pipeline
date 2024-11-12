@@ -70,13 +70,43 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// get first header
+	// open gz file and read only the header
+	file, err := os.Open(*inputFolder + "/0/daily_mean_RES1_C181R0.csv.gz")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	// gzip reader
+	gz, err := gzip.NewReader(file)
+	if err != nil {
+		panic(err)
+	}
+	defer gz.Close()
+
+	csvReader := csv.NewReader(bufio.NewReader(gz))
+	csvReader.Comma = '\t'
+	// read header
+	firstHeader, err := csvReader.Read()
+	if err != nil {
+		panic(err)
+	}
+
+	// check if minHeader contains the minimum columns
+	// Date	Precipitation	TempMin	TempMean	TempMax	Radiation	Windspeed	RelHumCalc
+	minHeader := []string{"Date", "Precipitation", "TempMin", "TempMean", "TempMax", "Radiation", "Windspeed", "RelHumCalc"}
+	if !contains(firstHeader, minHeader) {
+		fmt.Println("First header does not contain the correct columns:")
+		fmt.Println("Given:", firstHeader)
+		fmt.Println("Expected:", minHeader)
+	}
 
 	// walk through the folder
 	err = filepath.Walk(*inputFolder, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		errors := checkFile(path, info, startDateT, endDateT)
+		errors := checkFile(path, info, startDateT, endDateT, firstHeader)
 		if errors != nil {
 			println(path + ":")
 		}
@@ -90,7 +120,7 @@ func main() {
 	}
 }
 
-func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time.Time) []string {
+func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time.Time, header []string) []string {
 
 	// skip if file is a directory
 	if fileI.IsDir() {
@@ -128,8 +158,7 @@ func checkFile(path string, fileI os.FileInfo, startDate time.Time, endDate time
 	if err != nil {
 		panic(err)
 	}
-	// check if header contains the correct columns
-	header := []string{"Date", "Precipitation", "TempMin", "TempMean", "TempMax", "Radiation", "SunshineDuration", "SoilMoisture", "SoilTemperature", "Windspeed", "RefETcalc", "RefETdwd", "RelHumCalc", "Gridcell"}
+	// check if header contains the correct columns, all columns should be in the same format as the first header
 	if !compareSlices(header, record) {
 		errorStr = append(errorStr, "header does not contain the correct columns")
 	}
@@ -189,4 +218,24 @@ func compareSlices(a []string, b []string) bool {
 		}
 	}
 	return true
+}
+
+// contains slice a all the elements of slice b {
+func contains(a []string, b []string) bool {
+	for _, e := range b {
+		if !containsElement(a, e) {
+			return false
+		}
+	}
+	return true
+}
+
+// contains slice a the element e
+func containsElement(a []string, e string) bool {
+	for _, i := range a {
+		if i == e {
+			return true
+		}
+	}
+	return false
 }
