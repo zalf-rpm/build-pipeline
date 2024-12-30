@@ -23,7 +23,13 @@ RUN apt-get update --yes && \
 ARG MIGRATE_VERSION=migrate-5.0.6
 
 ENV DOWNLOAD=/download
+ENV MPI_DIR=/opt/ompi
 RUN mkdir -p ${DOWNLOAD}
+ENV USER=mpitest
+ENV GROUP=mpitest
+ENV HOME=/home/$USER
+ENV PATH="${MPI_DIR}/bin:${HOME}/.local/bin:${PATH}"
+
 WORKDIR ${DOWNLOAD}
 
 # Download OPENMPI from https://www.open-mpi.org/software/ompi/v5.0/
@@ -44,19 +50,28 @@ RUN wget https://peterbeerli.com/migrate-html5/download_version4/${MIGRATE_VERSI
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
     libgsl-dev \
-    libgslcblas0
+    libgslcblas0 \
+    python3 python3-dev python3-pip \
+    gcc gfortran binutils 
+RUN apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # install clang compiler
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
-    clang
+    clang \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+ENV LD_LIBRARY_PATH="${MPI_DIR}/lib"
+ENV CC=clang
+ENV CXX=clang++
 
 # compile openmpi
 RUN mkdir -p ${DOWNLOAD}/openmpi-5.0.6
 RUN tar -xvzf openmpi-5.0.6.tar.gz
 WORKDIR ${DOWNLOAD}/openmpi-5.0.6
-RUN ./configure
+RUN ./configure --prefix=$MPI_DIR 
 RUN make
 RUN make install
 
@@ -70,4 +85,23 @@ WORKDIR ${DOWNLOAD}/${MIGRATE_VERSION}/src
 RUN ./configure
 RUN make clean
 RUN make mpis
+
+
+
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+    python3.12-venv \
+    python3.12-dev \
+    pipx \
+    python3-mpi4py \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN groupadd -r ${GROUP} \
+    && useradd -r -g ${GROUP} ${USER} \
+    && mkdir -p $HOME \
+    && chown -R ${USER}:${GROUP} $HOME
+USER ${USER}
+WORKDIR ${HOME}
+
 
