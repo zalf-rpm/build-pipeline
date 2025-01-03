@@ -101,7 +101,15 @@ RUN groupadd -r ${GROUP} \
     && useradd -r -g ${GROUP} ${USER} \
     && mkdir -p $HOME \
     && chown -R ${USER}:${GROUP} $HOME
+
+# make migrate home with example
+ENV MIGRATE_HOME=/migrate/${MIGRATE_VERSION}
+RUN mkdir -p ${MIGRATE_HOME}
+WORKDIR ${MIGRATE_HOME}
+# add migrate to path 
+ENV PATH="${MIGRATE_HOME}/bin:${PATH}"
+# copy migrate to migrate home
+RUN mkdir -p ${MIGRATE_HOME}/bin
+RUN cp /download/${MIGRATE_VERSION}/src/migrate-n-mpi ${MIGRATE_HOME}/bin
+RUN cp -r /download/${MIGRATE_VERSION}/example ${MIGRATE_HOME}
 USER ${USER}
-WORKDIR ${HOME}
-
-
