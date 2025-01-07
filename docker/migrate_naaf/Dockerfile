@@ -86,8 +86,6 @@ RUN ./configure
 RUN make clean
 RUN make mpis
 
-
-
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
     python3.12-venv \
@@ -96,6 +94,10 @@ RUN apt-get update --yes && \
     python3-mpi4py \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# clean up the environment
+RUN rm -rf ${DOWNLOAD}/${MIGRATE_VERSION}.src.tar.gz
+RUN rm -rf ${DOWNLOAD}/openmpi-5.0.6.tar.gz
 
 RUN groupadd -r ${GROUP} \
     && useradd -r -g ${GROUP} ${USER} \
