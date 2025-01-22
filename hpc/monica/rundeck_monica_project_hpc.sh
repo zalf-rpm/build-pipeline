@@ -7,7 +7,7 @@ set -eu
 
 echo "Set env"
 
-export PATH=$PATH:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:~/.local/bin:~/bin
+export PATH=~/.conda/envs/git/bin:$PATH:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:~/.local/bin:~/bin
 
 USER=$1
 JOB_NAME=$2
