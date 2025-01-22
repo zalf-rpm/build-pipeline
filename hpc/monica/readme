@@ -1,0 +1,17 @@
+Installing current version of git:
+
+since these scripts are doing a checkout of a git repository, you need to have git and git-lfs installed on your system.
+
+Install git with conda:
+
+conda create git python=3.12
+conda activate git
+conda install -c conda-forge git git-lfs
+git lfs install
+
+Add to path:
+~/.conda/envs/git/bin:
+
+Check with:
+git --version
+git lfs env
