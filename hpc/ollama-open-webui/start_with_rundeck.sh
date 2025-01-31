@@ -23,15 +23,18 @@ SBATCH_JOB_NAME="ollama-webui"
 #parse output of squeue for job name
 BATCHID=$(squeue --noheader -o "%.18i" -n $SBATCH_JOB_NAME -u $(whoami))
 
+WORKDIR=/beegfs/${USER}/ollama${VERSION}
+MOUNT_OLLAMA=${WORKDIR}/ollama
+MOUNT_OPEN_WEB_UI=${WORKDIR}/open_web_ui
+LOGS=$WORKDIR/log
+SINGULARITY_IMAGE=/beegfs/common/singularity/ollama/ollama-hpc_${VERSION}.sif
+
 # check if job is running
 if [ -z "$BATCHID" ] ; then
    echo "No job running"
     # create required folder
-    WORKDIR=/beegfs/${USER}/ollama${VERSION}
-    MOUNT_OLLAMA=${WORKDIR}/ollama
-    MOUNT_OPEN_WEB_UI=${WORKDIR}/open_web_ui
-    LOGS=$WORKDIR/log
-    SINGULARITY_IMAGE=/beegfs/common/singularity/ollama/ollama-hpc_${VERSION}.sif
+
+
 
    # check if that is the inital run, by checking if the folder exists
    SLEEPTIME=30
