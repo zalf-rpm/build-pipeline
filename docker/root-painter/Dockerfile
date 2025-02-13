@@ -21,6 +21,7 @@ RUN apt-get install -y vim net-tools locales
 RUN apt-get -y install novnc python3-websockify python3-numpy
 # Install firefox
 RUN apt-get install -y firefox
+RUN apt-get install -y qt5-default qt5-qmake qtbase5-dev-tools qt5-doc 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install root_painter UI
