@@ -1,7 +1,7 @@
 # build helper tools for simplace on HPC
 # to split and merge big simplace project batch files 
 #Download base image alpine 3.10
-FROM golang:1.19.1-alpine3.16 AS build-env
+FROM golang:1.24.1-alpine3.21 AS build-env
 
 RUN apk update && apk add --no-cache binutils git curl unzip tar
 
@@ -15,13 +15,11 @@ RUN git describe --always --long > /version.txt
 
 # build tool to split up big project files
 WORKDIR /go/src/zalf-rpm/build-pipeline/hpc/simplace/splitsimplaceproj
-RUN go mod init
 RUN go mod tidy
 RUN VERSION=$(cat /version.txt) && go build -v -ldflags "-X main.version=${VERSION}"
 
 # build tool to merge output files from different folders into one
 WORKDIR /go/src/zalf-rpm/build-pipeline/hpc/simplace/accumulate_output
-RUN go mod init
 RUN go mod tidy
 RUN VERSION=$(cat /version.txt) && go build -v -ldflags "-X main.version=${VERSION}" -o accumulate_output
 
@@ -29,7 +27,7 @@ RUN VERSION=$(cat /version.txt) && go build -v -ldflags "-X main.version=${VERSI
 
 
 # build image with OpenJDK and simplace
-FROM alpine:3.16
+FROM alpine:3.21
 
 # OpenJDK with mircosoft libs
 
