@@ -1,6 +1,8 @@
-go 1.22.4
+go 1.23.4
 
 use (
 	./rundeck/varservice
 	./testtools/verify_climate_data_bonn
+	./hpc/simplace/accumulate_output
+	./hpc/simplace/splitsimplaceproj
 )
