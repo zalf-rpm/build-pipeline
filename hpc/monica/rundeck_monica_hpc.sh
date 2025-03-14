@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_data? ?num_instance? ?version? ?estimated_time? ?hostname?
 set -eu
-[[ $# < 9 ]] && {
+[[ $# < 10 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -18,6 +18,7 @@ VERSION=$6
 TIME=$7
 HOSTNAME=$8
 PORT_SETUP=$9
+SHARED_ID=${10}
 
 MONICA_PER_NODE=40
 
@@ -78,6 +79,13 @@ monica_autostart_proxies=true,\
 monica_autostart_worker=false,\
 monica_auto_restart_proxies=true,\
 monica_auto_restart_worker=false
+
+if [ "$SHARED_ID" == "true" ]; then
+    ENV_VARS=${ENV_VARS},monica_proxy_out_mode=-prs
+else
+    ENV_VARS=${ENV_VARS},monica_proxy_out_mode=-pps
+fi
+# start proxy
 
 singularity instance start --env ${ENV_VARS} -B $MOUNT_LOG:$LOGOUT ${IMAGE_PATH} ${PROXY_NAME} 
 nohup singularity run --env ${ENV_VARS} instance://${PROXY_NAME} > /dev/null 2>&1 & 

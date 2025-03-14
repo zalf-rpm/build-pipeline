@@ -14,7 +14,8 @@ MOUNT_LOG_WORKER=${10}
 MONICA_OUT=${11}
 PYTHON_SCRIPT=${12}
 SBATCH_JOB_NAME=${13}
-shift 13
+SHARED_ID=${14}
+shift 14
 SCRIPT_PARAMETERS=$@
 
 echo "SLURM NODES" ${SLURM_JOB_NODELIST}
@@ -33,7 +34,7 @@ DATE=`date +%Y-%d-%B_%H%M%S`
 
 # start proxy
 mkdir -p $MOUNT_LOG_PROXY
-srun --exclusive -w $NODE_PROXY -N1 -n1 -c2 -o ${MONICA_LOG}/monica_proxy_%j batch/sbatch_monica_proxy.sh ${SINGULARITY_MONICA_IMAGE} $MOUNT_LOG_PROXY &
+srun --exclusive -w $NODE_PROXY -N1 -n1 -c2 -o ${MONICA_LOG}/monica_proxy_%j batch/sbatch_monica_proxy.sh ${SINGULARITY_MONICA_IMAGE} $MOUNT_LOG_PROXY $SHARED_ID &
 
 # start worker
 mkdir -p $MOUNT_LOG_WORKER

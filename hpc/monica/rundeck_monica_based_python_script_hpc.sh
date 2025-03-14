@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_climate_data? ?mount_project_data? ?num_instance? ?version? ?estimated_time? ?mode? ?usehighmem? ?source? ?python_script?
 set -eu
-[[ $# < 14 ]] && {
+[[ $# < 15 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -23,7 +23,8 @@ USEHIGHMEM=${11}
 SCRIPT_SOURCE=${12}
 PYTHON_SCRIPT=${13}
 MAS_TAG=${14}
-shift 14
+SHARED_ID=${15}
+shift 15
 SCRIPT_PARAMETERS=$@
 
 MONICA_PER_NODE=40
@@ -143,7 +144,7 @@ fi
 # required nodes (1 monica proxy node)+(1 python script)+(n monica worker)
 NUM_SLURM_NODES=$(($NUM_NODES + 2))
 CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} $HPC_PARTITION -N $NUM_SLURM_NODES -c 40 -o ${MONICA_LOG}/monica_proj-%j"
-SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${PYTHON_SCRIPT} ${SBATCH_JOB_NAME} ${SCRIPT_PARAMETERS}"
+SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${PYTHON_SCRIPT} ${SBATCH_JOB_NAME} ${SHARED_ID} ${SCRIPT_PARAMETERS}"
 
 BATCHID=$( sbatch $CMD_LINE_SLURM batch/sbatch_monica_based_python_script.sh $SCRIPT_INPUT )
 DEPENDENCY="afterany:"$BATCHID
