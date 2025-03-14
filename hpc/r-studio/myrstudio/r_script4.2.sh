@@ -53,12 +53,26 @@ export SINGULARITY_HOME=${HOMEDIR}
 cd ${HOMEDIR}
 # Create temporary directory to be populated with directories to bind-mount in the container
 # where writable file systems are necessary. Adjust path as appropriate for your computing environment.
-workdir=$(python -c 'import tempfile; print(tempfile.mkdtemp())')
+TMPDIR=${HOMEDIR}/tmp
+mkdir -p ${TMPDIR}
+workdir=$(python -c 'import tempfile; print(tempfile.mkdtemp(dir="'${TMPDIR}'"))')
 mkdir -p -m 700 ${workdir}/run ${workdir}/tmp ${workdir}/var/lib/rstudio-server
 cat > ${workdir}/database.conf <<END
 provider=sqlite
 directory=/var/lib/rstudio-server
 END
+
+# clean up at end of script
+function clean_up {
+    # remove temporary directory
+    rm -rf "${TMPDIR:?}"
+    exit
+}
+
+# Always call "clean_up" when script ends
+# This even executes on job failure/cancellation
+trap 'clean_up' EXIT
+
 
 # Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
 # libraries used by R) from spawning more threads than the number of processors
