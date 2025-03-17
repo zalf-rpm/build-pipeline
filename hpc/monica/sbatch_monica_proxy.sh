@@ -2,7 +2,7 @@
 
 SINGULARITY_IMAGE=$1
 MOUNT_LOG=$2
-SHARED_ID=${3: "false"} # optional
+SHARED_ID=${3:-"false"} # optional
 LOGOUT=/var/log
 
 SHARED_ID_MODE=-pps
