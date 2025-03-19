@@ -27,7 +27,7 @@ SHARED_ID=${15}
 shift 15
 SCRIPT_PARAMETERS=$@
 
-MONICA_PER_NODE=40
+MONICA_PER_NODE=80
 
 # check if mas tag is empty
 if [ -z "$MAS_TAG" ] ; then 
