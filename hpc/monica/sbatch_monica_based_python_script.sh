@@ -1,5 +1,5 @@
 #!/bin/bash -x
-#SBATCH --cpus-per-task=40
+#SBATCH --cpus-per-task=80
 
 MOUNT_DATA_CLIMATE=${1}
 MOUNT_DATA_PROJECT=${2}
@@ -40,13 +40,13 @@ srun --exclusive -w $NODE_PROXY -N1 -n1 -c2 -o ${MONICA_LOG}/monica_proxy_%j bat
 mkdir -p $MOUNT_LOG_WORKER
 for node in "${NODE_ARRAY_WORKER[@]}"; do
     echo "worker: " ${node}
-    srun --exclusive -w ${node} -N1 -n1 -c40 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER &
+    srun --exclusive -w ${node} -N1 -n1 -c80 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER &
 done
 
 PATH_TO_PYTHON_SCRIPT="${PYTHON_SCRIPT%/*}"
 FILENAME_PYTHON_SCRIPT="${PYTHON_SCRIPT##*/}"
 
 # start python script
-srun --exclusive -w ${NODE_PYTHON_SCRIPT} -N1 -n1 -c40 -o ${MONICA_LOG}/python_script_log_%j -e ${MONICA_LOG}/python_script_error_log_%j batch/sbatch_python.sh $MONICA_WORKDIR/$PATH_TO_PYTHON_SCRIPT $FILENAME_PYTHON_SCRIPT $MONICA_OUT server=$NODE_PROXY prod-port=6666 cons-port=7777 $SCRIPT_PARAMETERS #&
+srun --exclusive -w ${NODE_PYTHON_SCRIPT} -N1 -n1 -c80 -o ${MONICA_LOG}/python_script_log_%j -e ${MONICA_LOG}/python_script_error_log_%j batch/sbatch_python.sh $MONICA_WORKDIR/$PATH_TO_PYTHON_SCRIPT $FILENAME_PYTHON_SCRIPT $MONICA_OUT server=$NODE_PROXY prod-port=6666 cons-port=7777 $SCRIPT_PARAMETERS #&
 #python_process_id=$!
 #wait $python_process_id

@@ -141,11 +141,11 @@ elif [ $MODE == "folder" ] ; then
   fi
 fi
 
-# required nodes (1 monica proxy node)+(1 python script)+(n monica worker)
-NUM_SLURM_NODES=$(($NUM_NODES + 2))
+# required nodes (0 monica proxy node)+(1 python script)+(n monica worker)
+NUM_SLURM_NODES=$(($NUM_NODES + 1))
 CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} $HPC_PARTITION -N $NUM_SLURM_NODES -c 80 -o ${MONICA_LOG}/monica_proj-%j"
 SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${PYTHON_SCRIPT} ${SBATCH_JOB_NAME} ${SHARED_ID} ${SCRIPT_PARAMETERS}"
 
-BATCHID=$( sbatch $CMD_LINE_SLURM batch/sbatch_monica_based_python_script.sh $SCRIPT_INPUT )
+BATCHID=$( sbatch $CMD_LINE_SLURM batch/sbatch_monica_based_python_script_opt.sh $SCRIPT_INPUT )
 DEPENDENCY="afterany:"$BATCHID
 sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_CLEANUP --time=00:15:00 -o log/monica_project_cleanup-%j batch/sbatch_monica_project_cleanup.sh ${MODE} ${MONICA_WORKDIR} 
