@@ -1,0 +1,9 @@
+email_server: imap.example.com
+port: "993"
+shared_email_folder: INBOX
+download_path: /tmp
+credential_key: cluster1
+username: ""
+password: ""
+subject: subject
+from: from
