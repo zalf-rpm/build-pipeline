@@ -18,6 +18,14 @@ type Config struct {
 	CredentialKey string `yaml:"credential_key"`
 	Username      string `yaml:"username"`
 	Password      string `yaml:"password"`
+	UseOAuth      bool   `yaml:"useOAuth"`
+
+	OAuth struct {
+		ClientID     string `yaml:"clientId"`
+		ClientSecret string `yaml:"clientSecret"`
+		TenantID     string `yaml:"tenantId"`
+		TokenCache   string `yaml:"tokenCache"`
+	} `yaml:"oauth"`
 
 	// search criteria
 	Subject string `yaml:"subject"`
@@ -50,14 +58,20 @@ func (c *Config) Validate() error {
 	if c.DownloadPath == "" {
 		return fmt.Errorf("download path is required")
 	}
-	if c.CredentialKey == "" {
-		if c.Username == "" {
-			return fmt.Errorf("username is required")
-		}
-		if c.Password == "" {
-			return fmt.Errorf("password is required")
-		}
+	if c.Username == "" {
+		return fmt.Errorf("username is required")
 	}
+	if !c.UseOAuth && (c.CredentialKey == "" && c.Password == "") {
+		return fmt.Errorf("either credential key or password is required")
+	}
+	if c.UseOAuth &&
+		(c.OAuth.ClientID == "" ||
+			c.OAuth.ClientSecret == "" ||
+			c.OAuth.TenantID == "" ||
+			c.OAuth.TokenCache == "") {
+		return fmt.Errorf("all OAuth fields are required")
+	}
+
 	if c.Subject == "" {
 		return fmt.Errorf("subject is required")
 	}
@@ -92,6 +106,18 @@ func WriteDummyConfig(file string) error {
 		Password:      "password",
 		Subject:       "subject",
 		From:          "from",
+		UseOAuth:      true,
+		OAuth: struct {
+			ClientID     string `yaml:"clientId"`
+			ClientSecret string `yaml:"clientSecret"`
+			TenantID     string `yaml:"tenantId"`
+			TokenCache   string `yaml:"tokenCache"`
+		}{
+			ClientID:     "clientId",
+			ClientSecret: "clientSecret",
+			TenantID:     "tenantId",
+			TokenCache:   "tokenCache",
+		},
 	}
 	data, err := yaml.Marshal(&config)
 	if err != nil {

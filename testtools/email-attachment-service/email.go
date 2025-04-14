@@ -8,38 +8,58 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/imapclient"
 	"github.com/emersion/go-message/mail"
+	"github.com/emersion/go-sasl"
 )
 
 // EmailClient represents the email client that connects to the email server.
 type EmailClient struct {
-	IMAPServer string
-	Username   string
-	Password   string
+	IMAPServer    string
+	Username      string
+	Password      string
+	UseOAuth      bool
+	TokenProvider *TokenProvider
 }
 
 // NewEmailClient creates a new instance of EmailClient.
-func NewEmailClient(config *Config) *EmailClient {
-	var username, password string
-	var err error
-	if config.CredentialKey != "" {
-		username, password, err = GetCredential(config.CredentialKey)
-		if err != nil {
-			log.Fatalf("failed to load credentials: %v", err)
-		}
-	} else if config.Username == "" || config.Password == "" {
-		log.Fatal("creadential_key or username:password are required")
-	} else {
-		username = config.Username
-		password = config.Password
+func NewEmailClient(config *Config) (*EmailClient, error) {
+	if config == nil {
+		return nil, fmt.Errorf("config cannot be nil")
 	}
-	return &EmailClient{
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config: %v", err)
+	}
+
+	client := &EmailClient{
 		IMAPServer: config.EmailServer + ":" + config.Port,
-		Username:   username,
-		Password:   password,
 	}
+	client.Username = config.Username
+	if config.CredentialKey != "" {
+		username, password, err := GetCredential(config.CredentialKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get credentials: %v", err)
+		}
+		if client.Username != username {
+			return nil, fmt.Errorf("username in config does not match credentials")
+		}
+		client.Password = password
+	} else if config.Password != "" {
+		client.Password = config.Password
+	} else if config.UseOAuth {
+		oauthConfig := &OAuthConfig{
+			ClientID:     config.OAuth.ClientID,
+			ClientSecret: config.OAuth.ClientSecret,
+			TenantID:     config.OAuth.TenantID,
+			TokenCache:   config.OAuth.TokenCache,
+		}
+		client.TokenProvider = NewTokenProvider(oauthConfig)
+		client.UseOAuth = true
+	} else {
+		return nil, fmt.Errorf("no credentials provided")
+	}
+	return client, nil
 }
 
 type EmailConfig struct {
@@ -59,20 +79,63 @@ func NewEmailConfig(config *Config) *EmailConfig {
 }
 
 // Connect authenticates the client with the email server.
-func (ec *EmailClient) Connect() (*client.Client, error) {
+func (ec *EmailClient) Connect() (*imapclient.Client, error) {
 	log.Println("Connecting to server...")
 
 	// Connect to server
-	c, err := client.DialTLS(ec.IMAPServer, nil)
+	c, err := imapclient.DialTLS(ec.IMAPServer, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to server: %v", err)
 	}
 	log.Println("Connected")
 
-	// Login
-	if err := c.Login(ec.Username, ec.Password); err != nil {
-		c.LoggedOut()
-		return nil, fmt.Errorf("login failed: %v", err)
+	// Login with OAuth or Basic Authentication
+	if ec.UseOAuth && ec.TokenProvider != nil {
+		// Get the XOAUTH2 token
+		authString, err := ec.TokenProvider.GetAccessToken()
+		if err != nil {
+			c.Logout()
+			return nil, fmt.Errorf("failed to get OAuth token: %v", err)
+		}
+		if !c.Caps().Has(imap.AuthCap(sasl.OAuthBearer)) {
+			c.Logout()
+			return nil, fmt.Errorf("OAUTHBEARER not supported by the server")
+		}
+
+		saslClient := sasl.NewOAuthBearerClient(&sasl.OAuthBearerOptions{
+			Username: ec.Username,
+			Token:    authString,
+		})
+		if err := c.Authenticate(saslClient); err != nil {
+			c.Logout()
+			return nil, fmt.Errorf("authentication failed: %v", err)
+		}
+	} else {
+		// ask server if it supports NTLM authentication
+		if c.Caps().Has(imap.AuthCap("NTLM")) {
+			log.Println("Server supports NTLM authentication")
+			// use NTLM authentication with username and password
+			ntlmClient := &NTLMClient{
+				Username:     ec.Username,
+				Password:     ec.Password,
+				Domain:       "", // Set the domain if required
+				DomainNeeded: false,
+			}
+			if err := c.Authenticate(ntlmClient); err != nil {
+				c.Logout()
+				return nil, fmt.Errorf("NTLM authentication failed: %v", err)
+			}
+		} else if c.Caps().Has(imap.AuthCap("PLAIN")) {
+			log.Println("Server supports PLAIN authentication")
+			auth := sasl.NewPlainClient("", ec.Username, ec.Password)
+			if err := c.Authenticate(auth); err != nil {
+				c.Logout()
+				return nil, fmt.Errorf("AUTH PLAIN failed: %v", err)
+			}
+		} else {
+			c.Logout()
+			return nil, fmt.Errorf("no supported authentication method found")
+		}
 	}
 	log.Println("Logged in")
 
@@ -88,74 +151,88 @@ func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig) error {
 	defer c.Logout()
 
 	// Select the mailbox
-	mbox, err := c.Select(eConf.SharedFolder, false)
+	mbox := c.Select(eConf.SharedFolder, &imap.SelectOptions{ReadOnly: true})
+	selectMBoxData, err := mbox.Wait()
 	if err != nil {
 		return fmt.Errorf("failed to select mailbox: %v", err)
 	}
-	log.Printf("Mailbox %s selected, total messages: %d", eConf.SharedFolder, mbox.Messages)
+	log.Printf("Mailbox %s selected, total messages: %d", eConf.SharedFolder, selectMBoxData.NumMessages)
 
-	if mbox.Messages == 0 {
+	if selectMBoxData.NumMessages == 0 {
 		log.Println("No messages in mailbox")
 		return nil
 	}
 
 	// Get emails from the last 24 hours
 	since := time.Now().Add(-24 * time.Hour)
-	criteria := imap.NewSearchCriteria()
-	criteria.Since = since
-	criteria.Header.Add("From", eConf.From)
-	criteria.Header.Add("Subject", eConf.Subject)
 
-	uids, err := c.Search(criteria)
-	if err != nil {
-		return fmt.Errorf("search failed: %v", err)
+	// Search for emails with the specified criteria
+	criteria := &imap.SearchCriteria{
+		Since: since,
+		Header: []imap.SearchCriteriaHeaderField{
+			{Key: "From", Value: eConf.From},
+			{Key: "Subject", Value: eConf.Subject},
+		},
 	}
-	log.Printf("Found %d messages in the last 24 hours", len(uids))
 
-	if len(uids) == 0 {
+	data, err := c.UIDSearch(criteria, nil).Wait()
+	if err != nil {
+		return fmt.Errorf("UID SEARCH command failed: %v", err)
+	}
+
+	log.Printf("Found %d messages in the last 24 hours", data.Count)
+
+	if data.Count == 0 {
 		return nil
 	}
 
 	// Create a sequence set for the UIDs
+	data.AllUIDs()
 	seqSet := new(imap.SeqSet)
-	seqSet.AddNum(uids...)
+	seqSet.AddNum(data.AllSeqNums()...)
 
 	// Get the whole message body
-	section := &imap.BodySectionName{}
-	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchBody, imap.FetchBodyStructure, section.FetchItem()}
+	//section := &imap.BodySectionName{}
+	bodySection := &imap.FetchItemBodySection{}
+	fetchOptions := &imap.FetchOptions{
+		BodySection: []*imap.FetchItemBodySection{bodySection},
+		Envelope:    true,
+	}
+	fetchCmd := c.Fetch(seqSet, fetchOptions)
+	defer fetchCmd.Close()
 
-	messages := make(chan *imap.Message, 10)
-	done := make(chan error, 1)
-	go func() {
-		done <- c.Fetch(seqSet, items, messages)
-	}()
-
-	// Process messages and download attachments
-	for msg := range messages {
-		log.Printf("Processing message: %s", msg.Envelope.Subject)
-
-		r := msg.GetBody(section)
-		if r == nil {
-			log.Printf("No body found for message: %s", msg.Envelope.Subject)
-			continue
+	for msg := fetchCmd.Next(); msg != nil; msg = fetchCmd.Next() {
+		var bodySectionData imapclient.FetchItemDataBodySection
+		ok := false
+		for {
+			item := msg.Next()
+			if item == nil {
+				break
+			}
+			bodySectionData, ok = item.(imapclient.FetchItemDataBodySection)
+			if ok {
+				break
+			}
 		}
 
-		// Create a new mail reader
-		mr, err := mail.CreateReader(r)
+		if !ok {
+			// skip if no body section found
+			log.Printf("FETCH command did not return body section")
+			continue
+		}
+		// Read the message via the go-message library
+		mr, err := mail.CreateReader(bodySectionData.Literal)
 		if err != nil {
-			log.Printf("Error creating mail reader: %v", err)
-			continue
+			log.Fatalf("failed to create mail reader: %v", err)
 		}
 
-		// Process each message part (attachments, etc.)
+		// Process the message's parts
 		for {
 			p, err := mr.NextPart()
 			if err == io.EOF {
 				break
-			}
-			if err != nil {
-				log.Printf("Error getting next part: %v", err)
-				break
+			} else if err != nil {
+				log.Fatalf("failed to read message part: %v", err)
 			}
 
 			switch h := p.Header.(type) {
@@ -163,7 +240,6 @@ func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig) error {
 				// This is an attachment
 				filename, _ := h.Filename()
 				log.Printf("Found attachment: %s", filename)
-
 				// Save the attachment
 				if err := eConf.saveAttachment(p.Body, filename); err != nil {
 					log.Printf("Error saving attachment: %v", err)
@@ -173,9 +249,8 @@ func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig) error {
 			}
 		}
 	}
-
-	if err := <-done; err != nil {
-		return fmt.Errorf("fetch error: %v", err)
+	if err := fetchCmd.Close(); err != nil {
+		log.Fatalf("FETCH command failed: %v", err)
 	}
 
 	return nil

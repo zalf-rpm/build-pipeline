@@ -37,6 +37,18 @@ func TestLoadConfig(t *testing.T) {
 				CredentialKey: "dummyKey",
 				Subject:       "subject",
 				From:          "from",
+				UseOAuth:      true,
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
 			},
 			wantErr: false,
 		},
@@ -50,6 +62,265 @@ func TestLoadConfig(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("LoadConfig() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConfig_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		c       *Config
+		wantErr bool
+	}{
+		{
+			name: "valid config",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "993",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "/tmp",
+				Username:      "username",
+				Password:      "password",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "subject",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid config - missing email server",
+			c: &Config{
+				EmailServer:   "",
+				Port:          "993",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "/tmp",
+				Username:      "username",
+				Password:      "password",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "subject",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid config - missing port",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "/tmp",
+				Username:      "username",
+				Password:      "password",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "subject",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid config - missing shared folder",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "993",
+				SharedFolder:  "",
+				DownloadPath:  "/tmp",
+				Username:      "username",
+				Password:      "password",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "subject",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid config - missing download path",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "993",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "",
+				Username:      "username",
+				Password:      "password",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "subject",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid config - missing username",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "993",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "",
+				Username:      "",
+				Password:      "password",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "subject",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid config - missing password and credential key",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "993",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "",
+				Username:      "",
+				Password:      "",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "subject",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid config - missing subject",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "993",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "/tmp",
+				Username:      "username",
+				Password:      "password",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "",
+				From:          "from",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid config - missing from",
+			c: &Config{
+				EmailServer:   "imap.example.com",
+				Port:          "993",
+				SharedFolder:  "INBOX",
+				DownloadPath:  "",
+				Username:      "name",
+				Password:      "blub",
+				UseOAuth:      false,
+				CredentialKey: "",
+				Subject:       "bla",
+				From:          "",
+				OAuth: struct {
+					ClientID     string `yaml:"clientId"`
+					ClientSecret string `yaml:"clientSecret"`
+					TenantID     string `yaml:"tenantId"`
+					TokenCache   string `yaml:"tokenCache"`
+				}{
+					ClientID:     "clientId",
+					ClientSecret: "clientSecret",
+					TenantID:     "tenantId",
+					TokenCache:   "tokenCache",
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.c.Validate(); (err != nil) != tt.wantErr {
+				t.Errorf("Config.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

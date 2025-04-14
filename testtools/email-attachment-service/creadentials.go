@@ -31,6 +31,9 @@ func GetCredential(key string) (string, string, error) {
 	// decode the blob if it is UTF-16 encoded
 	decoder := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
 	decodedPass, _, err := transform.Bytes(decoder, pass)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to decode password: %v", err)
+	}
 
 	if len(decodedPass) > 0 {
 		pass = decodedPass

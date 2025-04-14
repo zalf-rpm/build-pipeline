@@ -10,7 +10,10 @@ func TestEmailClient_CheckForNewEmails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
-	testEmailClient := NewEmailClient(config)
+	testEmailClient, err := NewEmailClient(config)
+	if err != nil {
+		t.Fatalf("failed to create email client: %v", err)
+	}
 	testEmailConfig := NewEmailConfig(config)
 	type args struct {
 		eConf *EmailConfig
@@ -39,12 +42,14 @@ func TestEmailClient_CheckForNewEmails(t *testing.T) {
 
 func TestEmailClient_Connect(t *testing.T) {
 
-	config, err := LoadConfig("test_config.yaml")
+	config, err := LoadConfig("test_config_connect.yaml")
 	if err != nil {
 		t.Fatalf("failed to load config: %v", err)
 	}
-	testEmailClient := NewEmailClient(config)
-
+	testEmailClient, err := NewEmailClient(config)
+	if err != nil {
+		t.Fatalf("failed to create email client: %v", err)
+	}
 	tests := []struct {
 		name    string
 		ec      *EmailClient
@@ -62,6 +67,7 @@ func TestEmailClient_Connect(t *testing.T) {
 			if got == nil {
 				t.Error("EmailClient.Connect() client nil, no error")
 			}
+			got.Logout()
 		})
 	}
 }

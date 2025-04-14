@@ -33,7 +33,10 @@ func main() {
 
 	// create the email config
 	eConf := NewEmailConfig(config)
-	emailCient := NewEmailClient(config)
+	emailCient, err := NewEmailClient(config)
+	if err != nil {
+		log.Fatalf("Error creating email client: %v", err)
+	}
 
 	runService("EmailAttachmentDownload", eConf, emailCient, false) //change to true to run in debug mode
 }
