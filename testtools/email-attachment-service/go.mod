@@ -1,4 +1,4 @@
-module github.com/zalf-rpm/automation-it/email-attachment-service
+module github.com/zalf-rpm/build-pipeline/email-attachment-service
 
 go 1.23.3
 

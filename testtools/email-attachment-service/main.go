@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -12,13 +13,31 @@ import (
 
 func main() {
 
+	// parse command line arguments
+	debug := flag.Bool("debug", false, "Run in debug mode")
+	flag.Parse()
+
+	// Set up logging to file
+	// rename existing log file
+	if _, err := os.Stat("debug.log"); err == nil {
+		// with date and time
+		newFileName := fmt.Sprintf("debug_%s.log", time.Now().Format("2006-01-02_15-04-05"))
+		err := os.Rename("debug.log", newFileName)
+		if err != nil {
+			log.Fatalln(fmt.Errorf("error renaming file: %v", err))
+		}
+	}
 	f, err := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalln(fmt.Errorf("error opening file: %v", err))
 	}
 	defer f.Close()
 
+	// Set up logging to file
 	log.SetOutput(f)
+	log.SetPrefix("EmailAttachmentService: ")
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	log.Println("Starting Email Attachment Service...")
 
 	// read the configuration file
 	config, err := LoadConfig("config.yaml")
@@ -38,16 +57,18 @@ func main() {
 		log.Fatalf("Error creating email client: %v", err)
 	}
 
-	runService("EmailAttachmentDownload", eConf, emailCient, false) //change to true to run in debug mode
+	runService("EmailAttachmentDownload", eConf, emailCient, *debug) //change to true to run in debug mode
 }
 
 func runService(name string, eConf *EmailConfig, emailCient *EmailClient, isDebug bool) {
 
 	service := &emailAttachmentService{
-		emailClient: emailCient,
-		emailConfig: eConf,
+		emailClient:     emailCient,
+		emailConfig:     eConf,
+		checkupInterval: time.Duration(eConf.CheckupInterval) * time.Hour,
 	}
 	if isDebug {
+		service.checkupInterval = 30 * time.Second
 		err := debug.Run(name, service)
 		if err != nil {
 			log.Fatalln("Error running service in debug mode.")
@@ -64,8 +85,9 @@ const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndCon
 
 // implement the service interface to as a windows service
 type emailAttachmentService struct {
-	emailClient *EmailClient
-	emailConfig *EmailConfig
+	emailClient     *EmailClient
+	emailConfig     *EmailConfig
+	checkupInterval time.Duration
 }
 
 func (eas *emailAttachmentService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
@@ -78,14 +100,21 @@ func (eas *emailAttachmentService) Execute(args []string, r <-chan svc.ChangeReq
 	svcStatus.Accepts = cmdsAccepted
 	s <- svcStatus
 
-	tick := time.Tick(30 * time.Second)
+	// initial email check, in verbose mode, next check will happen after the interval
+	log.Print("Initial Check for new emails...")
+	if err := eas.emailClient.CheckForNewEmails(eas.emailConfig, true); err != nil {
+		log.Printf("Error checking emails: %v", err)
+	}
+	// Set up a ticker for the checkup interval
+	tick := time.Tick(eas.checkupInterval)
+
 	// Service loop
 	for {
 		select {
 		case <-tick:
 			// Check for new emails
 			log.Print("Check for new emails...")
-			if err := eas.emailClient.CheckForNewEmails(eas.emailConfig); err != nil {
+			if err := eas.emailClient.CheckForNewEmails(eas.emailConfig, eas.emailConfig.Verbose); err != nil {
 				log.Printf("Error checking emails: %v", err)
 			}
 

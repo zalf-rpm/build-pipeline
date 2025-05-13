@@ -5,4 +5,5 @@ use (
 	./testtools/verify_climate_data_bonn
 	./hpc/simplace/accumulate_output
 	./hpc/simplace/splitsimplaceproj
+	./testtools/email-attachment-service
 )

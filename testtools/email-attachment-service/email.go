@@ -10,6 +10,7 @@ import (
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
+	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
 	"github.com/emersion/go-sasl"
 )
@@ -63,18 +64,24 @@ func NewEmailClient(config *Config) (*EmailClient, error) {
 }
 
 type EmailConfig struct {
-	From         string
-	SharedFolder string
-	DownloadDir  string
-	Subject      string
+	From        string
+	MailBox     string
+	DownloadDir string
+	Subject     string
+	// CheckupInterval is the interval in hours to check for new emails
+	CheckupInterval int
+	// Verbose enables verbose logging
+	Verbose bool
 }
 
 func NewEmailConfig(config *Config) *EmailConfig {
 	return &EmailConfig{
-		From:         config.From,
-		SharedFolder: config.SharedFolder,
-		DownloadDir:  config.DownloadPath,
-		Subject:      config.Subject,
+		From:            config.From,
+		MailBox:         config.MailBox,
+		DownloadDir:     config.DownloadPath,
+		Subject:         config.Subject,
+		CheckupInterval: config.CheckupInterval,
+		Verbose:         config.Verbose,
 	}
 }
 
@@ -111,21 +118,24 @@ func (ec *EmailClient) Connect() (*imapclient.Client, error) {
 			return nil, fmt.Errorf("authentication failed: %v", err)
 		}
 	} else {
+		// I would have liked to use NTLM authentication, but the server, or the account does not support it
+
 		// ask server if it supports NTLM authentication
-		if c.Caps().Has(imap.AuthCap("NTLM")) {
-			log.Println("Server supports NTLM authentication")
-			// use NTLM authentication with username and password
-			ntlmClient := &NTLMClient{
-				Username:     ec.Username,
-				Password:     ec.Password,
-				Domain:       "", // Set the domain if required
-				DomainNeeded: false,
-			}
-			if err := c.Authenticate(ntlmClient); err != nil {
-				c.Logout()
-				return nil, fmt.Errorf("NTLM authentication failed: %v", err)
-			}
-		} else if c.Caps().Has(imap.AuthCap("PLAIN")) {
+		// if c.Caps().Has(imap.AuthCap("NTLM")) {
+		// 	log.Println("Server supports NTLM authentication")
+		// 	// use NTLM authentication with username and password
+		// 	ntlmClient := &NTLMClient{
+		// 		Username:     ec.Username,
+		// 		Password:     ec.Password,
+		// 		Domain:       "", // Set the domain if required
+		// 		DomainNeeded: false,
+		// 	}
+		// 	if err := c.Authenticate(ntlmClient); err != nil {
+		// 		c.Logout()
+		// 		return nil, fmt.Errorf("NTLM authentication failed: %v", err)
+		// 	}
+		// } else
+		if c.Caps().Has(imap.AuthCap("PLAIN")) {
 			log.Println("Server supports PLAIN authentication")
 			auth := sasl.NewPlainClient("", ec.Username, ec.Password)
 			if err := c.Authenticate(auth); err != nil {
@@ -143,56 +153,87 @@ func (ec *EmailClient) Connect() (*imapclient.Client, error) {
 }
 
 // CheckForNewEmails searches for new emails and downloads their attachments
-func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig) error {
+func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig, verbose bool) error {
 	c, err := ec.Connect()
 	if err != nil {
 		return err
 	}
 	defer c.Logout()
-
-	// Select the mailbox
-	mbox := c.Select(eConf.SharedFolder, &imap.SelectOptions{ReadOnly: true})
+	if verbose {
+		mailboxes, err := c.List("", "*", nil).Collect()
+		if err != nil {
+			return fmt.Errorf("failed to list mailboxes: %v", err)
+		}
+		log.Printf("Found %v mailboxes", len(mailboxes))
+		for _, mbox := range mailboxes {
+			log.Printf(" - %v", mbox.Mailbox)
+		}
+	}
+	// Select the mailbox "INBOX"
+	mbox := c.Select(eConf.MailBox, &imap.SelectOptions{ReadOnly: true})
 	selectMBoxData, err := mbox.Wait()
 	if err != nil {
 		return fmt.Errorf("failed to select mailbox: %v", err)
 	}
-	log.Printf("Mailbox %s selected, total messages: %d", eConf.SharedFolder, selectMBoxData.NumMessages)
-
 	if selectMBoxData.NumMessages == 0 {
 		log.Println("No messages in mailbox")
 		return nil
 	}
+	if verbose {
+		log.Printf("Mailbox %s selected, total messages: %d", eConf.MailBox, selectMBoxData.NumMessages)
 
-	// Get emails from the last 24 hours
-	since := time.Now().Add(-24 * time.Hour)
+		log.Println("Fetch Test:")
+		seqSet := imap.SeqSetNum(1)
+		seqSet.AddNum(selectMBoxData.NumMessages)
+		fetchOptions := &imap.FetchOptions{Envelope: true}
+		messages, err := c.Fetch(seqSet, fetchOptions).Collect()
+		if err != nil {
+			return fmt.Errorf("failed to fetch first message in INBOX: %v", err)
+		}
+		for _, msg := range messages {
+			log.Printf("subject of message in INBOX: %v", msg.Envelope.Subject)
+		}
+	}
+	// Search for emails within the last 24 hours
+	since := time.Now().Add(-1 * time.Duration(eConf.CheckupInterval) * time.Hour)
+	log.Printf("Searching for emails since %s", since.Format("02-Jan-2006 15:04:05 -0700"))
 
-	// Search for emails with the specified criteria
-	criteria := &imap.SearchCriteria{
+	// Search for emails with attachments from the specified sender and subject
+	// within the last 24 hours
+	criteria := imap.SearchCriteria{
 		Since: since,
 		Header: []imap.SearchCriteriaHeaderField{
-			{Key: "From", Value: eConf.From},
-			{Key: "Subject", Value: eConf.Subject},
+			{
+				Key:   "X-MS-Has-Attach",
+				Value: "yes",
+			},
+			{
+				Key:   "From",
+				Value: eConf.From,
+			},
+			{
+				Key:   "Subject",
+				Value: eConf.Subject,
+			},
 		},
 	}
-
-	data, err := c.UIDSearch(criteria, nil).Wait()
+	s := c.Search(&criteria, nil)
+	data, err := s.Wait()
 	if err != nil {
-		return fmt.Errorf("UID SEARCH command failed: %v", err)
+		return fmt.Errorf("SEARCH command failed: %v", err)
 	}
 
-	log.Printf("Found %d messages in the last 24 hours", data.Count)
+	count := len(data.AllSeqNums()) // don't us data.count, it does not work with IMAPv1
+	log.Printf("Found %d messages in the last 24 hours", eConf.CheckupInterval)
 
-	if data.Count == 0 {
+	if count == 0 {
 		return nil
 	}
 
 	// Create a sequence set for the UIDs
-	data.AllUIDs()
-	seqSet := new(imap.SeqSet)
-	seqSet.AddNum(data.AllSeqNums()...)
+	seqSet := imap.SeqSetNum(data.AllSeqNums()...)
 
 	// Get the whole message body
-	//section := &imap.BodySectionName{}
 	bodySection := &imap.FetchItemBodySection{}
 	fetchOptions := &imap.FetchOptions{
 		BodySection: []*imap.FetchItemBodySection{bodySection},
@@ -223,7 +264,7 @@ func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig) error {
 		// Read the message via the go-message library
 		mr, err := mail.CreateReader(bodySectionData.Literal)
 		if err != nil {
-			log.Fatalf("failed to create mail reader: %v", err)
+			return fmt.Errorf("failed to create mail reader: %v", err)
 		}
 
 		// Process the message's parts
@@ -231,8 +272,8 @@ func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig) error {
 			p, err := mr.NextPart()
 			if err == io.EOF {
 				break
-			} else if err != nil {
-				log.Fatalf("failed to read message part: %v", err)
+			} else if err != nil && !message.IsUnknownCharset(err) {
+				return fmt.Errorf("failed to read message part: %v", err)
 			}
 
 			switch h := p.Header.(type) {
@@ -250,7 +291,7 @@ func (ec *EmailClient) CheckForNewEmails(eConf *EmailConfig) error {
 		}
 	}
 	if err := fetchCmd.Close(); err != nil {
-		log.Fatalf("FETCH command failed: %v", err)
+		return fmt.Errorf("FETCH command failed: %v", err)
 	}
 
 	return nil

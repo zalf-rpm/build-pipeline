@@ -9,17 +9,18 @@ import (
 )
 
 // config struct
-
 type Config struct {
-	EmailServer   string `yaml:"email_server"`
-	Port          string `yaml:"port"`
-	SharedFolder  string `yaml:"shared_email_folder"`
-	DownloadPath  string `yaml:"download_path"`
+	EmailServer  string `yaml:"email_server"`
+	Port         string `yaml:"port"`
+	MailBox      string `yaml:"mailbox"`
+	DownloadPath string `yaml:"download_path"`
+	// creadential key for the password manager
 	CredentialKey string `yaml:"credential_key"`
 	Username      string `yaml:"username"`
 	Password      string `yaml:"password"`
 	UseOAuth      bool   `yaml:"useOAuth"`
 
+	// OAuth configuration (untested, I may need it in the future)
 	OAuth struct {
 		ClientID     string `yaml:"clientId"`
 		ClientSecret string `yaml:"clientSecret"`
@@ -30,6 +31,9 @@ type Config struct {
 	// search criteria
 	Subject string `yaml:"subject"`
 	From    string `yaml:"from"`
+	// other fields
+	Verbose         bool `yaml:"verbose"`        // verbose logging
+	CheckupInterval int  `yaml:"check_interval"` // interval to check for new emails in hours
 }
 
 // LoadConfig reads the configuration from a YAML file.
@@ -52,7 +56,7 @@ func (c *Config) Validate() error {
 	if c.EmailServer == "" {
 		return fmt.Errorf("email server is required")
 	}
-	if c.SharedFolder == "" {
+	if c.MailBox == "" {
 		return fmt.Errorf("shared email folder is required")
 	}
 	if c.DownloadPath == "" {
@@ -81,6 +85,10 @@ func (c *Config) Validate() error {
 	if c.Port == "" {
 		return fmt.Errorf("port is required")
 	}
+	if c.CheckupInterval <= 0 || c.CheckupInterval > 168 {
+		return fmt.Errorf("checkup interval must be between 1 and 168 hours")
+	}
+
 	return nil
 }
 
@@ -99,7 +107,7 @@ func WriteDummyConfig(file string) error {
 	config := Config{
 		EmailServer:   "imap.example.com",
 		Port:          "993",
-		SharedFolder:  "INBOX",
+		MailBox:       "INBOX",
 		DownloadPath:  "/tmp",
 		CredentialKey: "dummyKey",
 		Username:      "username",
@@ -118,6 +126,8 @@ func WriteDummyConfig(file string) error {
 			TenantID:     "tenantId",
 			TokenCache:   "tokenCache",
 		},
+		Verbose:         true,
+		CheckupInterval: 24, // in hours
 	}
 	data, err := yaml.Marshal(&config)
 	if err != nil {

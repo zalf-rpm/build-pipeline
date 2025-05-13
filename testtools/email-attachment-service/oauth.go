@@ -13,6 +13,10 @@ import (
 	"golang.org/x/oauth2/microsoft"
 )
 
+// untested code for OAuth authentication
+// This code is not tested and may not work as expected. I may need to implement it in the future.
+// It is included here for reference and to provide a starting point for future development.
+
 // OAuthConfig holds configuration for OAuth authentication
 type OAuthConfig struct {
 	ClientID     string
