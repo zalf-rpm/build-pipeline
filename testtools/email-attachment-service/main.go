@@ -40,24 +40,32 @@ func main() {
 	log.Println("Starting Email Attachment Service...")
 
 	// read the configuration file
+	eConf, emailCient, err := loadAndValidateEmailSettings()
+	if err != nil {
+		log.Fatalln(fmt.Errorf("error loading configuration: %v", err))
+	}
+
+	runService("EmailAttachmentDownload", eConf, emailCient, *debug) //change to true to run in debug mode
+}
+
+func loadAndValidateEmailSettings() (*EmailConfig, *EmailClient, error) {
 	config, err := LoadConfig("config.yaml")
 	if err != nil {
-		log.Fatalf("Error loading configuration: %v", err)
+		return nil, nil, fmt.Errorf("error loading config.yml: %v", err)
 	}
 
 	// validate the configuration
 	if err := config.Validate(); err != nil {
-		log.Fatalf("Invalid configuration: %v", err)
+		return nil, nil, fmt.Errorf("config validation failed: %v", err)
 	}
 
 	// create the email config
 	eConf := NewEmailConfig(config)
 	emailCient, err := NewEmailClient(config)
 	if err != nil {
-		log.Fatalf("Error creating email client: %v", err)
+		return nil, nil, fmt.Errorf("failed to create email client: %v", err)
 	}
-
-	runService("EmailAttachmentDownload", eConf, emailCient, *debug) //change to true to run in debug mode
+	return eConf, emailCient, nil
 }
 
 func runService(name string, eConf *EmailConfig, emailCient *EmailClient, isDebug bool) {
@@ -132,6 +140,16 @@ func (eas *emailAttachmentService) Execute(args []string, r <-chan svc.ChangeReq
 				svcStatus.Accepts = cmdsAccepted
 				s <- svcStatus
 			case svc.Continue:
+				// reload the configuration
+				log.Print("Reloading configuration...")
+				eConf, emailCient, err := loadAndValidateEmailSettings()
+				if err != nil {
+					log.Printf("Error reloading configuration: %v", err)
+				} else {
+					log.Print("Configuration reloaded successfully.")
+					eas.emailClient = emailCient
+					eas.emailConfig = eConf
+				}
 				svcStatus.State = svc.Running
 				svcStatus.Accepts = cmdsAccepted
 				s <- svcStatus
