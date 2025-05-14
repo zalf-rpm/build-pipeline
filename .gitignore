@@ -16,3 +16,4 @@ testtools/email-attachment-service/config.yaml
 testtools/email-attachment-service/debug.log
 test_config*
 email-attachment-service.exe
+debug_*
