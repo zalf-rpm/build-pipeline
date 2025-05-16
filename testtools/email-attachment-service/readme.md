@@ -19,3 +19,6 @@ https://learn.microsoft.com/de-de/dotnet/framework/windows-services/how-to-insta
 
 About New-Service
 https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-service?view=powershell-7.5
+
+Note:
+you need to use a particular service name in order to run a particular service (and note that the name is case-sensitive). This is because the service, on startup, needs to register with the Service Control Manager to receive start/stop notifications and send status updates, using its service name. If you install the service with a different name, but the executable has no way of knowing this (through a configuration setting or whatnot), this registration will fail and the service can't start (to the operating system, it will look as if the service is failing to respond).
