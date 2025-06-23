@@ -18,7 +18,7 @@ SBATCH_JOB_NAME=${14}
 RUN_SETUPS=${15}
 SETUPS_FILE=${16}
 
-CURRENT_NODE=$(hostname)
+CURRENT_NODE=localhost
 
 # cap number of worker nodes to 40
 if [ "$NUM_NODES" -gt 40 ]; then
@@ -27,24 +27,7 @@ fi
 NODE_PROXY=${CURRENT_NODE}
 
 # start proxy and worker on the same node
-ENV_VARS=monica_intern_in_port=6677,\
-monica_intern_out_port=7788,\
-monica_consumer_port=7777,\
-monica_producer_port=6666,\
-monica_autostart_proxies=true,\
-monica_auto_restart_proxies=true,\
-monica_instances=$NUM_WORKER,\
-monica_autostart_worker=true,\
-monica_auto_restart_worker=true,\
-monica_proxy_in_host=$NODE_PROXY,\
-monica_proxy_out_host=$NODE_PROXY
-
-srun -o ${MONICA_LOG}/monica_proj_worker_proxy-%j singularity run --env ${ENV_VARS} -B \
-$MOUNT_DATA_CLIMATE:/monica_data/climate-data:ro,\
-$MONICA_LOG:/var/log \
---pwd / \
-${SINGULARITY_MONICA_IMAGE} &
-
+sh batch/sbatch_monica_worker_prox_tiny.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER $MONICA_LOG &
 
 MONICA_PARAMS=$MONICA_WORKDIR/monica-parameters
 MAS_INFRASTRUCTURE=$MONICA_WORKDIR/mas-infrastructure
