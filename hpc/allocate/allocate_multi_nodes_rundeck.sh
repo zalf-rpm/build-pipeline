@@ -1,7 +1,7 @@
 #!/bin/bash
-#/ usage: start ?estimated_time? ?partition?
+#/ usage: start ?estimated_time? ?computenodes? ?highmemnodes? ?fatnodes? ?gpu-Nvidia-Tensor-Core-H100? ?gpu-Nvidia-Tesla-V100?
 set -eu
-[[ $# < 2 ]] && {
+[[ $# < 6 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 export PATH=$PATH:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:~/.local/bin:~/bin
