@@ -118,6 +118,16 @@ To connect to the node from a login node, use the following command:
 ssh $USER@my_head_node
 
 To connect to the node from your local machine with vscode to your head node:
+
+If this is the first time you use this job, look at requirements below.
+
+- Select Remote Explorer in the left menu, you can now choose the node in the list of SSH Targets.
+- Select the node and enter your passphrase for the SSH key, if you have set one. It will ask twice.
+- Once you are connected, select the "Open Folder" option
+- Select the folder you want to work in. It will ask again for your passphrase for the SSH key, twice.
+
+
+Requirements:
 - You need to have the Dev Container extension installed in vscode.
 - You need to have an SSH key pair in your home directorys:
     The public key should be in /home/$USER/.ssh/authorized_keys on the cluster
@@ -135,11 +145,6 @@ To connect to the node from your local machine with vscode to your head node:
       IdentityFile C:/Users/$USER/.ssh/id_rsa_openssh
       ProxyJump $USER@login02.cluster.zalf.de:22
 
-- Select Remote Explorer in the left menu, you can now choose the node in the list of SSH Targets.
-- Select the node and enter your passphrase for the SSH key, if you have set one. It will ask twice.
-- Once you are connected, select the "Open Folder" option
-- Select the folder you want to work in. It will ask again for your passphrase for the SSH key, twice.
-- 
 
  If you have problems with setting up the connection. Please contact your MAS admin.
  Please send us a note if you think we can improve this explanation. 
