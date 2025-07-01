@@ -127,7 +127,7 @@ fi
 
 # required nodes (1 monica proxy node)+(1 producer)+(1 consumer)+(n monica worker)
 NUM_SLURM_NODES=1
-CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} $HPC_PARTITION -N $NUM_SLURM_NODES -c 40 -o ${MONICA_LOG}/monica_proj-%j"
+CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} $HPC_PARTITION -N $NUM_SLURM_NODES --exclusive -o ${MONICA_LOG}/monica_proj-%j"
 SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${CONSUMER} ${PRODUCER} ${SBATCH_JOB_NAME} ${RUN_SETUPS} ${SETUPS_FILE}"
 
 BATCHID=$( sbatch $CMD_LINE_SLURM batch/sbatch_monica_project_tiny.sh $SCRIPT_INPUT )
