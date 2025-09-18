@@ -59,7 +59,7 @@ mkdir $SIMPLACE_LOG
 
 
 #extract lines
-LINE_SPLITUPSTR=$( srun singularity run -B \
+LINE_SPLITUPSTR=$( srun $HPC_PARTITION singularity run -B \
 $MOUNT_WORK:/simplace/SIMPLACE_WORK,\
 $MOUNT_DATA:/data,\
 $MOUNT_PROJECT:/projects \
@@ -96,4 +96,4 @@ mkdir $MOUNT_OUT_ZIP_ACC
 
 echo sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=00:15:00 -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
 
-sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
+sbatch $HPC_PARTITION --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
