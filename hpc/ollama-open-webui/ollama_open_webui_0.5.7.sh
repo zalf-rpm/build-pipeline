@@ -26,4 +26,4 @@ KEY=$(cat $WORKDIR/.webui_secret_key)
 echo key: $KEY
 ENV_VARS=WEBUI_SECRET_KEY=$KEY
 
-singularity exec --env ${ENV_VARS} --cleanenv -H $WORKDIR -W $WORKDIR -B $WORKDIR:$WORKDIR,$MOUNT_OLLAMA:/root/.ollama,$MOUNT_OPEN_WEB_UI:/app/backend/data $SINGULARITY_IMAGE bash /app/backend/start.sh
+singularity exec --env ${ENV_VARS} --cleanenv --nv -H $WORKDIR -W $WORKDIR -B $WORKDIR:$WORKDIR,$MOUNT_OLLAMA:/root/.ollama,$MOUNT_OPEN_WEB_UI:/app/backend/data $SINGULARITY_IMAGE bash /app/backend/start.sh
