@@ -174,7 +174,7 @@ else
       echo "Job is already running"
       echo "If you want to cancel the existing job, use the following command:"
       echo "scancel $BATCHID "
-      echon "or login to your jupyter lab and use 'File->Shut Down' in the jupyterlab menu" 
+      echo "or login to your jupyter lab and use 'File->Shut Down' in the jupyterlab menu" 
 
       NODEHOST=$(squeue --noheader -o "%R" -n $SBATCH_JOB_NAME -u $(whoami) )
       TIME=$(squeue --noheader -o "%.10M" -n $SBATCH_JOB_NAME -u $(whoami) )
