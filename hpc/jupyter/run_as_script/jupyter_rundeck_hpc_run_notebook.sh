@@ -73,15 +73,11 @@ echo "Relative path detected"
 SCRIPT_NAME=$WORKDIR/$SCRIPT_NAME
 fi
 
-
-
 # check if script exists
 if [ ! -f ${SCRIPT_NAME} ] ; then
 echo "File '${SCRIPT_NAME}' not found"
 exit 1
 fi
-
-
 
 mkdir -p -m 700 $LOGS
 mkdir -p $JWORK
@@ -97,19 +93,18 @@ fi
 
 HPC_PARTITION="--partition=compute"
 CORES=80
-echo "Partition: $PARTITION"
 if [ $PARTITION == "highmem" ] ; then 
   HPC_PARTITION="--partition=highmem"
   CORES=80
-  echo "cores: $CORES"
-elif [ $PARTITION == "gpu" ] ; then 
-  HPC_PARTITION="--partition=gpu"
+elif [ $PARTITION == "gpu-Tesla-V100" ] ; then 
+  HPC_PARTITION="--partition=gpu -x gpu005"
   CORES=48
-  echo "cores: $CORES"
+elif [ $PARTITION == "gpu-Nvidia-H100" ] ; then 
+  HPC_PARTITION="--partition=gpu -x gpu001,gpu002,gpu003,gpu004"
+  CORES=128
 elif [ $PARTITION == "fat" ] ; then 
   HPC_PARTITION="--partition=fat"
   CORES=160
-  echo "cores: $CORES"
 fi
 
 DATE=`date +%Y-%d-%B_%H%M%S`
