@@ -72,6 +72,12 @@ To connect to the node from your local machine with vscode to the cluster node $
 
     Create a C:/Users/$USER/.ssh/config file, if it does not exist.
     Add the following content, if you have never connected to $NODE:
+    
+    Host login02.cluster.zalf.de
+      HostName login02.cluster.zalf.de
+      User $USER
+      IdentityFile C:/Users/$USER/.ssh/id_rsa_openssh
+
     Host $NODE
       HostName $NODE.service
       User $USER

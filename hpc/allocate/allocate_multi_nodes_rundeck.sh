@@ -138,7 +138,11 @@ Requirements:
 
     Create a C:/Users/$USER/.ssh/config file, if it does not exist.
     Add the following content, if you have never connected to your choosen head node:
-
+    Host login02.cluster.zalf.de
+      HostName login02.cluster.zalf.de
+      User $USER
+      IdentityFile C:/Users/$USER/.ssh/id_rsa_openssh
+      
     Host my_head_node
       HostName my_head_node.service
       User $USER
