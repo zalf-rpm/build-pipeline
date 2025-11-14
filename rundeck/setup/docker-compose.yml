@@ -1,4 +1,3 @@
-version: '3'
 
 services:
     rundeck:
@@ -9,8 +8,8 @@ services:
           - varservice
         environment:
             RUNDECK_GRAILS_URL: ${MAS_RUNDECK_GRAILS_URL:?err}/rundeck
-            RUNDECK_SERVER_FORWARDED: 'true'    
-            RUNDECK_SERVER_CONTEXTPATH: /rundeck   
+            RUNDECK_SERVER_FORWARDED: 'true'
+            RUNDECK_SERVER_CONTEXTPATH: /rundeck
 
             RUNDECK_DATABASE_DRIVER: org.mariadb.jdbc.Driver
             RUNDECK_DATABASE_USERNAME: rundeck
@@ -22,11 +21,19 @@ services:
 
             RUNDECK_LOGGING_STRATEGY: FILE
 
+        entrypoint: >
+            /bin/bash -c "
+              mkdir -p /home/rundeck/etc/ssl/truststore &&
+              keytool -importcert -file /usr/local/share/ca-certificates/CA-ZALF.crt -keystore /home/rundeck/etc/ssl/truststore/truststore.jks -storepass changeit -noprompt -alias zalf-ca || true &&
+              /tini -- docker-lib/entry.sh -Djavax.net.ssl.trustStore=/home/rundeck/etc/ssl/truststore/truststore.jks -Djavax.net.ssl.trustStorePassword=changeit
+            "
         volumes:
           - data:/home/rundeck/server/data
           - logs:/home/rundeck/server/logs
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/jaas-loginmodule.conf:/home/rundeck/server/config/jaas-loginmodule.conf:ro
           - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/realm.properties:/home/rundeck/server/config/realm.properties:ro
+          - ${MAS_RUNDECK_MOUNT_HOME:?err}/etc/certs/CA-ZALF.crt:/usr/local/share/ca-certificates/CA-ZALF.crt
+          - truststore:/home/rundeck/etc/ssl/truststore
     mysql:
         image: mysql:5.7
         expose:
@@ -37,9 +44,11 @@ services:
           - MYSQL_USER=rundeck
           - MYSQL_PASSWORD=${MAS_RUNDECK_DB_PASSWORD:?err}
         volumes:
+          - ./mysql-init:/docker-entrypoint-initdb.d         
           - dbdata:/var/lib/mysql
-    varservice: 
-        image: varservice:1.1
+    varservice:
+        image: varservice:1.2
+        pull_policy: never 
         expose:
           - 6080
     nginx:
@@ -71,3 +80,9 @@ volumes:
         type: none
         o: bind
         device: ${MAS_RUNDECK_MOUNT_HOME:?err}/logs
+    truststore:
+      driver: local
+      driver_opts:
+        type: none
+        o: bind
+        device: ${MAS_RUNDECK_MOUNT_HOME:?err}/truststore
