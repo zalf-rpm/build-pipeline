@@ -17,3 +17,5 @@ testtools/email-attachment-service/debug.log
 test_config*
 email-attachment-service.exe
 debug_*
+hpc/allocate/config_example
+hpc/allocate/config_generated
