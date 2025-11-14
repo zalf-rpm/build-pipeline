@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -164,7 +163,7 @@ func readProjectFile(filename string, devider rune) (resMap []projectIDCount, mi
 		}
 		if c > 0 {
 			for i := 0; i < c; i++ {
-				if '\n' == buf[i] {
+				if buf[i] == '\n' {
 					readID = true
 					currentID = []byte{}
 				} else if byte(devider) == buf[i] && readID {
@@ -239,7 +238,7 @@ func resolveProjectFromXML(projFileName string, placeholder map[string]string) (
 	}
 	defer xmlFile.Close()
 
-	byteValue, _ := ioutil.ReadAll(xmlFile)
+	byteValue, _ := io.ReadAll(xmlFile)
 
 	var projectData ProjectData
 	err = xml.Unmarshal(byteValue, &projectData)
@@ -252,15 +251,15 @@ func resolveProjectFromXML(projFileName string, placeholder map[string]string) (
 			if len(val.Divider) == 1 {
 				divider = rune(val.Divider[0])
 			}
-			if placeholder != nil {
-				for key, value := range placeholder {
-					prefix := fmt.Sprintf("${%s}", key)
-					if strings.HasPrefix(resultPath, prefix) {
-						resultPath = strings.Replace(resultPath, prefix, value, 1)
-						break
-					}
+
+			for key, value := range placeholder {
+				prefix := fmt.Sprintf("${%s}", key)
+				if strings.HasPrefix(resultPath, prefix) {
+					resultPath = strings.Replace(resultPath, prefix, value, 1)
+					break
 				}
 			}
+
 			break
 		}
 	}

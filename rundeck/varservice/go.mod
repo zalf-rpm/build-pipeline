@@ -1,6 +1,6 @@
 module github.com/zalf-rpm/build-pipeline/rundeck/varservice
 
-go 1.17
+go 1.25
 
 require golang.org/x/crypto v0.14.0
 

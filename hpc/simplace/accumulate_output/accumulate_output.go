@@ -278,12 +278,7 @@ func scanFiles(inputFiles ByLineNumber, inFolder string) (fileListing map[string
 				continue
 			case tar.TypeReg:
 				//fmt.Printf("Contents of %s %d %d\n", header.Name, header.Mode, header.Size)
-
-				if _, ok := fileListing[header.Name]; ok {
-					fileListing[header.Name] = append(fileListing[header.Name], filename)
-				} else {
-					fileListing[header.Name] = []string{filename}
-				}
+				fileListing[header.Name] = append(fileListing[header.Name], filename)
 
 			default:
 				fmt.Printf("%s : %c %s %s\n",
