@@ -69,8 +69,16 @@ CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time
 SCRIPT_INPUT="${USER} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_RSTUDIO_PATH} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${READ_ONLY_SOURCES}"
 SCRIPT_INPUT="${SCRIPT_INPUT} ${SCRIPT_NAME} ${PARAMS}"
 
-cd ${WORKDIR}
-BATCHID=$( sbatch $CMD_LINE_SLURM /beegfs/common/batch/r_script4.2.sh $SCRIPT_INPUT )
+# script version - take first 2 decimals from VERSION
+VERSION_SHORT=$(echo $VERSION | cut -d. -f1,2)
 
+# check if script exists
+if [ ! -e /beegfs/common/batch/r_script${VERSION_SHORT}.sh ] ; then
+  echo "Script /beegfs/common/batch/r_script${VERSION_SHORT}.sh not found"
+  exit 1
+fi
+
+cd ${WORKDIR}
+BATCHID=$( sbatch $CMD_LINE_SLURM /beegfs/common/batch/r_script${VERSION_SHORT}.sh $SCRIPT_INPUT )
 
 
