@@ -76,17 +76,17 @@ cd ${HOMEDIR}
 # where writable file systems are necessary. Adjust path as appropriate for your computing environment.
 TMPDIR=${HOMEDIR}/tmp
 mkdir -p ${TMPDIR}
-workdir=$(python -c 'import tempfile; print(tempfile.mkdtemp(dir="'${TMPDIR}'"))')
-mkdir -p -m 700 ${workdir}/run ${workdir}/tmp ${workdir}/var/lib/rstudio-server
-cat > ${workdir}/database.conf <<END
+WORKDIR=$(python -c 'import tempfile; print(tempfile.mkdtemp(dir="'${TMPDIR}'"))')
+mkdir -p -m 700 ${WORKDIR}/run ${WORKDIR}/tmp ${WORKDIR}/var/lib/rstudio-server
+cat > ${WORKDIR}/database.conf <<END
 provider=sqlite
 directory=/var/lib/rstudio-server
 END
 
 # clean up at end of script
 function clean_up {
-    # remove temporary directory
-    rm -rf "${TMPDIR:?}"
+    # remove WORKDIR directory
+    rm -rf "${WORKDIR:?}"
     exit
 }
 
@@ -103,16 +103,16 @@ trap 'clean_up' EXIT
 # personal libraries from any R installation in the host environment
 
 
-cat > ${workdir}/rsession.sh <<END
+cat > ${WORKDIR}/rsession.sh <<END
 #!/bin/sh
 export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE}
 export R_LIBS_USER=${HOMEDIR}/R/rocker-rstudio/4.2
 exec /usr/lib/rstudio-server/bin/rsession "\${@}"
 END
 
-chmod +x ${workdir}/rsession.sh
+chmod +x ${WORKDIR}/rsession.sh
 
-export SINGULARITY_BIND="${workdir}/run:/run,${workdir}/tmp:/tmp,${workdir}/database.conf:/etc/rstudio/database.conf,${workdir}/rsession.sh:/etc/rstudio/rsession.sh,${workdir}/var/lib/rstudio-server:/var/lib/rstudio-server"
+export SINGULARITY_BIND="${WORKDIR}/run:/run,${WORKDIR}/tmp:/tmp,${WORKDIR}/database.conf:/etc/rstudio/database.conf,${WORKDIR}/rsession.sh:/etc/rstudio/rsession.sh,${WORKDIR}/var/lib/rstudio-server:/var/lib/rstudio-server"
 
 export SINGULARITYENV_RSTUDIO_SESSION_TIMEOUT='0'
 export SINGULARITYENV_PASSWORD=$PASSW

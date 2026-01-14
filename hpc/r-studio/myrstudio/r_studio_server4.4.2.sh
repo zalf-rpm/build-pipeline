@@ -17,7 +17,7 @@ MOUNT_DATA_SOURCE1=$7
 MOUNT_DATA_SOURCE2=$8
 MOUNT_DATA_SOURCE3=$9
 READ_ONLY_SOURCES=${10}
-
+MOUNT_SCRATCH=${11:-"false"}
 
 # read password from file
 TRANS=${HOMEDIR}/.rundeck/r_trans.yml
@@ -67,26 +67,42 @@ if [ $MOUNT_DATA_SOURCE3 != "none" ] ; then
     MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
   fi
 fi
-
+# add scratch space if requested
+if [ "$MOUNT_SCRATCH" = true ] ; then
+  # make user specific scratch space
+  mkdir -p -m 700 /scratch/${SCRIPT_USER}
+  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,/scratch/${SCRIPT_USER}:/scratch/${SCRIPT_USER}"
+fi
 
 export SINGULARITY_HOME=${HOMEDIR}
 
 cd ${HOMEDIR}
 # Create temporary directory to be populated with directories to bind-mount in the container
 # where writable file systems are necessary. Adjust path as appropriate for your computing environment.
-TMPDIR=${HOMEDIR}/tmp
+
+# if scratch is used, use /tmp in the container
+if [ "$MOUNT_SCRATCH" = true ] ; then
+  TMPDIR=/scratch/${SCRIPT_USER}/tmp
+else
+  TMPDIR=${HOMEDIR}/tmp
+fi  
+
 mkdir -p ${TMPDIR}
-WORKDIR=$(python -c 'import tempfile; print(tempfile.mkdtemp(dir="'${TMPDIR}'"))')
-mkdir -p -m 700 ${WORKDIR}/run ${WORKDIR}/tmp ${WORKDIR}/var/lib/rstudio-server
-cat > ${WORKDIR}/database.conf <<END
+workdir=$(python -c 'import tempfile; print(tempfile.mkdtemp(dir="'${TMPDIR}'"))')
+mkdir -p -m 700 ${workdir}/run ${workdir}/tmp ${workdir}/var/lib/rstudio-server
+cat > ${workdir}/database.conf <<END
 provider=sqlite
 directory=/var/lib/rstudio-server
 END
 
 # clean up at end of script
 function clean_up {
-    # remove workdir directory
-    rm -rf "${WORKDIR:?}"
+    # remove temporary directory
+    rm -rf "${TMPDIR:?}"
+    # if scratch is used, remove the scratch directory
+    if [ "$MOUNT_SCRATCH" = true ] ; then
+      rm -rf /scratch/${SCRIPT_USER}
+    fi
     exit
 }
 
@@ -102,16 +118,16 @@ trap 'clean_up' EXIT
 # personal libraries from any R installation in the host environment
 
 
-cat > ${WORKDIR}/rsession.sh <<END
+cat > ${workdir}/rsession.sh <<END
 #!/bin/sh
 export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE}
 export R_LIBS_USER=${HOMEDIR}/R/rocker-rstudio/4.4
 exec /usr/lib/rstudio-server/bin/rsession "\${@}"
 END
 
-chmod +x ${WORKDIR}/rsession.sh
+chmod +x ${workdir}/rsession.sh
 
-export SINGULARITY_BIND="${WORKDIR}/run:/run,${WORKDIR}/tmp:/tmp,${WORKDIR}/database.conf:/etc/rstudio/database.conf,${WORKDIR}/rsession.sh:/etc/rstudio/rsession.sh,${WORKDIR}/var/lib/rstudio-server:/var/lib/rstudio-server"
+export SINGULARITY_BIND="${workdir}/run:/run,${workdir}/tmp:/tmp,${workdir}/database.conf:/etc/rstudio/database.conf,${workdir}/rsession.sh:/etc/rstudio/rsession.sh,${workdir}/var/lib/rstudio-server:/var/lib/rstudio-server"
 
 export SINGULARITYENV_RSTUDIO_SESSION_TIMEOUT='0'
 export SINGULARITYENV_PASSWORD=$PASSW
