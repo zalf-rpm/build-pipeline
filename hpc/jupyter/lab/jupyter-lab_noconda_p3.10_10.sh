@@ -37,15 +37,30 @@ if [ $MOUNT_DATA_SOURCE1 != "none" ] ; then
   if [ $READ_ONLY_SOURCES == "true" ] ; then
     MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
   fi
+  # also mount data source to same path inside container for compatibility 
+  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE1:$MOUNT_DATA_SOURCE1"
+  if [ $READ_ONLY_SOURCES == "true" ] ; then
+    MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
+  fi
 fi
 if [ $MOUNT_DATA_SOURCE2 != "none" ] ; then
   MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE2:${JWORK}/data2"
   if [ $READ_ONLY_SOURCES == "true" ] ; then
     MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
   fi
+  # also mount data source to same path inside container for compatibility
+  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE2:$MOUNT_DATA_SOURCE2"
+  if [ $READ_ONLY_SOURCES == "true" ] ; then
+    MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
+  fi
 fi
 if [ $MOUNT_DATA_SOURCE3 != "none" ] ; then
   MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE3:${JWORK}/data3"
+  if [ $READ_ONLY_SOURCES == "true" ] ; then
+    MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
+  fi
+  # also mount data source to same path inside container for compatibility
+  MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES,$MOUNT_DATA_SOURCE3:$MOUNT_DATA_SOURCE3"
   if [ $READ_ONLY_SOURCES == "true" ] ; then
     MOUNT_DATA_SOURCES="$MOUNT_DATA_SOURCES:ro"
   fi
