@@ -171,6 +171,7 @@ mkdir $MONICA_OUT
 MONICA_LOG=/beegfs/rpm/projects/monica/log/${USER}_${JOB_EXEC_ID}_${DATE}
 mkdir $MONICA_LOG
 
+CLEANUP="false" 
 if [ $CHECKOUT_MODE == "git" ] ; then 
   # do a fresh git checkout
   mkdir $MONICA_WORKDIR
@@ -179,6 +180,7 @@ if [ $CHECKOUT_MODE == "git" ] ; then
   git clone https://github.com/zalf-rpm/monica-parameters.git
   git clone https://github.com/zalf-rpm/mas-infrastructure.git
   cd ~
+  CLEANUP="true"
 elif [ $CHECKOUT_MODE == "folder" ] ; then
   # use folder on the cluster
   MONICA_WORKDIR=$( realpath $PROJECT_SOURCE )
@@ -199,11 +201,8 @@ CMD_LINE_SLURM="${CONSUMER_SLURM_PARAMS} : ${PRODUCER_SLURM_PARAMS} : ${PROXY_SL
 # other sbatch parameters
 CMD_LINE_SLURM="$CMD_LINE_SLURM --parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -o ${MONICA_LOG}/monica_proj-%j"
 # command line input for the monica project sbatch script
-SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${CONSUMER} ${PRODUCER} ${RUN_SETUPS} ${SETUPS_FILE} ${ADDITIONAL_PARAMS}"
+SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${CONSUMER} ${PRODUCER} ${RUN_SETUPS} ${SETUPS_FILE} ${CLEANUP} ${ADDITIONAL_PARAMS}"
 
 echo "sbatch $CMD_LINE_SLURM batch/ro_sbatch_monica_project.sh $SCRIPT_INPUT"
 
 #BATCHID=$( sbatch $CMD_LINE_SLURM batch/ro_sbatch_monica_project.sh $SCRIPT_INPUT )
-
-#DEPENDENCY="afterany:"$BATCHID
-#sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_CLEANUP --time=00:15:00 -o log/monica_project_cleanup-%j batch/ro_sbatch_monica_project_cleanup.sh ${CHECKOUT_MODE} ${MONICA_WORKDIR} 

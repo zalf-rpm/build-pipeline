@@ -15,7 +15,19 @@ CONSUMER=${12}
 PRODUCER=${13}
 RUN_SETUPS=${14}
 SETUPS_FILE=${15}
-ADDITIONAL_PARAMS="${@:16}"
+CLEANUP=${16}
+ADDITIONAL_PARAMS="${@:17}"
+
+# function to clean up work directory on exit
+cleanup() {
+  if [ "$CLEANUP" = "true" ]; then
+    echo "Cleaning up workdir directory: $MONICA_WORKDIR"
+    rm -rf $MONICA_WORKDIR
+    echo "Workdir directory removed."
+  fi
+}   
+# trap EXIT signal to ensure cleanup is called on job completion
+trap cleanup EXIT
 
 # resources (1 monica proxy)+(1 producer)+(1 consumer)+(n monica worker)
 
