@@ -35,53 +35,49 @@ ADDITIONAL_PARAMS="${@:19}" # consumer/producer additional parameters
 # check estimated resource usage and set parameters accordingly
 CONSUMER_CPU="2" # it is a python script, not multi threaded
 CONSUMER_MEMORY="4G"
-CONSUMER_PARTITION="compute"
 if [ $EST_CONSUMER == "tiny" ] ; then
   CONSUMER_MEMORY="4G"
 elif [ $EST_CONSUMER == "normal" ] ; then 
   CONSUMER_MEMORY="35G"
 elif [ $EST_CONSUMER == "high" ] ; then 
   CONSUMER_MEMORY="75G"
-  CONSUMER_PARTITION="highmem"
+elif [ $EST_CONSUMER == "veryhigh" ] ; then 
+  CONSUMER_MEMORY="140G"
 else
   echo "Error: Unknown estimated consumer resource usage: $EST_CONSUMER" >&2
   exit 1
 fi
 # --cpus-per-task=4 --mem-per-cpu=16g --ntasks=1
 
-CONSUMER_SLURM_PARAMS="--cpus-per-task=${CONSUMER_CPU} --mem-per-cpu=${CONSUMER_MEMORY} --ntasks=1 --partition=${CONSUMER_PARTITION}"
+CONSUMER_SLURM_PARAMS="--cpus-per-task=${CONSUMER_CPU} --mem-per-cpu=${CONSUMER_MEMORY} --ntasks=1 --partition=compute,highmem"
 
 PRODUCER_CPU="2" # it is a python script, not multi threaded
 PRODUCER_MEMORY="4G"
-PRODUCER_PARTITION="compute"
 if [ $EST_PRODUCER == "tiny" ] ; then
   PRODUCER_MEMORY="4G"
 elif [ $EST_PRODUCER == "normal" ] ; then 
   PRODUCER_MEMORY="35G"
 elif [ $EST_PRODUCER == "high" ] ; then 
   PRODUCER_MEMORY="75G"
-  PRODUCER_PARTITION="highmem"
 else
   echo "Error: Unknown estimated producer resource usage: $EST_PRODUCER" >&2
   exit 1
 fi
-PRODUCER_SLURM_PARAMS="--cpus-per-task=${PRODUCER_CPU} --mem-per-cpu=${PRODUCER_MEMORY} --ntasks=1 --partition=${PRODUCER_PARTITION}"
+PRODUCER_SLURM_PARAMS="--cpus-per-task=${PRODUCER_CPU} --mem-per-cpu=${PRODUCER_MEMORY} --ntasks=1 --partition=compute,highmem"
 
 PROXY_CPU="4" # monica proxy 
 PROXY_MEMORY="8G"
-PROXY_PARTITION="compute"
 if [ $EST_PROXY == "tiny" ] ; then
   PROXY_MEMORY="8G"
 elif [ $EST_PROXY == "normal" ] ; then 
   PROXY_MEMORY="35G"
 elif [ $EST_PROXY == "high" ] ; then 
   PROXY_MEMORY="75G"
-  PROXY_PARTITION="highmem"
 else
   echo "Error: Unknown estimated proxy resource usage: $EST_PROXY" >&2
   exit 1
 fi
-PROXY_SLURM_PARAMS="--cpus-per-task=${PROXY_CPU} --mem-per-cpu=${PROXY_MEMORY} --ntasks=1 --partition=${PROXY_PARTITION}"
+PROXY_SLURM_PARAMS="--cpus-per-task=${PROXY_CPU} --mem-per-cpu=${PROXY_MEMORY} --ntasks=1 --partition=compute,highmem"
 
 # resolve path
 MOUNT_DATA_CLIMATE=$( realpath $MOUNT_DATA_CLIMATE )
@@ -109,7 +105,7 @@ fi
 SBATCH_JOB_NAME="${USER}_monica_${JOB_NAME}_${JOB_EXEC_ID}"
 
 # max number of monica instances per node
-MONICA_PER_NODE=40
+MONICA_PER_NODE=80
 #calculate distribution of monica on nodes
 NUM_NODES=$(($NUM_MONICA / $MONICA_PER_NODE))
 
@@ -125,7 +121,7 @@ NUM_WORKER=$(($NUM_WORKER + 1))
 fi
 echo "Request Nodes: ${NUM_NODES}"
 echo "Worker per Node: ${NUM_WORKER}"
-WORKER_SLURM_PARAMS="--cpus-per-task=${MONICA_PER_NODE} --mem-per-cpu=2g --ntasks=${NUM_NODES} --partition=compute"
+WORKER_SLURM_PARAMS="--cpus-per-task=${NUM_WORKER} --mem-per-cpu=1g --ntasks=${NUM_NODES} --partition=compute,highmem"
 
 
 # get monica image from docker

@@ -62,7 +62,7 @@ srun --het-group=0 -o ${MONICA_LOG}/monica_proxy_%j batch/ro_sbatch_monica_proxy
 
 # start worker
 mkdir -p $MOUNT_LOG_WORKER
-srun --het-group=3 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER $INTERN_PROXY_IN_PORT $INTERN_PROXY_OUT_PORT &
+srun --het-group=3 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/ro_sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER $INTERN_PROXY_IN_PORT $INTERN_PROXY_OUT_PORT &
 
 RESOURCE_CHECKOUT=/beegfs/rpm/projects/monica/resource
 MONICA_PARAMS=$RESOURCE_CHECKOUT/monica-parameters
