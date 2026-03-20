@@ -177,8 +177,8 @@ if [ $CHECKOUT_MODE == "git" ] ; then
   mkdir $MONICA_WORKDIR
   cd  $MONICA_WORKDIR
   git clone $PROJECT_SOURCE
-  git clone https://github.com/zalf-rpm/monica-parameters.git
-  git clone https://github.com/zalf-rpm/mas-infrastructure.git
+  # git clone https://github.com/zalf-rpm/monica-parameters.git
+  # git clone https://github.com/zalf-rpm/mas-infrastructure.git
   cd ~
   CLEANUP="true"
 elif [ $CHECKOUT_MODE == "folder" ] ; then
@@ -205,4 +205,4 @@ SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IM
 
 echo "sbatch $CMD_LINE_SLURM batch/ro_sbatch_monica_project.sh $SCRIPT_INPUT"
 
-#BATCHID=$( sbatch $CMD_LINE_SLURM batch/ro_sbatch_monica_project.sh $SCRIPT_INPUT )
+BATCHID=$( sbatch $CMD_LINE_SLURM batch/ro_sbatch_monica_project.sh $SCRIPT_INPUT )

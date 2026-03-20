@@ -64,8 +64,9 @@ srun --het-group=0 -o ${MONICA_LOG}/monica_proxy_%j batch/ro_sbatch_monica_proxy
 mkdir -p $MOUNT_LOG_WORKER
 srun --het-group=3 -o ${MONICA_LOG}/monica_worker_${node}_%j batch/sbatch_monica_worker.sh $MOUNT_DATA_CLIMATE $SINGULARITY_MONICA_IMAGE $NUM_WORKER "${NODE_PROXY}.opa" $MOUNT_LOG_WORKER $INTERN_PROXY_IN_PORT $INTERN_PROXY_OUT_PORT &
 
-MONICA_PARAMS=$MONICA_WORKDIR/monica-parameters
-MAS_INFRASTRUCTURE=$MONICA_WORKDIR/mas-infrastructure
+RESOURCE_CHECKOUT=/beegfs/rpm/projects/monica/resource
+MONICA_PARAMS=$RESOURCE_CHECKOUT/monica-parameters
+MAS_INFRASTRUCTURE=$RESOURCE_CHECKOUT/mas-infrastructure
 
 PATH_TO_CONSUMER="${CONSUMER%/*}"
 FILENAME_CONSUMER="${CONSUMER##*/}"
