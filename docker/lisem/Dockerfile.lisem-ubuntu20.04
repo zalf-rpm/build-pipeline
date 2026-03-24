@@ -1,0 +1,76 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Core build tooling
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gfortran \
+    cmake \
+    ninja-build \
+    pkg-config \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dependencies already encountered while configuring LISEM
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libboost-all-dev \
+    libeigen3-dev \
+    libopenmpi-dev \
+    openmpi-bin \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev \
+    qtbase5-dev \
+    qtmultimedia5-dev \
+    libqt5opengl5-dev \
+    libgdal-dev \
+    gdal-bin \
+    libinsighttoolkit4-dev \
+    libgdcm-tools \
+    otb-bin \
+    otb-bin-qt \
+    otb-qgis \
+    libotb-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Additional dependencies commonly required by cmakeFindModules/externals.cmake.
+# Some packages may still need source builds depending on exact distro mirror state.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libassimp-dev \
+    libpdal-dev \
+    libarchive-dev \
+    libfreetype6-dev \
+    libavcodec-dev \
+    libavdevice-dev \
+    libavformat-dev \
+    libavfilter-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libglfw3-dev \
+    libopencv-dev \
+    libceres-dev \
+    libarmadillo-dev \
+    libcgal-dev \
+    libsuperlu-dev \
+    libmuparser-dev \
+    ocl-icd-opencl-dev \
+    opencl-headers \
+    libtinyxml-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+
+# Copy project and configure
+COPY . /src
+
+# Note: Ubuntu 20.04 provides OTB, but distro packages do not include all
+# https://www.orfeo-toolbox.org/packages/archives/OTB/OTB-7.4.2-Linux64-glibc-2.27.run
+# https://www.orfeo-toolbox.org/packages/archives/OTB/OTB-7.4.2-Linux64.run
+
+# https://www.orfeo-toolbox.org/packages/archives/OTB/OTB-6.6.1-Linux64.run
+
+# LISEM-requested OTB modules (for example OTB6S). Configure/build manually
+# after adding a custom OTB install or using LISEM_USE_EXTERNALDIR=ON.
+
+CMD ["bash"]

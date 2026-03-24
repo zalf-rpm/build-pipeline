@@ -1,0 +1,116 @@
+FROM ubuntu:20.04 AS base-deps
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Toolchain and common build utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gfortran \
+    cmake \
+    ninja-build \
+    pkg-config \
+    git \
+    ca-certificates \
+    curl \
+    unzip \
+    python3 \
+    python3-dev \
+    swig \
+    && rm -rf /var/lib/apt/lists/*
+
+# OTB source-build dependencies (minimal but practical set)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libboost-all-dev \
+    libinsighttoolkit4-dev \
+    libmuparser-dev \
+    libtinyxml-dev \
+    libcurl4-openssl-dev \
+    zlib1g-dev \
+    libexpat1-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libgeotiff-dev \
+    libgdal-dev \
+    libgdcm-tools \
+    libfftw3-dev \
+    libopenthreads-dev \
+    libossim-dev \
+    qtbase5-dev \
+    qtmultimedia5-dev \
+    libqt5opengl5-dev \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM base-deps AS otb-builder
+
+ARG OTB_VERSION=7.4.2
+
+WORKDIR /opt
+RUN git clone --depth 1 --branch ${OTB_VERSION} https://github.com/orfeotoolbox/OTB.git otb-src
+
+WORKDIR /opt/otb-superbuild
+# Follow OTB 7.4 cookbook guidance: use SuperBuild to produce a complete,
+# self-contained OTB installation with optional modules enabled.
+RUN cmake -S /opt/otb-src/SuperBuild -B /opt/otb-superbuild -G "Unix Makefiles" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/opt/otb \
+    -DDOWNLOAD_LOCATION=/opt/otb-superbuild/downloads \
+    -DOTB_BUILD_DEFAULT_MODULES=ON \
+    -DOTB_USE_6S=ON \
+    -DOTB_USE_QT=OFF \
+    -DOTB_WRAP_PYTHON=OFF \
+    -DBUILD_TESTING=OFF && \
+    cmake --build /opt/otb-superbuild --parallel
+
+FROM base-deps AS lisem-base
+
+# LISEM dependencies found during iterative CMake setup
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libeigen3-dev \
+    libopenmpi-dev \
+    openmpi-bin \
+    qtbase5-dev \
+    qtmultimedia5-dev \
+    libqt5opengl5-dev \
+    libgdal-dev \
+    gdal-bin \
+    libinsighttoolkit4-dev \
+    libassimp-dev \
+    libpdal-dev \
+    libarchive-dev \
+    libfreetype6-dev \
+    libavcodec-dev \
+    libavdevice-dev \
+    libavformat-dev \
+    libavfilter-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libglfw3-dev \
+    libopencv-dev \
+    libceres-dev \
+    libarmadillo-dev \
+    libcgal-dev \
+    libsuperlu-dev \
+    ocl-icd-opencl-dev \
+    opencl-headers \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=otb-builder /opt/otb /opt/otb
+
+WORKDIR /src
+COPY . /src
+
+# Optional configure check can be enabled at build time with:
+#   --build-arg RUN_LISEM_CMAKE=ON
+ARG RUN_LISEM_CMAKE=OFF
+RUN if [ "$RUN_LISEM_CMAKE" = "ON" ]; then \
+      OTB_CMAKE_DIR="$(find /opt/otb/lib/cmake -maxdepth 1 -type d -name 'OTB-*' | head -n1)" && \
+      cmake -S . -B build -G Ninja \
+        -DLISEM_USE_EXTERNALDIR=OFF \
+        -DLISEM_BUILD_TESTS=OFF \
+        -DOTB_DIR="${OTB_CMAKE_DIR}"; \
+    fi
+
+CMD ["bash"]
