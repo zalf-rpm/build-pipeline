@@ -1,0 +1,95 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%post
+    # Avoid interactive prompts
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Update and install dependencies
+    apt-get update && apt-get install -y \
+        build-essential \
+        cmake \
+        cmake-gui \
+        git \
+        libboost-all-dev \
+        libncurses5-dev \
+        libpython3-dev \
+        libxerces-c-dev \
+        libxml2 \
+        libxml2-utils \
+        libxslt1-dev \
+        python3-numpy \
+        qt6-base-dev \
+        python3-docopt \
+        openssl \
+        libglu1-mesa-dev \
+        freeglut3-dev \
+        mesa-common-dev \
+        gdal-bin \
+        libgdal-dev \
+        libcurl4-openssl-dev \
+        libqt6svg6-dev
+
+    # Clean up apt cache to reduce image size
+    rm -rf /var/lib/apt/lists/*
+
+    # -----------------------------------------------------------------------------
+    # Install specific QWT branch as required by openLISEM
+    # -----------------------------------------------------------------------------
+
+    mkdir -p /usr/src
+    cd /usr/src
+
+    # Clone the repository
+    git clone -b qwt-multiaxes https://git.code.sf.net/p/qwt/git qwt
+
+    cd qwt
+
+    # Configure QWT 
+    # Disable QwtSvg as suggested in compile instructions
+    sed -i 's/QWT_CONFIG.*+=.*QwtSvg/#QWT_CONFIG     += QwtSvg/g' qwtconfig.pri
+
+    # Compile and install QWT using Qt6 qmake
+    /usr/lib/qt6/bin/qmake qwt.pro
+    make -j$(nproc)
+    make install
+
+    # -----------------------------------------------------------------------------
+    # Build openLISEM
+    # -----------------------------------------------------------------------------
+
+    cd /usr/src
+
+    # Checkout the repository (main_C branch)
+    git clone -b main_C https://github.com/vjetten/openlisem.git openlisem
+
+    # Create build directory
+    mkdir -p openlisem/build
+    cd openlisem/build
+
+    # Configure and compile
+    # Dynamically find the QWT installation directory in /usr/local
+    QWT_DIR=$(ls -d /usr/local/qwt-*)
+    echo "Found QWT at $QWT_DIR"
+    export NIX_QWT=$QWT_DIR
+
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    make -j$(nproc)
+
+%environment
+    export LC_ALL=C
+    # Add the build directory to PATH so 'Lisem' can be run directly if needed
+    export PATH=/usr/src/openlisem/build:$PATH
+    
+    # Ensure QWT libraries are found at runtime (dynamically finding the path is harder in environment, 
+    # but we can assume standard install location or standard library paths match what cmake configured)
+    # If openlisem binary has rpath set (cmake defaults often do), this might not be strictly necessary,
+    # but QWT often installs to /usr/local/qwt-x.x.x/lib which is not in standard ldconfig.
+    # We'll try to guess a common one or rely on the build RPATH. 
+
+%runscript
+    exec /bin/bash "$@"
+
+%labels
+    Description OpenLISEM container converted from Dockerfile
+    BaseImage ubuntu:24.04

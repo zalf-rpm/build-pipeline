@@ -1,0 +1,54 @@
+Command Line Syntax
+You can run OpenLISEM from the command line using the following arguments:
+
+-ni: Run in No Interface mode (headless). This is required for command-line usage.
+-r <file>: Specify the runfile path. This is mandatory when using -ni.
+-f: (Optional) Force creation of the result directory if it doesn't exist.
+-S <dir>: (Optional) specificy a sub-directory name inside the result folder.
+Calibration options:
+-calH <vals>: 7 hydrology calibration factors separated by ;
+-calF <vals>: 5 flow calibration factors separated by ;
+-calE <vals>: 5 erosion calibration factors separated by ;
+Runfile Format
+The runfile (e.g., sim.run) is a simple text file with Key = Value pairs. Below is a template based on the source code variables:
+
+# Directories
+Map Directory = /path/to/maps/
+Result Directory = /path/to/results/
+
+# Time and Output
+Output interval = 60
+Output maps end = 0
+Report digits out = 3
+Erosion map units (0/1/2) = 1
+# 0: kg, 1: ton/ha, 2: kg/m2
+
+# Switches (1=On, 0=Off)
+Include Rainfall = 1
+Include Interception = 1
+Include Infiltration = 1
+Include main channels = 1
+Event based = 1
+Include GW flow = 0
+long timestep = 0.0
+
+# Map Files (Map Name = Filename.map)
+# These files must exist in the "Map Directory"
+ldd = ldd.map
+dem = dem.map
+grad = gradient.map
+outlet = outlet.map
+landunit = landuse.map
+manning = n.map
+cover = per.map
+lai = lai.map
+smax = smax.map
+RR = rr.map
+width = width.map
+depth = depth.map
+
+# ... add other maps as needed by your specific simulation setup
+
+
+To create a runfile, you can usually save a project from the GUI version of OpenLISEM, which generates a .run file that you can then modify and use on Linux.
+
