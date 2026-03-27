@@ -61,16 +61,61 @@ EOF
   echo "File '${IMAGE_RSTUDIO_PATH}' not found"
   fi
 
-  HPC_PARTITION="--partition=compute"
+  HPC_PARTITION="--partition=compute,highmem,fat"
   CORES=80
-  echo "warning..."
-  if [ $PARTITION == "highmem" ] ; then 
-     HPC_PARTITION="--partition=highmem"
-     CORES=80
-  elif [ $PARTITION == "fat" ] ; then 
-     HPC_PARTITION="--partition=fat"
-     CORES=160
+  MEM_PER_CPU="--mem-per-cpu=1G"
+  #10vCPUs-10gb-RAM,
+  if [ $PARTITION == "10vCPUs-10gb-RAM" ] ; then 
+    CORES=10
+    MEM_PER_CPU="--mem-per-cpu=1G"
+  #40vCPUs-40gb-RAM,
+  elif [ $PARTITION == "40vCPUs-40gb-RAM" ] ; then 
+    CORES=40
+    MEM_PER_CPU="--mem-per-cpu=1G"
+  #80vCPUs-80gb-RAM,
+  elif [ $PARTITION == "80vCPUs-80gb-RAM" ] ; then 
+    CORES=80
+    MEM_PER_CPU="--mem-per-cpu=1G"
+  #fat-40vCPUs-360gb-RAM,
+  elif [ $PARTITION == "fat-40vCPUs-360gb-RAM" ] ; then 
+    HPC_PARTITION="--partition=fat"
+    CORES=40
+    MEM_PER_CPU="--mem-per-cpu=9G"
+  #fat-80vCPUs-720gb-RAM,
+  elif [ $PARTITION == "fat-80vCPUs-720gb-RAM" ] ; then 
+    HPC_PARTITION="--partition=fat"
+    CORES=80
+    MEM_PER_CPU="--mem-per-cpu=9G"
+  #fat-120vCPUs-1tb-RAM,
+  elif [ $PARTITION == "fat-120vCPUs-1tb-RAM" ] ; then 
+    HPC_PARTITION="--partition=fat"
+    CORES=120
+    MEM_PER_CPU="--mem-per-cpu=9G"
+  #compute-full-80vCPUs-90gb-RAM,
+  elif [ $PARTITION == "compute-full-80vCPUs-90gb-RAM" ] ; then 
+    HPC_PARTITION="--partition=compute"
+    CORES=80
+    MEM_PER_CPU=""
+  #highmem-full-80vCPUs-180gb-RAM,
+  elif [ $PARTITION == "highmem-full-80vCPUs-180gb-RAM" ] ; then 
+    HPC_PARTITION="--partition=highmem"
+    CORES=80
+    MEM_PER_CPU=""
+  #fat-full-160vCPUs-1.5tb-RAM
+  elif [ $PARTITION == "fat-full-160vCPUs-1.5tb-RAM" ] ; then 
+    HPC_PARTITION="--partition=fat"
+    CORES=160
+    MEM_PER_CPU=""
   fi
+
+  # old... 
+  # if [ $PARTITION == "highmem" ] ; then 
+  #    HPC_PARTITION="--partition=highmem"
+  #    CORES=80
+  # elif [ $PARTITION == "fat" ] ; then 
+  #    HPC_PARTITION="--partition=fat"
+  #    CORES=160
+  # fi
 
   if [ ! -d ${MOUNT_DATA_SOURCE1} ] ; then
   echo "Directory '${MOUNT_DATA_SOURCE1}' not found"
@@ -86,7 +131,7 @@ EOF
   fi
 
   # required nodes 1
-  CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c $CORES -o ${LOGS}/rstudio-server_${USER}_%j.log"
+  CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --time=${TIME} -N 1 -c $CORES ${MEM_PER_CPU} -o ${LOGS}/rstudio-server_${USER}_%j.log"
   SCRIPT_INPUT="${USER} ${LOGIN_HOST} ${MOUNT_PROJECT} ${MOUNT_DATA} ${WORKDIR} ${IMAGE_RSTUDIO_PATH} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${READ_ONLY_SOURCES}"
 
   cd ${WORKDIR}
