@@ -72,6 +72,12 @@ RUN QWT_DIR=$(ls -d /usr/local/qwt-*) && \
     make -j$(nproc)
 
 # Make the executable available globally (optional)
-# RUN ln -s /usr/src/openlisem/build/Lisem /usr/local/bin/Lisem
+RUN ln -s /usr/src/openlisem/build/Lisem /usr/local/bin/Lisem
+
+# add a non-root user for better security
+RUN useradd -m -s /bin/bash lisemuser && \
+    chown -R lisemuser:lisemuser /usr/src/openlisem
+USER lisemuser
+
 
 CMD ["/bin/bash"]
