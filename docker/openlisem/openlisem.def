@@ -62,6 +62,9 @@ From: ubuntu:24.04
 
     # Checkout the repository (main_C branch)
     git clone -b main_C https://github.com/vjetten/openlisem.git openlisem
+    # switch to version 240523 - v6.99 after erosion bugfixes, hash dc71535
+    cd openlisem
+    git checkout dc71535
 
     # Create build directory
     mkdir -p openlisem/build
