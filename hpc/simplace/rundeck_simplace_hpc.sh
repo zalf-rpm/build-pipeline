@@ -25,17 +25,30 @@ MOUNT_OUT=${11}
 MOUNT_OUT_ZIP=${12}
 MOUNT_PROJECT=${13}
 NODES=${14}
-USEHIGHMEM=${15}
+MEMORY=${15}
 
 # check if job name is empty 
 if [ -z "$JOB_NAME" ] ; then 
     JOB_NAME="generic"
 fi 
 
-HPC_PARTITION="--partition=compute"
-if [ $USEHIGHMEM == "true" ] ; then 
+# options: tiny, normal, high, veryhigh (default: normal)
+CPU="--cpus-per-task=40"
+HPC_PARTITION="--partition=compute,highmem"
+MEMORY_USAGE="--mem-per-cpu=1G" # default memory usage per cpu, can be overwritten by high memory option
+if [ $MEMORY == "tiny" ] ; then 
+  CPU="--cpus-per-task=16" 
+  MEMORY_USAGE="--mem-per-cpu=2G" # total: cpu*mem = 32G
+elif [ $MEMORY == "normal" ] ; then 
+  CPU="--cpus-per-task=40"
+  MEMORY_USAGE="--mem-per-cpu=1G" # total: cpu*mem = 40G
+elif [ $MEMORY == "high" ] ; then 
+  MEMORY_USAGE="--mem-per-cpu=2G" # total: cpu*mem = 80G
+elif [ $MEMORY == "veryhigh" ] ; then 
   HPC_PARTITION="--partition=highmem"
+  MEMORY_USAGE="--mem-per-cpu=4G" # total: cpu*mem = 160G
 fi
+
 
 #sbatch job name 
 SBATCH_JOB_NAME="simpl_${USER}_${JOB_NAME}_${JOB_EXEC_ID}"
@@ -59,7 +72,7 @@ mkdir $SIMPLACE_LOG
 
 
 #extract lines
-LINE_SPLITUPSTR=$( srun $HPC_PARTITION singularity run -B \
+LINE_SPLITUPSTR=$( srun --partition=compute,highmem,fat,gpu --cpus-per-task=2 --mem-per-cpu=1G --job-name=${SBATCH_JOB_NAME}_srun singularity run -B \
 $MOUNT_WORK:/simplace/SIMPLACE_WORK,\
 $MOUNT_DATA:/data,\
 $MOUNT_PROJECT:/projects \
@@ -77,7 +90,7 @@ for i in "${ADDR[@]}"; do # access each element of array
     STARTLINE=${SOME[0]}
     ENDLINE=${SOME[1]}
 	#sbatch commands
-	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} --cpus-per-task=40 ${HPC_PARTITION} -o $SIMPLACE_LOG/simplace-%j"
+	SBATCH_COMMANDS="--parsable --job-name=${SBATCH_JOB_NAME}_${i} --time=${TIME} ${CPU} ${MEMORY_USAGE} ${HPC_PARTITION} -o $SIMPLACE_LOG/simplace-%j"
 	#simplace sbatch script commands
     SIMPLACE_INPUT="${MOUNT_DATA} ${MOUNT_WORK} ${MOUNT_OUT} ${MOUNT_OUT_ZIP} ${SIMPLACE_LOG} ${MOUNT_PROJECT} ${SOLUTION_PATH} ${PROJECT_PATH} ${IMAGE_DIR}/${SINGULARITY_IMAGE} ${DEBUG} ${STARTLINE} ${ENDLINE} ${SBATCH_JOB_NAME}_${i} false"
     echo "First  $STARTLINE"
@@ -94,6 +107,7 @@ done
 MOUNT_OUT_ZIP_ACC=${MOUNT_OUT_ZIP}_acc
 mkdir $MOUNT_OUT_ZIP_ACC
 
-echo sbatch --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=00:15:00 -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
+DEP_COMAND="sbatch --dependency=$DEPENDENCY --partition=compute,highmem --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 --cpus-per-task=2 --mem-per-cpu=4G -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE} "
 
-sbatch $HPC_PARTITION --dependency=$DEPENDENCY --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 -o $SIMPLACE_LOG/simplace-acc%j batch/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE}
+echo "ACCUMULATE: ${DEP_COMAND}"
+$DEP_COMAND
