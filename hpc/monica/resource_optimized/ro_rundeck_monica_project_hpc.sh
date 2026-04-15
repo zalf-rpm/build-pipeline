@@ -36,13 +36,13 @@ ADDITIONAL_PARAMS="${@:19}" # consumer/producer additional parameters
 CONSUMER_CPU="2" # it is a python script, not multi threaded
 CONSUMER_MEMORY="4G"
 if [ $EST_CONSUMER == "tiny" ] ; then
-  CONSUMER_MEMORY="4G"
+  CONSUMER_MEMORY="4G" # total: cpu*mem = 8G
 elif [ $EST_CONSUMER == "normal" ] ; then 
-  CONSUMER_MEMORY="35G"
+  CONSUMER_MEMORY="16G" # total: cpu*mem = 32G
 elif [ $EST_CONSUMER == "high" ] ; then 
-  CONSUMER_MEMORY="75G"
+  CONSUMER_MEMORY="40G" # total: cpu*mem = 80G
 elif [ $EST_CONSUMER == "veryhigh" ] ; then 
-  CONSUMER_MEMORY="140G"
+  CONSUMER_MEMORY="80G" # total: cpu*mem = 160G
 else
   echo "Error: Unknown estimated consumer resource usage: $EST_CONSUMER" >&2
   exit 1
@@ -54,11 +54,13 @@ CONSUMER_SLURM_PARAMS="--cpus-per-task=${CONSUMER_CPU} --mem-per-cpu=${CONSUMER_
 PRODUCER_CPU="2" # it is a python script, not multi threaded
 PRODUCER_MEMORY="4G"
 if [ $EST_PRODUCER == "tiny" ] ; then
-  PRODUCER_MEMORY="4G"
+  PRODUCER_MEMORY="4G" # total: cpu*mem = 8G
 elif [ $EST_PRODUCER == "normal" ] ; then 
-  PRODUCER_MEMORY="35G"
+  PRODUCER_MEMORY="16G" # total: cpu*mem = 32G
 elif [ $EST_PRODUCER == "high" ] ; then 
-  PRODUCER_MEMORY="75G"
+  PRODUCER_MEMORY="40G" # total: cpu*mem = 80G
+elif [ $EST_PRODUCER == "veryhigh" ] ; then 
+  PRODUCER_MEMORY="80G" # total: cpu*mem = 160G
 else
   echo "Error: Unknown estimated producer resource usage: $EST_PRODUCER" >&2
   exit 1
@@ -66,13 +68,15 @@ fi
 PRODUCER_SLURM_PARAMS="--cpus-per-task=${PRODUCER_CPU} --mem-per-cpu=${PRODUCER_MEMORY} --ntasks=1 --partition=compute,highmem"
 
 PROXY_CPU="4" # monica proxy 
-PROXY_MEMORY="8G"
+PROXY_MEMORY="4G"
 if [ $EST_PROXY == "tiny" ] ; then
-  PROXY_MEMORY="8G"
+  PROXY_MEMORY="3G" # total: cpu*mem = 12G
 elif [ $EST_PROXY == "normal" ] ; then 
-  PROXY_MEMORY="35G"
+  PROXY_MEMORY="4G" # total: cpu*mem = 16G
 elif [ $EST_PROXY == "high" ] ; then 
-  PROXY_MEMORY="75G"
+  PROXY_MEMORY="8G" # total: cpu*mem = 32G
+elif [ $EST_PROXY == "veryhigh" ] ; then 
+  PROXY_MEMORY="20G" # total: cpu*mem = 80G
 else
   echo "Error: Unknown estimated proxy resource usage: $EST_PROXY" >&2
   exit 1
@@ -121,6 +125,7 @@ NUM_WORKER=$(($NUM_WORKER + 1))
 fi
 echo "Request Nodes: ${NUM_NODES}"
 echo "Worker per Node: ${NUM_WORKER}"
+#NUM_WORKER cpu = mem
 WORKER_SLURM_PARAMS="--cpus-per-task=${NUM_WORKER} --mem-per-cpu=1g --ntasks=${NUM_NODES} --partition=compute,highmem"
 
 
@@ -193,7 +198,7 @@ fi
 #          --cpus-per-task=2 --mem-per-cpu=1g  --ntasks=8 my.bash
 
 # required resources (1 monica proxy)+(1 producer)+(1 consumer)+(n monica worker)
-CMD_LINE_SLURM="${CONSUMER_SLURM_PARAMS} : ${PRODUCER_SLURM_PARAMS} : ${PROXY_SLURM_PARAMS} : ${WORKER_SLURM_PARAMS} "
+CMD_LINE_SLURM="${PROXY_SLURM_PARAMS} : ${CONSUMER_SLURM_PARAMS} : ${PRODUCER_SLURM_PARAMS} : ${WORKER_SLURM_PARAMS} "
 # other sbatch parameters
 CMD_LINE_SLURM="$CMD_LINE_SLURM --parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -o ${MONICA_LOG}/monica_proj-%j"
 # command line input for the monica project sbatch script
