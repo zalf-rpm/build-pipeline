@@ -4,6 +4,8 @@
 WORKDIR=$1
 PORT=$2
 
+echo "Starting jupyter lab in ${WORKDIR} on port ${PORT}"
+
 cd $WORKDIR
 
 # make sure jupyter is in PATH

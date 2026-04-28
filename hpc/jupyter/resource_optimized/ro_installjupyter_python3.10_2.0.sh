@@ -62,16 +62,16 @@ fi
 # create jupyter config if not already existing
 JUPYTER_PATH=$WORKDIR/.jupyter/jupyter_server_config.py
 if [ ! -e ${JUPYTER_PATH} ] ; then
-conda activate jupyterenv
-jupyter server --generate-config
+    conda activate jupyterenv
+    jupyter server --generate-config
 
-# initialize password hash
-if [ -z "$HASH" ] ; then
- # fail if no hash is given
-    echo "No hash given"
-    exit 1
-fi
+    # initialize password hash
+    if [ -z "$HASH" ] ; then
+    # fail if no hash is given
+        echo "No hash given"
+        exit 1
+    fi
 
-sed -i "s/# c.ServerApp.password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
-sed -i "s/# c.ServerApp.password_required = .*/c.PasswordIdentityProvider.password_required = True/g" $WORKDIR/.jupyter/jupyter_server_config.py 
+    sed -i "s/# c.ServerApp.password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
+    sed -i "s/# c.ServerApp.password_required = .*/c.PasswordIdentityProvider.password_required = True/g" $WORKDIR/.jupyter/jupyter_server_config.py 
 fi

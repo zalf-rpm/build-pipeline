@@ -11,10 +11,10 @@ LOCAL_PORT=8888 # local port for ssh tunnel, can be changed if multiple jupyter 
 LOGIN_HOST="login-node" # name of the login node/ jump host for ssh, e.g. login01, login02, etc. depending on the HPC cluster setup 
 PARTITION="10vCPUs-10gb-RAM" # resource specs
 
-JOB_NAME="new_jupyter_lab"
+JOB_NAME="jupyter_lab_gen"
 
 #parse output of squeue for job name
-BATCHID=$(squeue --noheader -o "%.18i" -n $SBATCH_JOB_NAME -u $(whoami))
+BATCHID=$(squeue --noheader -o "%.18i" -n $JOB_NAME -u $(whoami))
 
 # check if job is running
 if [ -z "$BATCHID" ] ; then
@@ -67,7 +67,7 @@ if [ -z "$BATCHID" ] ; then
 cat <<EOF > ${TRANS}
 $HASH
 EOF
-   fi
+  fi
    # switch to workdir
    cd $WORKDIR
 
@@ -80,13 +80,23 @@ EOF
       exit 1
    fi
 
-   # run jupyter install script, with the selected python version (if not already installed)
-   export SINGULARITYENV_USE_HTTPS=yes
-   export SINGULARITY_HOME=$WORKDIR
+   # get os with python as prepared singularity image
+  IMAGE_DIR=/beegfs/common/singularity/python
+  SINGULARITY_IMAGE=${VERSION}.sif
+  IMAGE_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
+ 
+  if [ ! -e ${IMAGE_PATH} ] ; then
+    echo "File '${IMAGE_PATH}' not found"
+    exit 1
+  fi
+  
+  # run jupyter install script, with the selected python version (if not already installed)
+  export SINGULARITYENV_USE_HTTPS=yes
+  export SINGULARITY_HOME=$WORKDIR
 
-   singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
-   -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
-   $IMAGE_PATH /bin/bash ro_installjupyter_$VERSION.sh $WORKDIR $REQUIRE_SETUP true
+  singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
+  -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
+  $IMAGE_PATH /bin/bash ro_installjupyter_$VERSION.sh $WORKDIR $REQUIRE_SETUP true
 
 
 
@@ -171,14 +181,14 @@ EOF
 
   # prepare log directory and file for salloc output
   DATE=$(date +%Y-%m-%d-%H-%M-%S)
-  WORKDIR=/home/$USER/logs/allocate
-  mkdir -p -m 700 $WORKDIR
-  LOGFILE=$WORKDIR/$DATE-out.log
+  ALLOC_LOG_DIR=/home/$USER/logs/allocate
+  mkdir -p -m 700 $ALLOC_LOG_DIR
+  ALLOC_LOGFILE=$ALLOC_LOG_DIR/$DATE-out.log
 
   # trap remove the log file on exit
   function clean_up {
       # remove temporary directory
-      rm -f $LOGFILE
+      rm -f $ALLOC_LOGFILE
       exit
   }
   trap clean_up EXIT
@@ -186,7 +196,7 @@ EOF
   # Example salloc command:
   # salloc --job-name=myjob -N 1 --immediate=10 --partition=compute -c 2 --mem-per-cpu=1G --time=00:05:00 --no-shell > /home/user/logs/allocate/$(date +%Y-%m-%d-%H-%M-%S)-out.log 2>&1
   # allocate node and redirect standard output and error to log file 
-  salloc --job-name=$JOB_NAME --time=$TIME -N 1 $RESOURCE_REQUEST --immediate=10 --no-shell > $LOGFILE 2>&1
+  salloc --job-name=$JOB_NAME --time=$TIME -N 1 $RESOURCE_REQUEST --immediate=10 --no-shell > $ALLOC_LOGFILE 2>&1
 
   # read the log file to get the node name
   # Example log output:
@@ -211,15 +221,15 @@ EOF
           echo "Allocated node: $NODE"
           break
       fi
-  done < $LOGFILE
+  done < $ALLOC_LOGFILE
 
   # check if jobid and node were found
   if [ -z "$JOBID" ]; then
-      echo "Error: Could not get job ID from salloc output. Check the log file $LOGFILE for details." >&2
+      echo "Error: Could not get job ID from salloc output. Check the log file $ALLOC_LOGFILE for details." >&2
       exit 1
   fi
   if [ -z "$NODE" ]; then
-      echo "Error: Could not allocate a node. Check the log file $LOGFILE for details." >&2
+      echo "Error: Could not allocate a node. Check the log file $ALLOC_LOGFILE for details." >&2
       exit 1
   fi
 
@@ -237,15 +247,6 @@ EOF
   MOUNT_DATA=/beegfs/common/data
   MOUNT_PROJECT=/beegfs/$USER/
   MOUNT_HOME=/home/$USER
-
-  # get os with python as prepared singularity image
-  IMAGE_DIR=/beegfs/common/singularity/python
-  SINGULARITY_IMAGE=${VERSION}.sif
-  IMAGE_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
-
-  if [ ! -e ${IMAGE_PATH} ] ; then
-   echo "File '${IMAGE_PATH}' not found"
-  fi
 
   LOG_NAME=${LOGS}/jupyter_lab_${DATE}_${JOBID}.log
   SCRIPT_INPUT="${MOUNT_PROJECT} ${MOUNT_DATA} ${MOUNT_HOME} ${WORKDIR} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${JWORK} ${IMAGE_PATH} ${VERSION} ${JUPYTER_PORT} ${READ_ONLY_SOURCES} ${GFX_SUPPORT}"

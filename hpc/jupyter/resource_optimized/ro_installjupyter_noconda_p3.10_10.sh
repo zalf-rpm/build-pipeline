@@ -151,25 +151,25 @@ fi
 # create jupyter config if not already existing
 JUPYTER_PATH=$WORKDIR/.jupyter/jupyter_server_config.py
 if [ ! -e ${JUPYTER_PATH} ] ; then
-jupyter server --generate-config
+    jupyter server --generate-config
 
-# initialize password hash
-if [ -z "$HASH" ] ; then
- # fail if no hash is given
-    echo "No hash given"
-    exit 1
-fi
+    # initialize password hash
+    if [ -z "$HASH" ] ; then
+    # fail if no hash is given
+        echo "No hash given"
+        exit 1
+    fi
 
-sed -i "s/# c.ServerApp.password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
-sed -i "s/# c.ServerApp.password_required = .*/c.PasswordIdentityProvider.password_required = True/g" $WORKDIR/.jupyter/jupyter_server_config.py 
+    sed -i "s/# c.ServerApp.password = .*/c.PasswordIdentityProvider.hashed_password = u'$HASH'/g" $WORKDIR/.jupyter/jupyter_server_config.py 
+    sed -i "s/# c.ServerApp.password_required = .*/c.PasswordIdentityProvider.password_required = True/g" $WORKDIR/.jupyter/jupyter_server_config.py 
 
-# set default ipykernel from pyton3 to python3.12_default
-# c.MultiKernelManager.default_kernel_name = 'python3'
-# set AI kernel as default if SETUP_AI_ENV_1 is true
-if [ $SETUP_AI_ENV_1 == "true" ] ; then
-    sed -i "s/# c.MultiKernelManager.default_kernel_name = .*/c.MultiKernelManager.default_kernel_name = 'pytorchcu121'/g" $WORKDIR/.jupyter/jupyter_server_config.py
-else
-    sed -i "s/# c.MultiKernelManager.default_kernel_name = .*/c.MultiKernelManager.default_kernel_name = 'python3.10_default'/g" $WORKDIR/.jupyter/jupyter_server_config.py
-fi
+    # set default ipykernel from pyton3 to python3.12_default
+    # c.MultiKernelManager.default_kernel_name = 'python3'
+    # set AI kernel as default if SETUP_AI_ENV_1 is true
+    if [ $SETUP_AI_ENV_1 == "true" ] ; then
+        sed -i "s/# c.MultiKernelManager.default_kernel_name = .*/c.MultiKernelManager.default_kernel_name = 'pytorchcu121'/g" $WORKDIR/.jupyter/jupyter_server_config.py
+    else
+        sed -i "s/# c.MultiKernelManager.default_kernel_name = .*/c.MultiKernelManager.default_kernel_name = 'python3.10_default'/g" $WORKDIR/.jupyter/jupyter_server_config.py
+    fi
 
 fi
