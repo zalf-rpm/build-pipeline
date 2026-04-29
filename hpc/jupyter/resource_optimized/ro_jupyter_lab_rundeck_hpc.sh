@@ -265,7 +265,10 @@ EOF
 
   # start jupyter lab on the allocated resources
   # when jupyter exits, scancel releases the allocation automatically
-  srun --jobid=${JOBID} -o ${LOG_NAME} sh -c "sh /beegfs/common/batch/ro_jupyter-lab_${VERSION}.sh ${SCRIPT_INPUT}; scancel ${JOBID}" &
+  # close stdin and redirect srun's own stdout/stderr to the log file
+  # so Rundeck does not wait for inherited file descriptors to close
+  srun --jobid=${JOBID} -o ${LOG_NAME} -e ${LOG_NAME} sh -c "sh /beegfs/common/batch/ro_jupyter-lab_${VERSION}.sh ${SCRIPT_INPUT} ${JOBID}" </dev/null >>${LOG_NAME} 2>&1 &
+  disown
 
   # sleep a bit to catch some error message during startup
   sleep 10
