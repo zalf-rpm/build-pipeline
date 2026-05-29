@@ -87,7 +87,7 @@ RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearm
 
 RUN apt-get update && apt-get install -y nvidia-container-toolkit
 
-ENV NVIDIA_CONTAINER_TOOLKIT_VERSION=1.19.0-1
+ENV NVIDIA_CONTAINER_TOOLKIT_VERSION=1.19.1-1
 RUN apt-get install -y \
       nvidia-container-toolkit=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
       nvidia-container-toolkit-base=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
