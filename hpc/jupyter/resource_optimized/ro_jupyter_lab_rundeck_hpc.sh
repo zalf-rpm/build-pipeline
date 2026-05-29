@@ -29,15 +29,15 @@ JOB_NAME="jupyter_lab_gen"
 #parse output of squeue for job name
 BATCHID=$(squeue --noheader -o "%.18i" -n $JOB_NAME -u $(whoami))
 
+# version mapping
+# some versions will start with the name "legacy"
+# remove it from the version name if it exists
+VERSION=${VERSION_VIEW#legacy_}
+echo "Requested version: $VERSION_VIEW, using version: $VERSION"
+
 # check if job is running
 if [ -z "$BATCHID" ] ; then
    echo "No job running"
-
-  # version mapping
-  # some versions will start with the name "legacy"
-  # remove it from the version name if it exists
-  VERSION=${VERSION_VIEW#legacy_}
-  echo "Requested version: $VERSION_VIEW, using version: $VERSION"
 
   # create required folder
   WORKDIR=/beegfs/${USER}/jupyter_playground${VERSION}
@@ -273,31 +273,14 @@ EOF
   # sleep a bit to catch some error message during startup
   sleep 10
 
-#______________________________________________________________________________________________
+LAUNCH_FOLDER=/beegfs/${USER}/jupyter_playground${VERSION}/.launch_instructions
+mkdir -p -m 700 $LAUNCH_FOLDER
+LAUNCH_FILE=${LAUNCH_FOLDER}/${JOBID}.rundeck
 
-# job is already running, retrieve job id and node information
-else 
-  echo "Job is already running"
-  echo "If you want to cancel the existing job, use the following command:"
-  echo "scancel $BATCHID "
-  echo "or login to your jupyter lab and use 'File->Shut Down' in the jupyterlab menu" 
+# clear launch folder of old files
+rm -f ${LAUNCH_FOLDER}/*.rundeck
 
-  NODEHOST=$(squeue --noheader -o "%R" -n $SBATCH_JOB_NAME -u $(whoami) )
-  TIME=$(squeue --noheader -o "%.10M" -n $SBATCH_JOB_NAME -u $(whoami) )
-  TIMESPAN=$(squeue --noheader -o "%.9l" -n $SBATCH_JOB_NAME -u $(whoami) )
-
-  echo "Job ID: $BATCHID"
-  echo "Node: $NODEHOST"
-  echo "Running since: $TIME"
-  echo "Total time span: $TIMESPAN"
-
-fi 
-#______________________________________________________________________________________________
-
-# Note: Will be shown even if job startup fails
-# That may cause confusion. In that case, check the log file for details and errors.
-
-cat 1>&2 <<END
+cat <<EOF > ${LAUNCH_FILE}
 
 1. SSH tunnel from your workstation using the following command:
 
@@ -313,4 +296,40 @@ cat 1>&2 <<END
     or end the SLURM job with
    scancel ${JOBID}
     
-END
+EOF
+
+#______________________________________________________________________________________________
+
+# job is already running, retrieve job id and node information
+else 
+  # remove leading and trailing whitespaces from BATCHID
+  BATCHID=$(echo $BATCHID | xargs)
+
+  echo "Job is already running"
+  echo "If you want to cancel the existing job, use the following command:"
+  echo "scancel $BATCHID "
+  echo "or login to your jupyter lab and use 'File->Shut Down' in the jupyterlab menu" 
+
+  NODE=$(squeue --noheader -o "%R" -n $JOB_NAME -u $(whoami) )
+  TIME=$(squeue --noheader -o "%.10M" -n $JOB_NAME -u $(whoami) )
+  TIMESPAN=$(squeue --noheader -o "%.9l" -n $JOB_NAME -u $(whoami) )
+
+  echo "Job ID: $BATCHID"
+  echo "Node: $NODE"
+  echo "Running since: $TIME"
+  echo "Total time span: $TIMESPAN"
+
+  LAUNCH_FILE=/beegfs/${USER}/jupyter_playground${VERSION}/.launch_instructions/${BATCHID}.rundeck
+fi 
+#______________________________________________________________________________________________
+
+# Note: Will be shown even if job startup fails
+# That may cause confusion. In that case, check the log file for details and errors.
+
+# print launch instructions for ssh tunnel and jupyter access
+if [ -f ${LAUNCH_FILE} ] ; then
+    cat ${LAUNCH_FILE}
+else
+    echo "Launch instructions file not found: ${LAUNCH_FILE}"
+    echo "Check if job is running with a different version"
+fi 
