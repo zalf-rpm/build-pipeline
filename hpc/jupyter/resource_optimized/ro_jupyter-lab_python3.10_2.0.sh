@@ -12,6 +12,7 @@ VERSION=${10}
 JUPYTER_PORT=${11}
 READ_ONLY_SOURCES=${12}
 GFX_SUPPORT=${13} # not supported in this image, but passed for compatibility with other versions
+JOBID=${14}
 
 PROJECT=${JWORK}/project
 DATA=${JWORK}/data

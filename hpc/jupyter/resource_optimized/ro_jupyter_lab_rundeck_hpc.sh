@@ -270,6 +270,8 @@ EOF
   srun --jobid=${JOBID} -o ${LOG_NAME} -e ${LOG_NAME} sh -c "sh /beegfs/common/batch/ro_jupyter-lab_${VERSION}.sh ${SCRIPT_INPUT} ${JOBID}" </dev/null >>${LOG_NAME} 2>&1 &
   disown
 
+  # TODO: Use --async, not supported by current Slurm version
+
   # sleep a bit to catch some error message during startup
   sleep 10
 
