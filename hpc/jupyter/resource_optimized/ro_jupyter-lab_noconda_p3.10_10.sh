@@ -76,3 +76,5 @@ singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv $GFX \
 $IMAGE_PATH /bin/bash ro_startjupyter_${VERSION}.sh $PLAYGROUND $JUPYTER_PORT
 
 printf 'jupyter exited' 1>&2
+
+scancel $JOBID
