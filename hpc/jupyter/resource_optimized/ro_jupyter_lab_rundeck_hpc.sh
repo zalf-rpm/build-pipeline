@@ -61,6 +61,7 @@ if [ -z "$BATCHID" ] ; then
   HASH=$(singularity exec $IMG_FOR_HASH python -c "exec(\"from jupyter_server.auth import passwd\nprint(passwd('$PASSW','sha256'))\")")
   JUPYTER_CONFIG_PATH=$WORKDIR/.jupyter/jupyter_server_config.py
   REQUIRE_SETUP=false
+  
   if [ -e ${JUPYTER_CONFIG_PATH} ] ; then
     # make sure the directory can only be accessed by the user
     chmod 700 $WORKDIR/.jupyter/
@@ -109,7 +110,6 @@ EOF
   singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
   -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
   $IMAGE_PATH /bin/bash ro_installjupyter_$VERSION.sh $WORKDIR $REQUIRE_SETUP true
-
 
 
   # check if additional directories are available (else set to none)
@@ -191,114 +191,39 @@ EOF
 # tiny-2vCPUs-2gb-RAM,10vCPUs-10gb-RAM,40vCPUs-40gb-RAM,80vCPUs-80gb-RAM,fat-40vCPUs-360gb-RAM,fat-80vCPUs-720gb-RAM,fat-120vCPUs-1tb-RAM,compute-full-80vCPUs-90gb-RAM,highmem-full-80vCPUs-180gb-RAM,fat-full-160vCPUs-1.5tb-RAM,gpu-Tesla-V100,gpu-Nvidia-H100
   RESOURCE_REQUEST="-c $CORES $MEM_PER_CPU $HPC_PARTITION" 
 
-  # prepare log directory and file for salloc output
   DATE=$(date +%Y-%m-%d-%H-%M-%S)
-  ALLOC_LOG_DIR=/home/$USER/logs/allocate
-  mkdir -p -m 700 $ALLOC_LOG_DIR
-  ALLOC_LOGFILE=$ALLOC_LOG_DIR/$DATE-out.log
-
-  # trap remove the log file on exit
-  function clean_up {
-      # remove temporary directory
-      rm -f $ALLOC_LOGFILE
-      exit
-  }
-  trap clean_up EXIT
-
-  # Example salloc command:
-  # salloc --job-name=myjob -N 1 --immediate=10 --partition=compute -c 2 --mem-per-cpu=1G --time=00:05:00 --no-shell > /home/user/logs/allocate/$(date +%Y-%m-%d-%H-%M-%S)-out.log 2>&1
-  # allocate node and redirect standard output and error to log file 
-  salloc --job-name=$JOB_NAME --time=$TIME -N 1 $RESOURCE_REQUEST --immediate=10 --no-shell > $ALLOC_LOGFILE 2>&1
-
-  # read the log file to get the node name
-  # Example log output:
-  # salloc: Granted job allocation 522188
-  # salloc: Nodes node053 are ready for job
-  JOBID=""
-  NODE=""
-  while read line; do
-      # granted job allocation 
-      if [[ $line == *"salloc: Granted job allocation"* ]]; then
-          # salloc: Granted job allocation 522188
-          # get 522188 from the line
-          JOBID=$(echo $line | awk -F ' ' '{print $5}')
-          echo "salloc jobid: $JOBID"
-      fi
-
-      if [[ $line == *"salloc: Nodes"* ]]; then
-          # salloc: Nodes node053 are ready for job
-          # get node053 from the line
-          NODE=$(echo $line | awk -F ' ' '{print $3}')
-
-          echo "Allocated node: $NODE"
-          break
-      fi
-  done < $ALLOC_LOGFILE
-
-  # check if jobid and node were found
-  if [ -z "$JOBID" ]; then
-      echo "Error: Could not get job ID from salloc output. Check the log file $ALLOC_LOGFILE for details." >&2
-      exit 1
-  fi
-  if [ -z "$NODE" ]; then
-      echo "Error: Could not allocate a node. Check the log file $ALLOC_LOGFILE for details." >&2
-      exit 1
-  fi
-
-  # use srun to get a free port on the allocated node
-  JUPYTER_PORT=$(srun --jobid=${JOBID} python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
-  # check if free port was found
-  if [ -z "$JUPYTER_PORT" ] ; then
-     echo "Error: Could not assign free port on node for jupyter lab" >&2
-     scancel $JOBID
-     exit 1
-  fi
-  echo "Free port on allocated node: $JUPYTER_PORT"
-
+  LOG_NAME=${LOGS}/jupyter_lab_${DATE}_%j.log
   # default mounts
   MOUNT_DATA=/beegfs/common/data
   MOUNT_PROJECT=/beegfs/$USER/
   MOUNT_HOME=/home/$USER
 
-  LOG_NAME=${LOGS}/jupyter_lab_${DATE}_${JOBID}.log
-  SCRIPT_INPUT="${MOUNT_PROJECT} ${MOUNT_DATA} ${MOUNT_HOME} ${WORKDIR} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${JWORK} ${IMAGE_PATH} ${VERSION} ${JUPYTER_PORT} ${READ_ONLY_SOURCES} ${GFX_SUPPORT}"
 
-  # start jupyter lab on the allocated resources
-  # when jupyter exits, scancel releases the allocation automatically
-  # close stdin and redirect srun's own stdout/stderr to the log file
-  # so Rundeck does not wait for inherited file descriptors to close
-  srun --jobid=${JOBID} -o ${LOG_NAME} -e ${LOG_NAME} sh -c "sh /beegfs/common/batch/ro_jupyter-lab_${VERSION}.sh ${SCRIPT_INPUT} ${JOBID}" </dev/null >>${LOG_NAME} 2>&1 &
-  disown
+  SBATCH_CMD=" --parsable --job-name=$JOB_NAME --time=$TIME -N 1 $RESOURCE_REQUEST -o ${LOG_NAME} -e ${LOG_NAME} "
+  SCRIPT_INPUT="${MOUNT_PROJECT} ${MOUNT_DATA} ${MOUNT_HOME} ${WORKDIR} ${MOUNT_DATA_SOURCE1} ${MOUNT_DATA_SOURCE2} ${MOUNT_DATA_SOURCE3} ${JWORK} ${IMAGE_PATH} ${VERSION} ${READ_ONLY_SOURCES} ${GFX_SUPPORT} ${LOCAL_PORT} ${LOGIN_HOST}"
 
-  # TODO: Use --async, not supported by current Slurm version
+  # start sbatch job to run jupyter lab with prepared script input and resource request
+  BATCHID=$(sbatch $SBATCH_CMD /beegfs/common/batch/ro_jupyter-lab_${VERSION}.sh ${SCRIPT_INPUT} )
 
-  # sleep a bit to catch some error message during startup
-  sleep 10
+  # wait for launch file to be created by sbatch script, check every 5 seconds, and print launch instructions for ssh tunnel and jupyter access once file is created
+  sleep 5
+  LAUNCH_FILE=/beegfs/${USER}/jupyter_playground${VERSION}/.launch_instructions/${BATCHID}.rundeck
 
-LAUNCH_FOLDER=/beegfs/${USER}/jupyter_playground${VERSION}/.launch_instructions
-mkdir -p -m 700 $LAUNCH_FOLDER
-LAUNCH_FILE=${LAUNCH_FOLDER}/${JOBID}.rundeck
-
-# clear launch folder of old files
-rm -f ${LAUNCH_FOLDER}/*.rundeck
-
-cat <<EOF > ${LAUNCH_FILE}
-
-1. SSH tunnel from your workstation using the following command:
-
-   ssh -N -L ${LOCAL_PORT}:${NODE}:${JUPYTER_PORT} ${USER}@${LOGIN_HOST}
-
-2. open in your web browser:
-   
-   http://localhost:${LOCAL_PORT}/lab 
-
-3. please shutdown your jupyter after finishing your work with
-   
-   'File->Shut Down' in the jupyterlab menu
-    or end the SLURM job with
-   scancel ${JOBID}
-    
-EOF
+  # count to 30 or till a launch file is created, 
+  # then timeout and cancel job if no launch file is created
+  COUNTER=0
+  while [ ! -f ${LAUNCH_FILE} ] && [ ! $COUNTER -eq 30 ] ; do 
+  sleep 5
+  COUNTER=$(($COUNTER + 1))
+  if [ $COUNTER == 30 ] ; then
+      scancel $BATCHID
+      echo "timeout: no free slot available. Try again later"
+      exit 1
+  fi 
+  done
+  # make sure jupyter has started and is ready to accept connections before printing launch instructions, 
+  #otherwise user may try to connect too early and get connection error
+  sleep 10 
 
 #______________________________________________________________________________________________
 
@@ -323,6 +248,7 @@ else
 
   LAUNCH_FILE=/beegfs/${USER}/jupyter_playground${VERSION}/.launch_instructions/${BATCHID}.rundeck
 fi 
+
 #______________________________________________________________________________________________
 
 # Note: Will be shown even if job startup fails

@@ -1,5 +1,7 @@
 #!/bin/bash 
 
+# Legacy script for installing jupyterlab with python 3.9, which is not supported by the latest jupyterlab version.
+
 WORKDIR=$1
 READ_HASH=$2
 cd $WORKDIR
@@ -37,16 +39,28 @@ ENVPATH=$WORKDIR/.conda/envs/jupyterenv
 if [ ! -e ${ENVPATH} ] ; then
 conda create -y --name jupyterenv python=3.9
 conda activate jupyterenv
+conda clean -y --index-cache
 # install jupyterlab
-conda install -y -c conda-forge jupyterlab
-conda install -y -c conda-forge ipywidgets
-conda install -y -c conda-forge widgetsnbextension
-conda install -y -c conda-forge matplotlib-base
-conda install -y -c conda-forge pandas
-conda install -y -c conda-forge scipy
-conda install -y -c conda-forge seaborn
-conda install -y -c conda-forge jupyterlab-git
-conda install -y -c conda-forge jupyterlab-drawio
+conda install -y -c conda-forge jupyterlab=3.6.8
+# conda clean -y --index-cache
+# conda install -y -c conda-forge ipywidgets
+# conda clean -y --index-cache
+# conda install -y -c conda-forge widgetsnbextension
+# conda clean -y --index-cache
+# conda install -y -c conda-forge matplotlib-base
+# conda clean -y --index-cache
+# conda install -y -c conda-forge pandas
+# conda clean -y --index-cache
+# conda install -y -c conda-forge scipy
+# conda clean -y --index-cache
+# conda install -y -c conda-forge seaborn
+# conda clean -y --index-cache
+# conda install -y -c conda-forge jupyterlab-git
+# conda clean -y --index-cache
+# conda install -y -c conda-forge jupyterlab-drawio
+
+# if the user wants extensions, they can install them by themselves
+# the version is so old, it has problems downloading the packages
 
 conda clean -y --all
 fi
