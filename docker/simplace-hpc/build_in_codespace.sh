@@ -8,7 +8,7 @@
 
 # copy first the compiled /lapclient/console into SOURCEDIR
 
-SIMPLACE_SVN_VERSION=${1:-"5.2-0"} # default version number + revision number
+SIMPLACE_SVN_VERSION=${1:-"5.2-5288"} # default version number + revision number
 SOURCEDIR=${2:-./simplace/console} # default source directory
 WORKDIR=$(pwd)
 

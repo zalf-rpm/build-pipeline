@@ -1,7 +1,7 @@
 # build helper tools for simplace on HPC
 # to split and merge big simplace project batch files 
 #Download base image alpine 3.10
-FROM golang:1.24.1-alpine3.21 AS build-env
+FROM golang:1.26-alpine3.23 AS build-env
 
 RUN apk update && apk add --no-cache binutils git curl unzip tar
 
