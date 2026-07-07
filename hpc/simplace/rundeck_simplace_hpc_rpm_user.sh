@@ -85,8 +85,19 @@ SIMPLACE_RUNS=${USER_FOLDER}/runs
 mkdir -p $SIMPLACE_RUNS
 chmod 755 $SIMPLACE_RUNS
 
+
+# check if job name is empty 
+if [ -z "$JOB_NAME" ] ; then 
+    JOB_NAME="generic"
+fi 
+# job name should only contain letters, numbers, lines and underscores, so we replace all other characters with underscores
+JOB_NAME=$(echo $JOB_NAME | sed 's/[^a-zA-Z0-9_-]/_/g')
+
+#sbatch job name 
+SBATCH_JOB_NAME="simpl_${JOB_NAME}"
+
 DATE=`date +%Y-%d-%B_%H%M%S`
-RUN_ID=${DATE}_${JOB_EXEC_ID}
+RUN_ID=${DATE}_${JOB_EXEC_ID}_${JOB_NAME}
 
 SIMPLACE_RUN=${SIMPLACE_RUNS}/${RUN_ID}
 mkdir -p $SIMPLACE_RUN
@@ -101,16 +112,6 @@ chmod 755 $SIMPLACE_OUT_ZIP
 SIMPLACE_LOG=${SIMPLACE_RUN}/log
 mkdir -p $SIMPLACE_LOG
 chmod 755 $SIMPLACE_LOG
-
-# check if job name is empty 
-if [ -z "$JOB_NAME" ] ; then 
-    JOB_NAME="generic"
-fi 
-# job name should only contain letters, numbers, lines and underscores, so we replace all other characters with underscores
-JOB_NAME=$(echo $JOB_NAME | sed 's/[^a-zA-Z0-9_-]/_/g')
-
-#sbatch job name 
-SBATCH_JOB_NAME="simpl_${JOB_NAME}"
 
 # options: tiny, normal, high, veryhigh (default: normal)
 CPU="--cpus-per-task=40"
