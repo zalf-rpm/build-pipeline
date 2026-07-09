@@ -1,0 +1,223 @@
+#!/bin/bash -x
+#/ usage: start ?user? ?job_name? ?job_exec_id? ?mount_climate_data? ?mount_project_data? ?num_instance? ?version? ?estimated_time? ?estimated_consumer_size? ?estimated_producer_size? ?estimated_proxy_size? ?CHECKOUT_MODE? ?source? ?consumer? ?producer?
+set -eu
+[[ $# < 16 ]] && {
+  grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
+}
+
+echo "Set env"
+
+export PATH=~/.conda/envs/git/bin:$PATH:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:~/.local/bin:~/bin
+
+USER=$1
+JOB_NAME=$2
+JOB_EXEC_ID=$3
+MOUNT_DATA_CLIMATE=$4
+MOUNT_DATA_PROJECT=$5
+NUM_MONICA=$6
+VERSION=$7
+PYTHON_VERSION=$8
+TIME=$9
+EST_CONSUMER=${10}
+EST_PRODUCER=${11}
+EST_PROXY=${12}
+
+CHECKOUT_MODE=${13} # git or folder
+PROJECT_SOURCE=${14} # git url or folder path
+CONSUMER=${15} # path to consumer script
+PRODUCER=${16} # path to producer script
+RUN_SETUPS=${17} # run setup numbers [, separated]
+SETUPS_FILE=${18} # path to setups file
+# all rest of command line arguments
+ADDITIONAL_PARAMS="${@:19}" # consumer/producer additional parameters
+
+# estimated resource usage (tiny/normal/high)
+# check estimated resource usage and set parameters accordingly
+CONSUMER_CPU="2" # it is a python script, not multi threaded
+CONSUMER_MEMORY="4G"
+if [ $EST_CONSUMER == "tiny" ] ; then
+  CONSUMER_MEMORY="4G" # total: cpu*mem = 8G
+elif [ $EST_CONSUMER == "normal" ] ; then 
+  CONSUMER_MEMORY="16G" # total: cpu*mem = 32G
+elif [ $EST_CONSUMER == "high" ] ; then 
+  CONSUMER_MEMORY="40G" # total: cpu*mem = 80G
+elif [ $EST_CONSUMER == "veryhigh" ] ; then 
+  CONSUMER_MEMORY="80G" # total: cpu*mem = 160G
+else
+  echo "Error: Unknown estimated consumer resource usage: $EST_CONSUMER" >&2
+  exit 1
+fi
+# --cpus-per-task=4 --mem-per-cpu=16g --ntasks=1
+
+CONSUMER_SLURM_PARAMS="--cpus-per-task=${CONSUMER_CPU} --mem-per-cpu=${CONSUMER_MEMORY} --ntasks=1 --partition=compute,highmem"
+
+PRODUCER_CPU="2" # it is a python script, not multi threaded
+PRODUCER_MEMORY="4G"
+if [ $EST_PRODUCER == "tiny" ] ; then
+  PRODUCER_MEMORY="4G" # total: cpu*mem = 8G
+elif [ $EST_PRODUCER == "normal" ] ; then 
+  PRODUCER_MEMORY="16G" # total: cpu*mem = 32G
+elif [ $EST_PRODUCER == "high" ] ; then 
+  PRODUCER_MEMORY="40G" # total: cpu*mem = 80G
+elif [ $EST_PRODUCER == "veryhigh" ] ; then 
+  PRODUCER_MEMORY="80G" # total: cpu*mem = 160G
+else
+  echo "Error: Unknown estimated producer resource usage: $EST_PRODUCER" >&2
+  exit 1
+fi
+PRODUCER_SLURM_PARAMS="--cpus-per-task=${PRODUCER_CPU} --mem-per-cpu=${PRODUCER_MEMORY} --ntasks=1 --partition=compute,highmem"
+
+PROXY_CPU="4" # monica proxy 
+PROXY_MEMORY="4G"
+if [ $EST_PROXY == "tiny" ] ; then
+  PROXY_MEMORY="3G" # total: cpu*mem = 12G
+elif [ $EST_PROXY == "normal" ] ; then 
+  PROXY_MEMORY="4G" # total: cpu*mem = 16G
+elif [ $EST_PROXY == "high" ] ; then 
+  PROXY_MEMORY="8G" # total: cpu*mem = 32G
+elif [ $EST_PROXY == "veryhigh" ] ; then 
+  PROXY_MEMORY="20G" # total: cpu*mem = 80G
+else
+  echo "Error: Unknown estimated proxy resource usage: $EST_PROXY" >&2
+  exit 1
+fi
+PROXY_SLURM_PARAMS="--cpus-per-task=${PROXY_CPU} --mem-per-cpu=${PROXY_MEMORY} --ntasks=1 --partition=compute,highmem"
+
+# resolve path
+MOUNT_DATA_CLIMATE=$( realpath $MOUNT_DATA_CLIMATE )
+MOUNT_DATA_PROJECT=$( realpath $MOUNT_DATA_PROJECT )
+if  [[ $MOUNT_DATA_CLIMATE == /home/rpm* ]] ;
+then
+    echo "access denied"
+    exit 1
+fi
+if  [[ $MOUNT_DATA_PROJECT == /home/rpm* ]] ;
+then
+    echo "access denied"
+    exit 1
+fi
+
+# check if job name is empty 
+if [ -z "$JOB_NAME" ] ; then 
+    JOB_NAME="generic"
+fi 
+# make sure the job name does not contain any other characters than alphanumeric and _ - 
+JOB_NAME=$(echo $JOB_NAME | sed 's/[^a-zA-Z0-9_-]/_/g') 
+
+#sbatch job name 
+SBATCH_JOB_NAME="${USER}_monica_${JOB_NAME}_${JOB_EXEC_ID}"
+
+# max number of monica instances per node
+MONICA_PER_NODE=80
+#calculate distribution of monica on nodes
+NUM_NODES=$(($NUM_MONICA / $MONICA_PER_NODE))
+
+NUM_LEFT=$(($NUM_MONICA % $MONICA_PER_NODE))
+if [ $NUM_LEFT -ne 0 ] ; then 
+  NUM_NODES=$(($NUM_NODES + 1))
+fi
+
+NUM_WORKER=$(($NUM_MONICA / $NUM_NODES))
+NUM_W_LEFT=$(($NUM_MONICA % $NUM_NODES))
+if [ $NUM_W_LEFT -ne 0 ] ; then 
+NUM_WORKER=$(($NUM_WORKER + 1))
+fi
+echo "Request Nodes: ${NUM_NODES}"
+echo "Worker per Node: ${NUM_WORKER}"
+#NUM_WORKER cpu = mem
+WORKER_SLURM_PARAMS="--cpus-per-task=${NUM_WORKER} --mem-per-cpu=1g --ntasks=${NUM_NODES} --partition=compute,highmem"
+
+
+# get monica image from docker
+IMAGE_DIR=~/singularity/monica
+SINGULARITY_IMAGE=monica-cluster_${VERSION}.sif
+IMAGE_MONICA_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
+mkdir -p $IMAGE_DIR
+if [ ! -e ${IMAGE_MONICA_PATH} ] ; then
+echo "File '${IMAGE_MONICA_PATH}' not found"
+cd $IMAGE_DIR
+singularity pull docker://zalfrpm/monica-cluster:${VERSION}
+cd ~
+fi
+
+IMAGE_DIR_PYTHON=~/singularity/python
+SINGULARITY_PYTHON_IMAGE=${PYTHON_VERSION}.sif #python3.7_1.0.sif
+IMAGE_PYTHON_PATH=${IMAGE_DIR_PYTHON}/${SINGULARITY_PYTHON_IMAGE}
+mkdir -p $IMAGE_DIR_PYTHON
+if [ ! -e ${IMAGE_PYTHON_PATH} ] ; then
+  echo "File '${IMAGE_PYTHON_PATH}' not found"
+  cd $IMAGE_DIR_PYTHON
+  if [ $PYTHON_VERSION == "python3.7_1.0" ] ; then 
+    singularity pull docker://zalfrpm/python3.7:1.0
+  elif [ $PYTHON_VERSION == "python3.10_3" ] ; then 
+    singularity pull docker://zalfrpm/python3.10:3
+  fi
+  cd ~
+fi
+
+
+# create output log
+MOUNT_LOG_PROXY=~/log/supervisor/monica/proxy
+mkdir -p $MOUNT_LOG_PROXY
+
+MOUNT_LOG_WORKER=~/log/supervisor/monica/worker
+mkdir -p $MOUNT_LOG_WORKER
+
+DATE=`date +%Y-%d-%B_%H%M%S`
+RUNID=${DATE}_${JOB_EXEC_ID}_${JOB_NAME}
+RUNDIR=/beegfs/rpm/projects/monica_user/${USER}/${RUNID}
+mkdir -p $RUNDIR
+
+MONICA_WORKDIR=$RUNDIR/projectcheckout # do not create this folder, it will be created by git clone or already exist if using folder checkout
+MONICA_OUT=$RUNDIR/out
+mkdir $MONICA_OUT
+MONICA_LOG=$RUNDIR/log
+mkdir $MONICA_LOG
+
+CLEANUP="false" 
+
+if [ $CHECKOUT_MODE == "git" ] ; then 
+  # do a fresh git checkout
+  mkdir $MONICA_WORKDIR
+  cd  $MONICA_WORKDIR
+  git clone $PROJECT_SOURCE
+  MONICA_WORKDIR=$MONICA_WORKDIR/$(basename $PROJECT_SOURCE .git)
+  # check if the folder was created
+  if [ ! -d "$MONICA_WORKDIR" ]; then
+    echo "Error: Git checkout failed, folder '$MONICA_WORKDIR' does not exist" >&2
+    exit 1
+  fi
+  # change back to home directory, to find the scripts
+  cd ~
+  CLEANUP="true"
+elif [ $CHECKOUT_MODE == "folder" ] ; then
+  # use folder on the cluster
+  MONICA_WORKDIR=$( realpath $PROJECT_SOURCE )
+  if  [[ $MONICA_WORKDIR == /home/rpm* ]] ;
+  then
+      echo "access denied"
+      exit 1
+  fi
+  # check if folder exists
+  if [ ! -d $MONICA_WORKDIR ] ; then
+    echo "Error: Folder '$MONICA_WORKDIR' does not exist" >&2
+    exit 1
+  fi
+fi
+TMP_DIR=$RUNDIR/tmp
+mkdir -p $TMP_DIR
+
+# Example sbatch for multiple resource request:
+# sbatch --cpus-per-task=4 --mem-per-cpu=16g --ntasks=1 : \
+#          --cpus-per-task=2 --mem-per-cpu=1g  --ntasks=8 my.bash
+
+# required resources (1 monica proxy)+(1 producer)+(1 consumer)+(n monica worker)
+CMD_LINE_SLURM="${PROXY_SLURM_PARAMS} : ${CONSUMER_SLURM_PARAMS} : ${PRODUCER_SLURM_PARAMS} : ${WORKER_SLURM_PARAMS} "
+# other sbatch parameters
+CMD_LINE_SLURM="$CMD_LINE_SLURM --parsable --job-name=${SBATCH_JOB_NAME} --time=${TIME} -o ${MONICA_LOG}/monica_proj-%j"
+# command line input for the monica project sbatch script
+SCRIPT_INPUT="${MOUNT_DATA_CLIMATE} ${MOUNT_DATA_PROJECT} ${MONICA_WORKDIR} ${IMAGE_MONICA_PATH} ${IMAGE_PYTHON_PATH} ${NUM_NODES} ${NUM_WORKER} ${MONICA_LOG} ${MOUNT_LOG_PROXY} ${MOUNT_LOG_WORKER} $MONICA_OUT ${TMP_DIR} ${CONSUMER} ${PRODUCER} ${RUN_SETUPS} ${SETUPS_FILE} ${CLEANUP} ${ADDITIONAL_PARAMS}"
+
+echo "sbatch $CMD_LINE_SLURM batch/eo_sbatch_monica_project.sh $SCRIPT_INPUT"
+
+BATCHID=$( sbatch $CMD_LINE_SLURM batch/eo_sbatch_monica_project.sh $SCRIPT_INPUT )
