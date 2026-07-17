@@ -37,32 +37,26 @@ ENVPATH=$WORKDIR/.conda/envs/jupyterenv
 
 # create conda environment if not already existing
 if [ ! -e ${ENVPATH} ] ; then
-conda create -y --name jupyterenv python=3.9
-conda activate jupyterenv
-conda clean -y --index-cache
-# install jupyterlab
-conda install -y -c conda-forge jupyterlab=3.6.8
+
+# installing jupyterlab does not work anymore with conda-forge
+# this job is kept for legacy reasons
+# No install:
+exit 1
+
+# conda create -y --name jupyterenv python=3.9
+# conda activate jupyterenv
 # conda clean -y --index-cache
+# # install jupyterlab
+# conda install -y -c conda-forge jupyterlab=3.6.8
 # conda install -y -c conda-forge ipywidgets
-# conda clean -y --index-cache
 # conda install -y -c conda-forge widgetsnbextension
-# conda clean -y --index-cache
 # conda install -y -c conda-forge matplotlib-base
-# conda clean -y --index-cache
 # conda install -y -c conda-forge pandas
-# conda clean -y --index-cache
 # conda install -y -c conda-forge scipy
-# conda clean -y --index-cache
 # conda install -y -c conda-forge seaborn
-# conda clean -y --index-cache
 # conda install -y -c conda-forge jupyterlab-git
-# conda clean -y --index-cache
 # conda install -y -c conda-forge jupyterlab-drawio
-
-# if the user wants extensions, they can install them by themselves
-# the version is so old, it has problems downloading the packages
-
-conda clean -y --all
+# conda clean -y --all
 fi
 # create jupyter config if not already existing
 JUPYTER_PATH=$WORKDIR/.jupyter/jupyter_server_config.py

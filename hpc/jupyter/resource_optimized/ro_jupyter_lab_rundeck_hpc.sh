@@ -107,9 +107,24 @@ EOF
   export SINGULARITYENV_USE_HTTPS=yes
   export SINGULARITY_HOME=$WORKDIR
 
+  # this script can fail, catch the exit status and exit with error if it fails
+  set +e
   singularity run -H $SINGULARITY_HOME -W $SINGULARITY_HOME --cleanenv \
   -B ${SINGULARITY_HOME}:${SINGULARITY_HOME} \
   $IMAGE_PATH /bin/bash ro_installjupyter_$VERSION.sh $WORKDIR $REQUIRE_SETUP true
+  STATUS=$?
+  set -e
+
+  # check exit status of the jupyter install script
+  if [ $STATUS -ne 0 ]; then
+      echo "Jupyter install script: $STATUS - failed"
+      # version 3.9 is not supported anymore - tell user to use a newer version
+      if [[ $VERSION == *"3.9"* ]]; then
+        echo "Install of Python 3.9 is not supported anymore, please use a newer version"
+      fi
+
+      exit 1
+  fi
 
 
   # check if additional directories are available (else set to none)
