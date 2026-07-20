@@ -1,7 +1,7 @@
 #!/bin/bash -x
 #/ usage: start ?script? ?estimated_time? ?partition? ?version? ?mount_source1? ?mount_source2? ?mount_source3? ?read_only_sources?
 set -eu
-if [ $# -lt 10 ] ; then
+if [ $# -lt 8 ] ; then
   # echo command line
   echo $#
   echo ${@:1}
