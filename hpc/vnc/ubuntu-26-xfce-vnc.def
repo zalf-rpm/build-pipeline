@@ -1,0 +1,43 @@
+# Ubuntu 26.04 based VNC image for HPC usage
+Bootstrap: docker
+From: ubuntu:26.04
+
+%environment
+    export LANG=en_US.UTF-8
+    export LANGUAGE=en_US:en
+    export LC_ALL=en_US.UTF-8
+    export TERM=xterm
+    export VNC_COL_DEPTH=24
+    export VNC_RESOLUTION=1920x1080
+    export VNC_PW=vncpassword
+    export VNC_VIEW_ONLY=false
+
+%files
+    ./scripts/. /opt/
+%post
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        locales \
+        ca-certificates \
+        dbus-x11 \
+        xfce4 \
+        xfce4-goodies \
+        tigervnc-standalone-server \
+        tigervnc-common \
+        novnc \
+        websockify \
+        xterm \
+        x11-xserver-utils \
+        procps
+
+    locale-gen en_US.UTF-8
+    update-locale LANG=en_US.UTF-8
+
+    mkdir -p /opt
+    
+    chmod 755 /opt/wm_startup.sh /opt/vnc_startup-ubuntu-26.sh
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
