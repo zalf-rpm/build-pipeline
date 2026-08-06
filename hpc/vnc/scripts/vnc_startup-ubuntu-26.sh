@@ -51,6 +51,8 @@ cat > "$HOME/.config/tigervnc/xstartup" <<'XSTARTUP'
 #!/usr/bin/env bash
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
+# dbus-launch is required; without it xfce4-session exits immediately in a container
+eval "$(dbus-launch --sh-syntax --exit-with-session)"
 exec /usr/bin/startxfce4
 XSTARTUP
 chmod 755 "$HOME/.config/tigervnc/xstartup"
@@ -60,7 +62,7 @@ vncserver "$DISPLAY" -depth "$VNC_COL_DEPTH" -geometry "$VNC_RESOLUTION" \
     -xstartup "$HOME/.config/tigervnc/xstartup" \
     > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_vnc_startup.log" 2>&1
 
-websockify -D --web="$VNC_ROOT/novnc" "$NO_VNC_PORT" "localhost:$VNC_PORT" > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_no_vnc_startup.log" 2>&1
+websockify -D --web="$VNC_ROOT/novnc" "$NO_VNC_PORT" "127.0.0.1:$VNC_PORT" > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_no_vnc_startup.log" 2>&1
 
 echo "VNC available at http://$(hostname):${NO_VNC_PORT}"
 while true; do
