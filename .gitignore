@@ -17,3 +17,4 @@ hpc/allocate/config_example
 hpc/allocate/config_generated
 *.exe
 *.dll
+*.sif

@@ -6,10 +6,25 @@ NO_VNC_PORT=${NO_VNC_PORT:-6901}
 VNC_COL_DEPTH=${VNC_COL_DEPTH:-24}
 VNC_RESOLUTION=${VNC_RESOLUTION:-1920x1080}
 
-if [ -z "${VNC_PW:-}" ]; then
-    echo "VNC_PW must be set" >&2
+# TigerVNC now expects its password file in ~/.config/tigervnc/passwd.
+# Keep the legacy ~/.vnc/passwd path as a fallback for older images/setups.
+PASSWD_PATH="$HOME/.config/tigervnc/passwd"
+LEGACY_PASSWD_PATH="$HOME/.vnc/passwd"
+
+mkdir -p "$HOME/.config/tigervnc"
+
+if [ ! -f "$PASSWD_PATH" ] && [ -f "$LEGACY_PASSWD_PATH" ]; then
+    PASSWD_PATH="$LEGACY_PASSWD_PATH"
+fi
+
+# check if the password file exists if not, exit with error
+if [ ! -f "$PASSWD_PATH" ]; then
+    echo "VNC password file not found: $PASSWD_PATH" >&2
+    echo "Please mount the password file into the container at $HOME/.config/tigervnc/passwd" >&2
+    echo "make sure the password has at least 6 characters and is not empty" >&2
     exit 1
 fi
+
 
 VNC_ROOT="$HOME/vnc"
 LOG_FILE_DIR="$VNC_ROOT/vnc_logs"
@@ -22,11 +37,11 @@ if [ ! -d "$VNC_ROOT/novnc" ]; then
     ln -sf "$VNC_ROOT/novnc/vnc_lite.html" "$VNC_ROOT/novnc/index.html"
 fi
 
-mkdir -p "$HOME/.vnc"
-PASSWD_PATH="$HOME/.vnc/passwd"
-rm -f "$PASSWD_PATH"
-echo "$VNC_PW" | vncpasswd -f > "$PASSWD_PATH"
-chmod 600 "$PASSWD_PATH"
+# mkdir -p "$HOME/.vnc"
+# PASSWD_PATH="$HOME/.vnc/passwd"
+# rm -f "$PASSWD_PATH"
+# echo $(<"/vnc_password.txt") | vncpasswd -f > "$PASSWD_PATH"
+# chmod 600 "$PASSWD_PATH"
 
 DISPLAY=:$((VNC_PORT - 5900))
 export DISPLAY

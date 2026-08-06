@@ -1,18 +1,18 @@
-#!/bin/bash
+#!/bin/bash 
 #SBATCH --job-name='vnc-web'
-#SBATCH --partition=gpu
+#SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --exclusive
-#SBATCH --time=08:00:00
+#SBATCH --time=01:00:00
 
-set -euo pipefail
+set -euxo pipefail
 
 SINGULARITY_IMAGE=${SINGULARITY_IMAGE:-/beegfs/common/singularity/vnc/ubuntu-26-xfce-vnc.sif}
 VNC_HOME=/home/${USER}/hpc-vnc
 MYHOME_SOURCE=/home/${USER}
 BEEGFS_USER_SOURCE=/beegfs/${USER}
 BEEGFS_COMMON_SOURCE=/beegfs/common
-OPTIONAL_DATA01_SOURCE=/data01/PB/${USER}
+OPTIONAL_DATA01_SOURCE=/data01/FDS/${USER}
 VNC_TMPDIR=/scratch/${USER}/vnc-temp
 SUBMIT_DIR=${SLURM_SUBMIT_DIR:-$PWD}
 
@@ -31,34 +31,37 @@ if ! command -v openssl >/dev/null 2>&1; then
     exit 1
 fi
 
-export VNC_ACCESS_PW
-VNC_ACCESS_PW=$(openssl rand -base64 15 | tr -d '\n')
-
-mkdir -p "${VNC_TMPDIR}"
+mkdir -p "${VNC_TMPDIR}/tmp"
 mkdir -p "${VNC_HOME}"
+mkdir -p "${VNC_TMPDIR}/run"
+mkdir -p "${VNC_HOME}/.config/tigervnc"
 
 clean_up() {
     cd "${SUBMIT_DIR}" || true
     rm -rf "${VNC_TMPDIR:?}"
-    rm -f "${SUBMIT_DIR}/vnc_password.txt"
 }
 
 trap clean_up EXIT INT TERM
 
-printf '%s\n' "${VNC_ACCESS_PW}" > "${SUBMIT_DIR}/vnc_password.txt"
 
 export SINGULARITY_HOME=${VNC_HOME}
 cd "${VNC_HOME}"
 
-ENV_VARS="VNC_PORT=5901,VNC_PW=${VNC_ACCESS_PW},NO_VNC_PORT=6901,VNC_RESOLUTION=1920x1080"
-BINDS="${MYHOME_SOURCE}:/myhome,${BEEGFS_USER_SOURCE}:${BEEGFS_USER_SOURCE},${BEEGFS_COMMON_SOURCE}:/beegfs/common,${VNC_TMPDIR}:/tmp"
+# user folder bindings
+BINDS="${MYHOME_SOURCE}:/myhome,${BEEGFS_USER_SOURCE}:${BEEGFS_USER_SOURCE},${BEEGFS_COMMON_SOURCE}:/beegfs/common"
+# system bindings
+export SINGULARITY_BIND="${VNC_TMPDIR}/run:/run,${VNC_TMPDIR}/tmp:/tmp,/home/${USER}/.vnc_config/encrypted_vnc_passwd:${VNC_HOME}/.config/tigervnc/passwd"
+
+export SINGULARITYENV_VNC_PORT=5901
+export SINGULARITYENV_NO_VNC_PORT=6901
+export SINGULARITYENV_VNC_RESOLUTION=1920x1080
+export SINGULARITYENV_USER=$(id -un)
 
 if [ -d "${OPTIONAL_DATA01_SOURCE}" ]; then
     BINDS="${BINDS},${OPTIONAL_DATA01_SOURCE}:${OPTIONAL_DATA01_SOURCE}"
 fi
 
-singularity exec --nv --cleanenv \
-    --env "${ENV_VARS}" \
+singularity exec --cleanenv \
     -B "${BINDS}" \
     -H "${SINGULARITY_HOME}" \
     -W "${SINGULARITY_HOME}" \

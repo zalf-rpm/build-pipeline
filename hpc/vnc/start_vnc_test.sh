@@ -3,8 +3,8 @@
 
 set -eu
 
-TIME=${1:-08:00:00}
-PARTITION=${2:-gpu}
+TIME=${1:-01:00:00}
+PARTITION=${2:-compute}
 IMAGE_NAME=${3:-ubuntu-26-xfce-vnc.sif}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,6 +30,24 @@ if [ ! -f "${SINGULARITY_IMAGE}" ]; then
     echo "Image not found: ${SINGULARITY_IMAGE}" >&2
     exit 1
 fi
+
+# generate a random password and store it in /home/${USER_NAME}/.vnc_config/vnc_password.txt
+# this is for testing purposes only, in production the password needs to be set by the user and mounted into the container
+mkdir -p "/home/${USER_NAME}/.vnc_config"
+PASSWORD_FILE="/home/${USER_NAME}/.vnc_config/vnc_password.txt"
+openssl rand -base64 15 | tr -d '\n' > "$PASSWORD_FILE"
+chmod 600 "$PASSWORD_FILE"
+
+VNC_PASSWD_PATH="/home/${USER_NAME}/.vnc_config/encrypted_vnc_passwd"
+# create an encrypted password file for vncserver using the generated password
+if [ -f "$VNC_PASSWD_PATH" ]; then
+    rm -f "$VNC_PASSWD_PATH"
+fi 
+echo "Creating VNC password file at $VNC_PASSWD_PATH"
+
+singularity exec --cleanenv "${SINGULARITY_IMAGE}" bash -c "echo $(<"$PASSWORD_FILE") | tigervncpasswd -f > \"$VNC_PASSWD_PATH\""
+chmod 600 "$VNC_PASSWD_PATH"
+
 
 HPC_PARTITION="--partition=compute"
 CORES=80
@@ -61,5 +79,5 @@ echo "After node is known, tunnel from workstation:"
 echo "ssh -N -L 6901:<nodehost>:6901 ${USER_NAME}@login02.cluster.zalf.de"
 echo ""
 echo "Open: http://localhost:6901"
-echo "Password file: ${WORKDIR}/vnc_password.txt"
+echo "Password file: /home/${USER_NAME}/.vnc_config/vnc_password.txt"
 echo "Stop: scancel ${BATCHID}"
