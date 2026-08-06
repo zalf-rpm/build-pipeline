@@ -46,10 +46,19 @@ fi
 DISPLAY=:$((VNC_PORT - 5900))
 export DISPLAY
 
-vncserver -kill "$DISPLAY" > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_vnc_kill.log" 2>&1 || true
-vncserver "$DISPLAY" -depth "$VNC_COL_DEPTH" -geometry "$VNC_RESOLUTION" > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_vnc_startup.log" 2>&1
+# Provide xstartup so TigerVNC uses xfce4 rather than its own default WM.
+cat > "$HOME/.config/tigervnc/xstartup" <<'XSTARTUP'
+#!/usr/bin/env bash
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+exec /usr/bin/startxfce4
+XSTARTUP
+chmod 755 "$HOME/.config/tigervnc/xstartup"
 
-/opt/wm_startup.sh > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_wm_startup.log" 2>&1
+vncserver -kill "$DISPLAY" > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_vnc_kill.log" 2>&1 || true
+vncserver "$DISPLAY" -depth "$VNC_COL_DEPTH" -geometry "$VNC_RESOLUTION" \
+    -xstartup "$HOME/.config/tigervnc/xstartup" \
+    > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_vnc_startup.log" 2>&1
 
 websockify -D --web="$VNC_ROOT/novnc" "$NO_VNC_PORT" "localhost:$VNC_PORT" > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_no_vnc_startup.log" 2>&1
 
