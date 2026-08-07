@@ -10,7 +10,10 @@ From: ubuntu:26.04
     export VNC_COL_DEPTH=24
     export VNC_RESOLUTION=1920x1080
     #export VNC_PW=vncpassword
-    export VNC_VIEW_ONLY=false
+    export VNC_VIEW_ONLY=true
+    export DISPLAY=:1
+    # glycin uses bubblewrap for SVG sandboxing which fails inside Singularity
+    export GLYCIN_SANDBOX_MECHANISM=none
 
 %files
     ./scripts/. /opt/
@@ -22,23 +25,25 @@ From: ubuntu:26.04
     apt-get install -y --no-install-recommends \
         locales \
         ca-certificates \
-        dbus-x11 \
         xfce4 \
         xfce4-goodies \
         tigervnc-standalone-server \
-        tigervnc-common \
         tigervnc-tools \
         novnc \
         websockify \
-        xterm \
-        x11-xserver-utils \
-        procps
+        supervisor \
+        dbus-x11 \
+        sudo \
+        curl \
+        wget \
+        bash \
+        && apt-get clean && rm -rf /var/lib/apt/lists/*
 
     locale-gen en_US.UTF-8
     update-locale LANG=en_US.UTF-8
 
     mkdir -p /opt
-    
+
     chmod 755 /opt/wm_startup.sh /opt/vnc_startup-ubuntu-26.sh
     apt-get clean
     rm -rf /var/lib/apt/lists/*

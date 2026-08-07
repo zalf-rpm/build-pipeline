@@ -47,15 +47,41 @@ DISPLAY=:$((VNC_PORT - 5900))
 export DISPLAY
 
 # Provide xstartup so TigerVNC uses xfce4 rather than its own default WM.
-cat > "$HOME/.config/tigervnc/xstartup" <<'XSTARTUP'
+# cat > "$HOME/.config/tigervnc/xstartup" <<'XSTARTUP'
+# #!/usr/bin/env bash
+# unset SESSION_MANAGER
+# unset DBUS_SESSION_BUS_ADDRESS
+# # dbus-launch is required; without it xfce4-session exits immediately in a container
+# eval "$(dbus-launch --sh-syntax --exit-with-session)"
+# exec /usr/bin/startxfce4
+# XSTARTUP
+#chmod 755 "$HOME/.config/tigervnc/xstartup"
+
+# Clear stale glycin loader cache; binaries extracted from a previous image build will fail
+rm -rf "$HOME/.cache/glycin"
+
+# Regenerate gdk-pixbuf loaders cache so paths match the running container
+GDK_LOADERS_CACHE=/tmp/gdk-pixbuf-loaders.cache
+gdk-pixbuf-query-loaders > "$GDK_LOADERS_CACHE" 2>/dev/null || true
+
+cat > "$HOME/.config/tigervnc/xstartup" <<XSTARTUP
 #!/usr/bin/env bash
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
+# glycin uses bubblewrap sandboxing which fails inside Singularity
+export GLYCIN_SANDBOX_MECHANISM=none
+export GDK_PIXBUF_MODULE_FILE=$GDK_LOADERS_CACHE
 # dbus-launch is required; without it xfce4-session exits immediately in a container
-eval "$(dbus-launch --sh-syntax --exit-with-session)"
+eval "\$(dbus-launch --sh-syntax --exit-with-session)"
 exec /usr/bin/startxfce4
 XSTARTUP
 chmod 755 "$HOME/.config/tigervnc/xstartup"
+
+
+
+# TigerVNC and ICE won't create these dirs when running as non-root (Singularity/HPC)
+mkdir -p /tmp/.X11-unix /tmp/.ICE-unix
+chmod 1777 /tmp/.X11-unix /tmp/.ICE-unix
 
 vncserver -kill "$DISPLAY" > "$LOG_FILE_DIR/${LOG_FILE_PREFIX}_vnc_kill.log" 2>&1 || true
 vncserver "$DISPLAY" -depth "$VNC_COL_DEPTH" -geometry "$VNC_RESOLUTION" \
