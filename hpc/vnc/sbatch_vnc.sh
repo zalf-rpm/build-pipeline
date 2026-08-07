@@ -13,8 +13,8 @@ MYHOME_SOURCE=/home/${USER}
 BEEGFS_USER_SOURCE=/beegfs/${USER}
 BEEGFS_COMMON_SOURCE=/beegfs/common
 OPTIONAL_DATA01_SOURCE=/data01/FDS/${USER}
-VNC_TMPDIR=/scratch/${USER}/vnc-temp
-SUBMIT_DIR=${SLURM_SUBMIT_DIR:-$PWD}
+USER_SCRATCH=/scratch/${USER}
+VNC_TMPDIR=${USER_SCRATCH}/vnc-temp
 
 if ! command -v singularity >/dev/null 2>&1; then
     echo "singularity command not found" >&2
@@ -36,9 +36,9 @@ mkdir -p "${VNC_HOME}"
 mkdir -p "${VNC_TMPDIR}/run"
 mkdir -p "${VNC_HOME}/.config/tigervnc"
 
+# TODO: clean up did not work.. check why
 clean_up() {
-    cd "${SUBMIT_DIR}" || true
-    rm -rf "${VNC_TMPDIR:?}"
+    rm -rf "${USER_SCRATCH:?}"
 }
 
 trap clean_up EXIT INT TERM
