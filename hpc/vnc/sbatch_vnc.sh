@@ -26,11 +26,6 @@ if [ ! -f "${SINGULARITY_IMAGE}" ]; then
     exit 1
 fi
 
-if ! command -v openssl >/dev/null 2>&1; then
-    echo "openssl command not found" >&2
-    exit 1
-fi
-
 mkdir -p "${VNC_TMPDIR}/tmp"
 mkdir -p "${VNC_HOME}"
 mkdir -p "${VNC_TMPDIR}/run"
@@ -50,7 +45,7 @@ cd "${VNC_HOME}"
 # user folder bindings
 BINDS="${MYHOME_SOURCE}:/myhome,${BEEGFS_USER_SOURCE}:${BEEGFS_USER_SOURCE},${BEEGFS_COMMON_SOURCE}:/beegfs/common"
 # system bindings
-export SINGULARITY_BIND="${VNC_TMPDIR}/run:/run,${VNC_TMPDIR}/tmp:/tmp,/home/${USER}/.vnc_config/encrypted_vnc_passwd:${VNC_HOME}/.config/tigervnc/passwd"
+export SINGULARITY_BIND="${VNC_TMPDIR}/run:/run,${VNC_TMPDIR}/tmp:/tmp,${VNC_HOME}/.config/tigervnc/passwd:${VNC_HOME}/.config/tigervnc/passwd"
 
 export SINGULARITYENV_VNC_PORT=5901
 export SINGULARITYENV_NO_VNC_PORT=6901

@@ -11,8 +11,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SBATCH_SCRIPT="${SCRIPT_DIR}/sbatch_vnc.sh"
 USER_NAME=$(whoami)
 
-WORKDIR=/home/${USER_NAME}/hpc-vnc
-LOGS=${WORKDIR}/log
+VNC_HOME=/home/${USER_NAME}/hpc-vnc
+mkdir -p "${VNC_HOME}"
+LOGS=${VNC_HOME}/log
+mkdir -p "${LOGS}"
 SBATCH_JOB_NAME="vnc_test_${USER_NAME}"
 
 if [[ "${IMAGE_NAME}" = /* ]]; then
@@ -33,21 +35,26 @@ fi
 
 # generate a random password and store it in /home/${USER_NAME}/.vnc_config/vnc_password.txt
 # this is for testing purposes only, in production the password needs to be set by the user and mounted into the container
-mkdir -p "/home/${USER_NAME}/.vnc_config"
-PASSWORD_FILE="/home/${USER_NAME}/.vnc_config/vnc_password.txt"
+mkdir -p "${VNC_HOME}/.config/tigervnc"
+mkdir -p "/home/${USER_NAME}/.vnc_test_access"
+PASSWORD_FILE="${VNC_HOME}/vnc_password.txt"
 openssl rand -base64 15 | tr -d '\n' > "$PASSWORD_FILE"
 chmod 600 "$PASSWORD_FILE"
 
-VNC_PASSWD_PATH="/home/${USER_NAME}/.vnc_config/encrypted_vnc_passwd"
+VNC_PASSWD_PATH="${VNC_HOME}/.config/tigervnc/passwd"
 # create an encrypted password file for vncserver using the generated password
 if [ -f "$VNC_PASSWD_PATH" ]; then
     rm -f "$VNC_PASSWD_PATH"
 fi 
 echo "Creating VNC password file at $VNC_PASSWD_PATH"
+export SINGULARITY_HOME=${VNC_HOME}
+cd "${VNC_HOME}"
 
-singularity exec --cleanenv "${SINGULARITY_IMAGE}" bash -c "echo $(<"$PASSWORD_FILE") | tigervncpasswd -f > \"$VNC_PASSWD_PATH\""
-chmod 600 "$VNC_PASSWD_PATH"
-
+singularity exec --cleanenv  \
+    -H "${SINGULARITY_HOME}" \
+    -W "${SINGULARITY_HOME}" \ 
+    "${SINGULARITY_IMAGE}" \
+    bash -c "echo $(<"$PASSWORD_FILE") | vncpasswd -f > \"$VNC_PASSWD_PATH\""
 
 HPC_PARTITION="--partition=compute"
 CORES=80
@@ -62,8 +69,6 @@ elif [ "${PARTITION}" = "fat" ]; then
     CORES=160
 fi
 
-mkdir -p "${WORKDIR}" "${LOGS}"
-cd "${WORKDIR}"
 
 DATE=$(date +%Y-%d-%B_%H%M%S)
 CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --exclusive --time=${TIME} -N 1 -c ${CORES} --export=ALL,SINGULARITY_IMAGE=${SINGULARITY_IMAGE} -o ${LOGS}/vnc_${DATE}_%j.log"
@@ -71,13 +76,21 @@ CMD_LINE_SLURM="--parsable --job-name=${SBATCH_JOB_NAME} ${HPC_PARTITION} --excl
 echo "Submitting with: ${CMD_LINE_SLURM}"
 BATCHID=$(sbatch ${CMD_LINE_SLURM} "${SBATCH_SCRIPT}")
 
+sleep 10
+
+NodeHost=$(squeue -j "${BATCHID}" -h -o "%N")
+if [ -z "${NodeHost}" ]; then
+    echo "Failed to get node host for job ${BATCHID}" >&2
+    NodeHost="unknown"
+fi
+
 echo "Job submitted: ${BATCHID}"
 echo "Wait until job is running, then check node with:"
 echo "squeue -j ${BATCHID}"
 echo ""
 echo "After node is known, tunnel from workstation:"
-echo "ssh -N -L 6901:<nodehost>:6901 ${USER_NAME}@login02.cluster.zalf.de"
+echo "ssh -N -L 6901:${NodeHost}:6901 ${USER_NAME}@login02.cluster.zalf.de"
 echo ""
 echo "Open: http://localhost:6901"
-echo "Password file: /home/${USER_NAME}/.vnc_config/vnc_password.txt"
+echo "Password file: ${VNC_HOME}/vnc_password.txt"
 echo "Stop: scancel ${BATCHID}"
