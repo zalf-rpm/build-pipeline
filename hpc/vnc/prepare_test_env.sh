@@ -2,7 +2,8 @@
 
 set -eu
 
-SINGULARITY_IMAGE=ubuntu-26-xfce-vnc.sif
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SINGULARITY_IMAGE="${SCRIPT_DIR}/ubuntu-26-xfce-vnc.sif"
 USER_NAME=$(whoami)
 
 VNC_HOME=/home/${USER_NAME}/hpc-vnc
@@ -31,15 +32,13 @@ echo "Creating VNC password file at $VNC_PASSWD_PATH"
 export SINGULARITY_HOME=${VNC_HOME}
 cd "${VNC_HOME}"
 
+echo singularity exec --cleanenv -H "${SINGULARITY_HOME}" -W "${SINGULARITY_HOME}" "${SINGULARITY_IMAGE}" bash -c "echo $(<"$PASSWORD_FILE") | vncpasswd -f > \"$VNC_PASSWD_PATH\""
+
 singularity exec --cleanenv  \
     -H "${SINGULARITY_HOME}" \
-    -W "${SINGULARITY_HOME}" \ 
-    "${SINGULARITY_IMAGE}" \
-    bash -c "echo $(<"$PASSWORD_FILE") | vncpasswd -f > \"$VNC_PASSWD_PATH\""
-
-
-export SINGULARITY_HOME=${VNC_HOME}
-cd "${VNC_HOME}"
+    -W "${SINGULARITY_HOME}" \
+    "${SINGULARITY_IMAGE}" bash -c "echo $(<"$PASSWORD_FILE") | vncpasswd -f > \"$VNC_PASSWD_PATH\""
+chmod 600 "$VNC_PASSWD_PATH"
 
 export SINGULARITYENV_VNC_PORT=5901
 export SINGULARITYENV_NO_VNC_PORT=6901

@@ -33,6 +33,9 @@ if [ ! -d "$NO_VNC_DIR" ]; then
     ln -sf "$NO_VNC_DIR/vnc_lite.html" "$NO_VNC_DIR/index.html"
 fi
 
+mkdir -p /tmp/.X11-unix
+mkdir -p /tmp/.ICE-unix
+
 # TODO: get more info about they DISPLAY
 # DISPLAY=:$((VNC_PORT - 5900))
 # export DISPLAY
