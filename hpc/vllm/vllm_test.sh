@@ -1,4 +1,4 @@
-#!/bin/bash +x
+#!/bin/bash -x
 
 DEVICE=${1:-0}
 PORT=${2:-8000}
