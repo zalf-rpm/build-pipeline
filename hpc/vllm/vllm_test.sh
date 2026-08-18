@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash +x
 
 DEVICE=${1:-0}
 PORT=${2:-8000}
@@ -22,7 +22,7 @@ export SINGULARITY_CUDA_VISIBLE_DEVICES=$DEVICE
 export SINGULARITY_VLLM_ENABLE_CUDA_COMPATIBILITY=1
 export SINGULARITY_HF_TOKEN=$HF_TOKEN
 
-
+cd ${HOMEDIR}
 singularity exec --cleanenv --nv \
     -H ${HOMEDIR} \
     -W ${HOMEDIR} \
