@@ -27,5 +27,5 @@ singularity exec --cleanenv --nv \
     -H ${HOMEDIR} \
     -W ${HOMEDIR} \
     $SINGULARITY_IMAGE \
-    vllm serve \"Qwen/Qwen3-Coder-Next\" --port $PORT
+    vllm serve Qwen/Qwen3-Coder-Next --port $PORT
 
