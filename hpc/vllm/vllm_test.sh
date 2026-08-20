@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-DEVICE=${1:-0}
+DEVICE=${1:-0,1}
 PORT=${2:-8000}
 SINGULARITY_IMAGE=${3:-/beegfs/common/singularity/vllm/vllm-openai.v0.26.0-cu129-ubuntu2404.sif}
 
@@ -28,5 +28,9 @@ singularity exec --cleanenv --nv \
     -H ${HOMEDIR} \
     -W ${HOMEDIR} \
     $SINGULARITY_IMAGE \
-    vllm serve Qwen/Qwen3-Coder-Next --port $PORT
+    vllm serve Qwen/Qwen3-Coder-Next \
+    --port $PORT \
+    --tensor-parallel-size 2 \
+    --max-model-len 32768 \
+    --gpu-memory-utilization 0.90
 
