@@ -34,6 +34,7 @@ export SINGULARITYENV_NCCL_NET=Socket
 export SINGULARITYENV_NCCL_IB_DISABLE=1
 export SINGULARITYENV_NCCL_NET_PLUGIN=none
 export SINGULARITYENV_TORCHINDUCTOR_CACHE_DIR=/root/.cache/torchinductor
+export SINGULARITYENV_OMP_NUM_THREADS=16
 set -x
 
 cd ${HOMEDIR}
@@ -46,5 +47,6 @@ singularity exec --cleanenv --nv \
     --tensor-parallel-size 2 \
     --max-model-len 32768 \
     --gpu-memory-utilization 0.90 \
+    --gdn-prefill-backend triton \
     --enforce-eager
 
