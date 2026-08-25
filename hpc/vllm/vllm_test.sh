@@ -25,7 +25,7 @@ set +x
 HF_TOKEN=$(cat /home/$USER/huggingface_access/token.txt)
 
 export SINGULARITY_HOME=${HOMEDIR}
-export SINGULARITY_BINDPATH="${WORKDIR}/run:/run,${WORKDIR}/tmp:/tmp,${HOMEDIR}/.cache/huggingface:/root/.cache/huggingface,${LOCAL_CACHE}/vllm:/root/.cache/vllm,${LOCAL_CACHE}/flashinfer:/root/.cache/flashinfer"
+export SINGULARITY_BINDPATH="${WORKDIR}/run:/run,${WORKDIR}/tmp:/tmp,${HOMEDIR}/.cache/huggingface:/root/.cache/huggingface,${LOCAL_CACHE}/vllm:/root/.cache/vllm,${LOCAL_CACHE}/flashinfer:/root/.cache/flashinfer,${LOCAL_CACHE}/torchinductor:/root/.cache/torchinductor"
 
 export SINGULARITYENV_CUDA_VISIBLE_DEVICES=$DEVICE
 export SINGULARITYENV_VLLM_ENABLE_CUDA_COMPATIBILITY=1
