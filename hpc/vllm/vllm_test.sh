@@ -12,11 +12,20 @@ mkdir -p ${WORKDIR}/run
 mkdir -p ${WORKDIR}/tmp
 mkdir -p ${HOMEDIR}/.cache/huggingface
 
+# JIT/compile caches produce many small files; keep them on local scratch, not BeeGFS
+USER_SCRATCH=/scratch/$USER
+mkdir -p ${USER_SCRATCH}
+LOCAL_CACHE=${USER_SCRATCH}/hpc-vllm-cache
+mkdir -p ${LOCAL_CACHE}/vllm ${LOCAL_CACHE}/flashinfer ${LOCAL_CACHE}/torchinductor
+
+# cleanup users scratch on exit
+trap "rm -rf ${USER_SCRATCH}" EXIT
+
 set +x
 HF_TOKEN=$(cat /home/$USER/huggingface_access/token.txt)
 
 export SINGULARITY_HOME=${HOMEDIR}
-export SINGULARITY_BINDPATH="${WORKDIR}/run:/run,${WORKDIR}/tmp:/tmp,${HOMEDIR}/.cache/huggingface:/root/.cache/huggingface"
+export SINGULARITY_BINDPATH="${WORKDIR}/run:/run,${WORKDIR}/tmp:/tmp,${HOMEDIR}/.cache/huggingface:/root/.cache/huggingface,${LOCAL_CACHE}/vllm:/root/.cache/vllm,${LOCAL_CACHE}/flashinfer:/root/.cache/flashinfer"
 
 export SINGULARITYENV_CUDA_VISIBLE_DEVICES=$DEVICE
 export SINGULARITYENV_VLLM_ENABLE_CUDA_COMPATIBILITY=1
@@ -24,6 +33,7 @@ export SINGULARITYENV_HF_TOKEN=$HF_TOKEN
 export SINGULARITYENV_NCCL_NET=Socket
 export SINGULARITYENV_NCCL_IB_DISABLE=1
 export SINGULARITYENV_NCCL_NET_PLUGIN=none
+export SINGULARITYENV_TORCHINDUCTOR_CACHE_DIR=/root/.cache/torchinductor
 set -x
 
 cd ${HOMEDIR}
@@ -35,5 +45,6 @@ singularity exec --cleanenv --nv \
     --port $PORT \
     --tensor-parallel-size 2 \
     --max-model-len 32768 \
-    --gpu-memory-utilization 0.90
+    --gpu-memory-utilization 0.90 \
+    --enforce-eager
 
