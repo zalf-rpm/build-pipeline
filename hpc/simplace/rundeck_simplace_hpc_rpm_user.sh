@@ -1,7 +1,7 @@
 #!/bin/bash
-#/ usage: start ?user? ?job_name? ?job_exec_id? ?solution_path? ?project_path? ?version? ?lines? ?debug? ?estimated_time? ?used_cpu? ?mount_data? ?mount_project? ?use_high_memory?
+#/ usage: start ?user? ?job_name? ?job_exec_id? ?solution_path? ?project_path? ?version? ?lines? ?debug? ?estimated_time? ?used_cpu? ?mount_data? ?mount_project? ?use_high_memory? ?email? ?email_on_fail? ?email_on_end?
 set -eu
-[[ $# != 12 ]] && {
+[[ $# != 13 ]] && {
   grep '^#/ usage:' <"$0" | cut -c4- >&2 ; exit 2;
 }
 
@@ -22,6 +22,7 @@ MOUNT_DATA=$9
 MOUNT_PROJECT=${10}
 NODES=${11}
 MEMORY=${12}
+SEND_EMAIL=${13}
 
 USER_FOLDER=/beegfs/rpm/projects/simplace_user/${USER}
 
@@ -177,7 +178,13 @@ done
 MOUNT_OUT_ZIP_ACC=${SIMPLACE_OUT_ZIP}/acc
 mkdir $MOUNT_OUT_ZIP_ACC
 
-DEP_COMAND="sbatch --dependency=$DEPENDENCY --partition=compute,highmem --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 --cpus-per-task=2 --mem-per-cpu=4G -o $SIMPLACE_LOG/simplace-acc%j $SCRIPT_DIR/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE} "
+DEP_COMAND="sbatch --dependency=$DEPENDENCY --partition=compute,highmem --job-name=${SBATCH_JOB_NAME}_ACC --time=05:15:00 --cpus-per-task=2 --mem-per-cpu=4G -o $SIMPLACE_LOG/simplace-acc%j "
+if [ "$SEND_EMAIL" == "true" ]; then
+  DEP_COMAND="$DEP_COMAND --mail-type=END,FAIL --mail-user=${USER}@zalf.de"
+fi
+
+DEP_COMAND="$DEP_COMAND $SCRIPT_DIR/sbatch_acc_simplace.sh $MOUNT_OUT_ZIP $MOUNT_OUT_ZIP_ACC ${IMAGE_DIR}/${SINGULARITY_IMAGE} "
+
 
 echo "ACCUMULATE: ${DEP_COMAND}"
 $DEP_COMAND
