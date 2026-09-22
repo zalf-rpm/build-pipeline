@@ -5,6 +5,5 @@ use (
 	./hpc/simplace/splitsimplaceproj
 	./hpc/vllm/hpc_loadbalancer
 	./rundeck/varservice
-	./testtools/email-attachment-service
 	./testtools/verify_climate_data_bonn
 )
