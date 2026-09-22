@@ -55,7 +55,9 @@ singularity exec --cleanenv --nv \
     --max-num-seqs 64 \
     --gpu-memory-utilization 0.90 \
     --max-cudagraph-capture-size 32 \
-    --default-chat-template-kwargs '{"enable_thinking": false}' \
+    --enable-auto-tool-choice \
+    --tool-call-parser qwen3_xml \
+    --reasoning-parser qwen3 \
     --gdn-prefill-backend triton \
     --mm-encoder-tp-mode data > "vllm_gpu_${DEVICE}.log" 2>&1 &
 
@@ -93,3 +95,20 @@ singularity exec --cleanenv --nv \
 #     --reasoning-parser qwen3 \
 #     --gdn-prefill-backend triton \
 #     --mm-encoder-tp-mode data
+
+# works but tool support disabled
+# singularity exec --cleanenv --nv \
+#     -H ${HOMEDIR} \
+#     -W ${HOMEDIR} \
+#     $SINGULARITY_IMAGE \
+#     vllm serve Qwen/Qwen3.8-27B \
+#     --port $PORT \
+#     --tensor-parallel-size 1 \
+#     --quantization fp8 \
+#     --max-model-len 32768 \
+#     --max-num-seqs 64 \
+#     --gpu-memory-utilization 0.90 \
+#     --max-cudagraph-capture-size 32 \
+#     --default-chat-template-kwargs '{"enable_thinking": false}' \
+#     --gdn-prefill-backend triton \
+#     --mm-encoder-tp-mode data > "vllm_gpu_${DEVICE}.log" 2>&1 &
