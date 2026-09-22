@@ -18,3 +18,4 @@ hpc/allocate/config_generated
 *.exe
 *.dll
 *.sif
+hpc/vllm/hpc_loadbalancer/hpc_loadbalancer

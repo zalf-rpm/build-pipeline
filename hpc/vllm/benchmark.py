@@ -3,9 +3,9 @@ import time
 from openai import AsyncOpenAI
 
 # CONFIGURATION
-API_URL = "http://localhost:8000/v1"  # Passe den Port an deine Instanz an
+API_URL = "http://localhost:9000/v1"  # Passe den Port an deine Instanz an
 MODEL_NAME = "Qwen/Qwen3.8-27B"       # Exakt der Name aus deinem Startbefehl
-CONCURRENT_REQUESTS = 4               # Wie viele Nutzer gleichzeitig anfragen
+CONCURRENT_REQUESTS = 32               # Wie viele Nutzer gleichzeitig anfragen
 PROMPT = "Schreibe einen ausführlichen, technischen Essay über die Zukunft von Quantencomputing und KI."
 
 async def measure_single_request(client, request_id):
@@ -22,7 +22,11 @@ async def measure_single_request(client, request_id):
         )
         
         async for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
+            if chunk.choices: 
+                delta = chunk.choices[0].delta
+            # Qwen3 Reasoning-Tokens oder normaler Content
+            content = getattr(delta, "content", None) or getattr(delta, "reasoning_content", None)
+            if content:
                 if ttft is None:
                     # Erste Antwort erhalten -> TTFT berechnen
                     ttft = time.time() - start_time

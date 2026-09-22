@@ -1,9 +1,10 @@
-go 1.26
+go 1.27.1
 
 use (
-	./rundeck/varservice
-	./testtools/verify_climate_data_bonn
 	./hpc/simplace/accumulate_output
 	./hpc/simplace/splitsimplaceproj
+	./hpc/vllm/hpc_loadbalancer
+	./rundeck/varservice
 	./testtools/email-attachment-service
+	./testtools/verify_climate_data_bonn
 )

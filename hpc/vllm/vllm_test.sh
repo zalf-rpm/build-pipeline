@@ -57,7 +57,7 @@ singularity exec --cleanenv --nv \
     --max-cudagraph-capture-size 32 \
     --default-chat-template-kwargs '{"enable_thinking": false}' \
     --gdn-prefill-backend triton \
-    --mm-encoder-tp-mode data
+    --mm-encoder-tp-mode data > "vllm_gpu_${DEVICE}.log" 2>&1 &
 
 
 # works but may be unstable
