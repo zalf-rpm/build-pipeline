@@ -1,4 +1,4 @@
-FROM zalfrpm/python3.14
+FROM zalfrpm/python3.14:1
 # base image, using Python 3.14 image for
 # HPC jupyter lab server from zalfrpm repository
 # see build-pipeline/docker/noconda/py3.14_ubuntu26.04/Dockerfile for reference
