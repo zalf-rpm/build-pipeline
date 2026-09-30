@@ -1,0 +1,143 @@
+#!/bin/bash
+# ai-harness - start the AI coding assistant (OpenCode) in a Singularity container
+# on a compute node. Run this on a login node, in your project directory.
+#
+# Deployed to /beegfs/common/bin/ai-harness. Site settings (image path, URL of the
+# internal model, ...) live in harness.conf, so they can change without a new image.
+set -euo pipefail
+
+CONF="${AI_HARNESS_CONF:-/beegfs/common/ai-harness/harness.conf}"
+
+# defaults, overridden by $CONF, overridden by command line flags
+IMAGE=/beegfs/common/singularity/ai-harness.sif
+INTERNAL_URL=""                     # e.g. http://<loadbalancer>:8000/v1
+INTERNAL_MODEL="cluster-qwen"       # served-model-name of the internal model
+OWN_MODEL="anthropic/claude-sonnet-5-5"
+PARTITION=compute
+TIME=04:00:00
+CPUS=2
+MEM=4G
+COMMON_DATA=/beegfs/common/data
+# shellcheck disable=SC1090
+[ -r "$CONF" ] && source "$CONF"
+
+BACKEND=internal
+ASSUME_YES=0
+ENVFILE="${XDG_CONFIG_HOME:-$HOME/.config}/ai-harness/env"
+STATE="${AI_HARNESS_STATE:-/beegfs/$USER/.ai-harness}"
+
+usage() {
+  cat <<EOF
+Usage: ai-harness [options] [-- opencode-args]
+       ai-harness status | doctor
+
+  (default)        use the internal cluster model (data stays on the cluster)
+  --own            use your own API key from $ENVFILE
+  --yes            do not ask for confirmation when using an external service
+  --time HH:MM:SS  session time limit   (default $TIME)
+  --mem SIZE       memory for the session (default $MEM)
+  --cpus N         CPUs for the session   (default $CPUS)
+  --partition P    partition              (default $PARTITION)
+  status           is the internal model reachable?
+  doctor           check slurm, internal model and external API from inside the container
+EOF
+}
+
+die() { echo "ai-harness: $*" >&2; exit 1; }
+
+# --- argument parsing -------------------------------------------------------
+CMD=run
+OPENCODE_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    status|doctor) CMD=$1 ;;
+    --own)         BACKEND=own ;;
+    --internal)    BACKEND=internal ;;
+    --yes)         ASSUME_YES=1 ;;
+    --time)        TIME=${2:?--time needs a value}; shift ;;
+    --mem)         MEM=${2:?--mem needs a value}; shift ;;
+    --cpus)        CPUS=${2:?--cpus needs a value}; shift ;;
+    --partition)   PARTITION=${2:?--partition needs a value}; shift ;;
+    -h|--help)     usage; exit 0 ;;
+    --)            shift; OPENCODE_ARGS=("$@"); break ;;
+    *)             usage >&2; die "unknown argument: $1" ;;
+  esac
+  shift
+done
+
+# --- status -----------------------------------------------------------------
+if [ "$CMD" = status ]; then
+  [ -n "$INTERNAL_URL" ] || die "INTERNAL_URL is not set in $CONF"
+  if curl -sf -m 5 "$INTERNAL_URL/models" >/dev/null; then
+    echo "internal model: available ($INTERNAL_URL)"
+  else
+    echo "internal model: NOT reachable ($INTERNAL_URL)"
+    echo "use 'ai-harness --own' or contact the HPC support team"
+    exit 1
+  fi
+  exit 0
+fi
+
+# --- project directory ------------------------------------------------------
+# The project directory is mounted at the SAME path inside the container, so that
+# jobs submitted by the assistant find their files on the compute nodes.
+case "$PWD" in
+  /|/home|"$HOME"|/beegfs|"/beegfs/$USER"|/data01|"/scratch")
+    die "please start ai-harness inside a project directory, not in $PWD (the assistant can read and change everything in the start directory)" ;;
+esac
+
+mkdir -p "$STATE"
+
+# --- backend ----------------------------------------------------------------
+SING_ENV=()
+if [ "$BACKEND" = internal ]; then
+  [ -n "$INTERNAL_URL" ] || die "INTERNAL_URL is not set in $CONF"
+  MODEL="cluster/$INTERNAL_MODEL"
+  SING_ENV+=(--env "AI_INTERNAL_BASE_URL=$INTERNAL_URL")
+  echo ">> backend: internal cluster model - your data stays on the cluster"
+else
+  [ -r "$ENVFILE" ] || die "no API keys found. Create $ENVFILE (chmod 600) with lines like ANTHROPIC_API_KEY=..."
+  [[ $(stat -c %a "$ENVFILE") =~ ^[0-7]00$ ]] || die "$ENVFILE must not be readable by others: chmod 600 $ENVFILE"
+  MODEL="$OWN_MODEL"
+  echo ">> backend: your own API key ($MODEL)"
+  echo ">> WARNING: file contents and prompts are sent to an external provider."
+  echo ">>          do not use this with sensitive or unpublished data."
+  if [ "$ASSUME_YES" -ne 1 ] && [ "$CMD" = run ]; then
+    read -r -p "continue? [y/N] " ans
+    [[ $ans =~ ^[yYjJ] ]] || exit 1
+  fi
+  # keys are passed via the environment (not the command line, which others can see with ps)
+  while IFS='=' read -r k v; do
+    [[ $k =~ ^[A-Z][A-Z0-9_]*_API_KEY$ ]] || continue
+    v="${v%\"}"; v="${v#\"}"
+    export "SINGULARITYENV_$k=$v" "APPTAINERENV_$k=$v"
+  done < "$ENVFILE"
+fi
+
+# --- container --------------------------------------------------------------
+SLURM_BINS=/usr/bin/sinfo,/usr/bin/squeue,/usr/bin/sbatch,/usr/bin/sacct,/usr/bin/scontrol,/usr/bin/scancel
+SING=(singularity exec --containall
+  --bind "$SLURM_BINS"
+  --bind /usr/lib64/slurm
+  --bind /var/spool/slurmd/conf-cache:/etc/slurm:ro
+  --bind /run/slurm
+  --bind "$PWD"
+  --bind "$STATE:/state"
+  --pwd "$PWD"
+  --env SLURM_CONF=/etc/slurm/slurm.conf
+  --env HOME=/state
+  --env "AI_HARNESS_BACKEND=$BACKEND"
+  --env "AI_HARNESS_MODEL=$MODEL"
+  "${SING_ENV[@]}")
+[ -d "$COMMON_DATA" ] && SING+=(--bind "$COMMON_DATA:$COMMON_DATA:ro")
+SING+=("$IMAGE")
+
+SRUN=(srun --job-name=ai-harness --partition="$PARTITION"
+  --ntasks=1 --cpus-per-task="$CPUS" --mem="$MEM" --time="$TIME")
+
+if [ "$CMD" = doctor ]; then
+  exec "${SRUN[@]}" "${SING[@]}" /opt/ai-harness/bin/doctor
+fi
+
+echo ">> starting session on a compute node (partition $PARTITION, $CPUS CPUs, $MEM, $TIME)..."
+exec "${SRUN[@]}" --pty "${SING[@]}" opencode --model "$MODEL" "${OPENCODE_ARGS[@]}"

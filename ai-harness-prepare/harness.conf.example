@@ -1,0 +1,18 @@
+# /beegfs/common/ai-harness/harness.conf - read by the ai-harness wrapper (bash syntax)
+# Change values here; no new image is needed.
+
+IMAGE=/beegfs/common/singularity/ai-harness.sif
+
+# OpenAI-compatible endpoint of the load balancer in front of the vLLM instances
+INTERNAL_URL="http://CHANGE-ME:8000/v1"
+# must equal --served-model-name of the vLLM instances (an alias, so the model can be exchanged)
+INTERNAL_MODEL="cluster-qwen"
+
+# default model when users bring their own key (opencode notation provider/model)
+OWN_MODEL="anthropic/claude-sonnet-5-5"
+
+# resources of the interactive session that holds the assistant
+PARTITION=compute
+TIME=04:00:00
+CPUS=2
+MEM=4G

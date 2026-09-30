@@ -124,11 +124,25 @@ RUN dnf install -y pipx nvtop && dnf clean all
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV SHELL=/bin/bash
 
-COPY ./python_version_noconda.sh /start.sh
-
+# the slurm user must exist (SlurmUser in slurm.conf); uid/gid must match the cluster: getent passwd slurm
 ARG GID=900
 ARG UID=900
 
 RUN groupadd -g $GID slurm && useradd -r -u $UID -g slurm -s /sbin/nologin slurm
 
-CMD ["sh", "./start.sh"]
+# --- AI harness ---------------------------------------------------------------
+# node.js 22 (the default nodejs 16 of EL9 is too old), shellcheck from EPEL
+ARG OPENCODE_VERSION=latest
+RUN dnf module enable -y nodejs:22 && \
+    dnf install -y nodejs npm ShellCheck && \
+    npm install -g opencode-ai@${OPENCODE_VERSION} && \
+    dnf clean all && npm cache clean --force
+
+COPY opencode.json AGENTS.md /etc/ai-harness/
+COPY bin/ /opt/ai-harness/bin/
+RUN chmod 0755 /opt/ai-harness/bin/*
+# /opt/ai-harness/bin first: its sbatch wrapper calls the host's /usr/bin/sbatch
+ENV PATH=/opt/ai-harness/bin:$PATH
+ENV OPENCODE_CONFIG=/etc/ai-harness/opencode.json
+
+CMD ["opencode"]

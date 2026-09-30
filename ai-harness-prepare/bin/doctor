@@ -1,0 +1,29 @@
+#!/bin/bash
+# doctor - runs inside the container (via 'ai-harness doctor') and checks the environment
+ok()   { echo "  ok    $*"; }
+fail() { echo "  FAIL  $*"; }
+
+echo "container on $(hostname), user $(id -un), backend ${AI_HARNESS_BACKEND:-?}"
+
+echo "slurm:"
+sinfo -h -o '%P' >/dev/null 2>&1 && ok "sinfo" || fail "sinfo"
+squeue -u "$USER" -h >/dev/null 2>&1 && ok "squeue" || fail "squeue"
+sacct -u "$USER" -X -n -S now-1hour >/dev/null 2>&1 && ok "sacct" || fail "sacct"
+t=$(mktemp /tmp/doctor.XXXXXX)
+printf '#!/bin/bash\n#SBATCH --partition=compute\n#SBATCH --mem=1G\n#SBATCH --time=00:01:00\ntrue\n' > "$t"
+sbatch --test-only "$t" >/dev/null 2>&1 && ok "sbatch --test-only" || fail "sbatch --test-only"
+rm -f "$t"
+
+echo "models:"
+if [ -n "${AI_INTERNAL_BASE_URL:-}" ]; then
+  curl -sf -m 5 "$AI_INTERNAL_BASE_URL/models" >/dev/null && ok "internal model $AI_INTERNAL_BASE_URL" || fail "internal model $AI_INTERNAL_BASE_URL"
+fi
+for h in api.anthropic.com api.openai.com openrouter.ai; do
+  curl -s -m 5 -o /dev/null "https://$h" && ok "https://$h" || fail "https://$h (blocked or no DNS?)"
+done
+
+echo "tools:"
+for c in opencode git shellcheck slurm-check python3; do
+  command -v "$c" >/dev/null && ok "$c" || fail "$c missing"
+done
+[ -w "$HOME" ] && ok "state dir $HOME writable" || fail "state dir $HOME not writable"

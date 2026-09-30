@@ -1,0 +1,6 @@
+#!/bin/bash
+# Wrapper around the host's sbatch (mounted at /usr/bin/sbatch).
+# Jobs submitted from inside the container must not inherit the container environment:
+# it contains HOME=/state, SLURM_CONF=/etc/slurm/..., and possibly API keys.
+# --export=NONE gives the job a clean environment. Later options on the command line win.
+exec /usr/bin/sbatch --export=NONE "$@"

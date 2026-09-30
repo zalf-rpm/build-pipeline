@@ -1,0 +1,30 @@
+#!/bin/bash
+# slurm-check - simple checks of a job script against the cluster's usage rules.
+# usage: slurm-check script.sh [...]     exit code 1 if problems were found
+rc=0
+for f in "$@"; do
+  [ -r "$f" ] || { echo "$f: cannot read"; rc=1; continue; }
+  dir=$(dirname "$f")
+  sb=$(grep -E '^#SBATCH' "$f")
+  warn() { echo "$f: $*"; rc=1; }
+
+  head -n1 "$f" | grep -q '^#!' || warn "no shebang (#!/bin/bash) in the first line"
+  grep -qE -- '--mem(-per-cpu)?[= ]' <<<"$sb" || warn "no --mem: the job would get the whole node's memory"
+  grep -qE -- '(--time|-t)[= ]' <<<"$sb"      || warn "no --time: the default time limit is infinite"
+  grep -qE -- '(--partition|-p)[= ]' <<<"$sb" || warn "no --partition (default is compute)"
+  grep -qE -- '--gres[= ]?.*gpu' <<<"$sb"     && warn "--gres=gpu is not active on this cluster; use the gpu partition (exclusive node)"
+
+  # output directories must exist
+  while read -r p; do
+    d=$(dirname "$p")
+    case "$d" in *%*|*'$'*) continue ;; esac
+    [ -d "$dir/$d" ] || [ -d "$d" ] || warn "output directory '$d' does not exist; SLURM will not create it (job fails silently)"
+  done < <(sed -nE 's/^#SBATCH[[:space:]]+(--output|--error|-o|-e)[= ]([^[:space:]]+).*/\2/p' "$f")
+
+  if grep -qE '/scratch|/tmp' "$f" && ! grep -q 'trap' "$f"; then
+    warn "uses /scratch or /tmp but has no 'trap ... EXIT' clean-up"
+  fi
+  grep -qE '(^|[^#])[[:space:]]*(rm -rf /|rm -rf \$[A-Za-z_]+/?$)' "$f" && warn "risky rm -rf"
+done
+[ $rc -eq 0 ] && echo "slurm-check: no problems found"
+exit $rc
