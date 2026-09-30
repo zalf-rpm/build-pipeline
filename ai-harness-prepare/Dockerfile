@@ -73,6 +73,15 @@ ENV CPLUS_INCLUDE_PATH=/usr/include/gdal C_INCLUDE_PATH=/usr/include/gdal
 # tools
 RUN dnf install -y htop libarchive && dnf clean all
 
+# runtime libs needed by an externally mounted slurm
+RUN dnf install -y \
+    freeipmi \
+    infiniband-diags \
+    libibumad \
+    libjwt \
+    munge-libs && \
+    dnf clean all
+
 # install other Python versions, to chose from
 # python3.9 is the system python3, 3.11 and 3.12 come from AppStream
 RUN dnf install -y \
