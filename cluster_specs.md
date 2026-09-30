@@ -298,7 +298,7 @@ This can also be done directly on the command line:
          --cpus-per-task=2 --mem-per-cpu=1g  --ntasks=8 my.bash
 
 
-## Standard Job Template
+## Standard Job Template Header
 When writing scripts for this cluster, please use this standard header:
 
 #!/bin/bash
@@ -308,4 +308,5 @@ When writing scripts for this cluster, please use this standard header:
 #SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1## Standard Job Template
+#SBATCH --cpus-per-task=1
+
