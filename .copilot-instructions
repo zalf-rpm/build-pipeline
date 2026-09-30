@@ -1,0 +1,18 @@
+# Copilot Instructions for HPC Scripts
+
+When generating SLURM scripts or HPC job submissions:
+
+1. Always reference cluster_specs.md for node specifications
+2. Partition guidelines:
+   - Use #SBATCH --partition=compute for general CPU jobs
+   - Use #SBATCH --partition=gpu for GPU jobs (H100 or V100)
+   - Use #SBATCH --partition=highmem for high-memory jobs
+   - Use #SBATCH --partition=fat for very high-memory and compute intense jobs
+3. Always include:
+   - #SBATCH --job-name=DESCRIPTIVE_NAME
+   - #SBATCH --output=logs/%x_%j.out
+   - #SBATCH --error=logs/%x_%j.err
+   - #SBATCH --mem=<specify explicitly, do not rely on defaults>
+   - #SBATCH --time=HH:MM:SS
+4. GPU jobs: Document that exclusive node access is currently required
+5. Reference examples in hpc/slurm_examples/ for templates
