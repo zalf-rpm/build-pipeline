@@ -6,12 +6,12 @@
 # internal model, ...) live in harness.conf, so they can change without a new image.
 set -euo pipefail
 
-CONF="${AI_HARNESS_CONF:-/beegfs/common/ai-harness/harness.conf}"
+CONF="${AI_HARNESS_CONF:-/beegfs/common/config/ai-harness/harness.conf}"
 
 # defaults, overridden by $CONF, overridden by command line flags
-IMAGE=/beegfs/common/singularity/ai-harness.sif
-INTERNAL_URL=""                     # e.g. http://<loadbalancer>:8000/v1
-INTERNAL_MODEL="cluster-qwen"       # served-model-name of the internal model
+IMAGE=/beegfs/common/singularity/ai-harness/ai-harness:0.4.sif
+INTERNAL_URL="http://gpu005.service:9000/v1"     # e.g. http://<loadbalancer>:8000/v1
+INTERNAL_MODEL="Qwen/Qwen3.8-27B"       # served-model-name of the internal model
 OWN_MODEL="anthropic/claude-sonnet-5-5"
 PARTITION=compute
 TIME=04:00:00
