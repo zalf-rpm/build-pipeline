@@ -19,3 +19,5 @@ hpc/allocate/config_generated
 *.dll
 *.sif
 hpc/vllm/hpc_loadbalancer/hpc_loadbalancer
+maintenance/
+logs/
