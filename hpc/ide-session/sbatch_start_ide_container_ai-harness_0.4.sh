@@ -87,11 +87,12 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 143' TERM INT HUP
 
-mkdir -p "$WORKDIR/tmp" "$WORKDIR/vartmp"
+mkdir -p "$WORKDIR/tmp" "$WORKDIR/vartmp" "$WORKDIR/run"
 chmod 700 "$WORKDIR"
 chmod 1777 "$WORKDIR/tmp" "$WORKDIR/vartmp"
-# /tmp and /var/tmp of the container live on node-local scratch and vanish with the session
-BINDS="$BINDS,$WORKDIR/tmp:/tmp,$WORKDIR/vartmp:/var/tmp"
+chmod 755 "$WORKDIR/run"
+# /tmp, /var/tmp and /run (sockets, pid/lock files) of the container live on node-local scratch and vanish with the session
+BINDS="$BINDS,$WORKDIR/tmp:/tmp,$WORKDIR/vartmp:/var/tmp,$WORKDIR/run:/run"
 
 # --- sshd setup -------------------------------------------------------------
 # sshd runs as the normal user (no root): it can only log in this one user, and every
