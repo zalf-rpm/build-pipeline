@@ -22,6 +22,7 @@ RUN dnf install -y --allowerasing \
     unzip \
     vim-minimal \
     openssh-clients \
+    openssh-server \
     less \
     texlive-xetex \
     texlive-collection-fontsrecommended \
