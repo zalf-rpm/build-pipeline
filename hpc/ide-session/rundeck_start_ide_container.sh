@@ -21,6 +21,7 @@ MOUNT_DATA_SOURCE1=${8:-none} # e.g climate data (optional mount source, read-on
 MOUNT_DATA_SOURCE2=${9:-none} # e.g. project data (optional, read-only)
 MOUNT_DATA_SOURCE3=${10:-none} # e.g. other sources (optional, read-only)
 MOUNT_DATA_OUT=${11:-none} # e.g. output data directory (optional, read-write)
+
 [ -z "$MOUNT_DATA_SOURCE1" ] && MOUNT_DATA_SOURCE1=none
 [ -z "$MOUNT_DATA_SOURCE2" ] && MOUNT_DATA_SOURCE2=none
 [ -z "$MOUNT_DATA_SOURCE3" ] && MOUNT_DATA_SOURCE3=none
@@ -77,7 +78,7 @@ fi
 
 # get base image as singularity image path
 IMAGE_DIR=/beegfs/common/singularity/ai-harness
-SINGULARITY_IMAGE=ai-harness_${VERSION}.sif
+SINGULARITY_IMAGE=${VERSION}.sif # the version is the name of the singularity image, e.g. ai-harness_0.4.sif, ubuntu26-harness_0.4.sif
 IMAGE_PATH=${IMAGE_DIR}/${SINGULARITY_IMAGE}
 
 if [ ! -e "$IMAGE_PATH" ] ; then
@@ -85,7 +86,7 @@ if [ ! -e "$IMAGE_PATH" ] ; then
   exit 1
 fi
 
-SBATCH_SCRIPT=/beegfs/common/batch/sbatch_start_ide_container_ai-harness_${VERSION}.sh
+SBATCH_SCRIPT=/beegfs/common/batch/sbatch_start_ide_container_${VERSION}.sh
 if [ ! -e "$SBATCH_SCRIPT" ] ; then
   echo "File '${SBATCH_SCRIPT}' not found" >&2
   exit 1
@@ -123,6 +124,24 @@ case "$RESOURCES" in
   *)
     echo "Unknown resources definition '${RESOURCES}', using default 80vCPUs-80gb-RAM" >&2 ;;
 esac
+
+# text for the rundeck selection box
+# give user some guidance on the resources
+# markdown section:
+# **Start small, find out what you need, then scale up.** The following resources are available:  
+# tiny-2vCPUs-2gb-RAM: small jobs, e.g. testing, writing small scripts  
+# 10vCPUs-10gb-RAM: small jobs, e.g. testing, debugging, small data analysis  
+# 40vCPUs-40gb-RAM: should suffice for most jobs, e.g. data analysis  
+# 80vCPUs-80gb-RAM: large jobs, e.g. data analysis  
+# fat-40vCPUs-360gb-RAM: very large jobs, e.g. data analysis with large datasets, satellite imagery, genomics etc.  
+# fat-80vCPUs-720gb-RAM: very large jobs, e.g. data analysis with large datasets, satellite imagery, genomics etc.  
+# fat-120vCPUs-1tb-RAM: very large jobs, e.g. data analysiswith large datasets, satellite imagery, genomics etc.  
+# compute-full-80vCPUs-90gb-RAM: exclusive access compute node 
+# highmem-full-80vCPUs-180gb-RAM: exclusive access highmem node for memory-intensive jobs  
+# fat-full-160vCPUs-1.5tb-RAM: exclusive access fat node 
+# gpu-Tesla-V100: exclusive access GPU node, use for deep learning jobs, e.g. training models, running inference on large datasets, etc.  
+# gpu-Nvidia-H100: exclusive access to GPU node, use for large deep learning jobs, e.g. training large models, running inference on large datasets, etc.  
+
 
 RESOURCE_REQUEST="-c $CORES $MEM_PER_CPU $HPC_PARTITION"
 
