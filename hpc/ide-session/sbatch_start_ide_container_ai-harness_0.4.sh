@@ -123,7 +123,8 @@ if [ -z "$CONTAINER_SSH_PORT" ] ; then
    echo "Error: Could not assign free port on node for container" >&2
    exit 1
 fi
-echo "Free port on allocated node: $CONTAINER_SSH_PORT"
+NODE=$(hostname -s)
+echo "Free port on allocated $NODE: $CONTAINER_SSH_PORT"
 
 # sshd config (paths are the same inside and outside, because HOMEDIR is the container home)
 SSHD_CONFIG=$WORKDIR/sshd_config
@@ -150,7 +151,6 @@ ClientAliveCountMax 5
 Subsystem sftp internal-sftp
 EOF
 
-NODE=$(hostname -s)
 END_TIME=$(squeue -h -j "$SLURM_JOB_ID" -o %e 2>/dev/null || echo "unknown")
 
 # write the instructions for the user, but only after sshd really accepts connections.
@@ -179,7 +179,8 @@ Everything else on the cluster is NOT visible, also not to agents/extensions sta
    - an SSH key pair. The public key must be in
          ${AUTH_KEYS}
      (it was copied from /home/${USER}/.ssh/authorized_keys if that file existed, so the key you use for the cluster works)
-   - private key on your workstation, e.g. C:/Users/${USER}/.ssh/id_rsa_openssh
+   - private key on your workstation, e.g. C:/Users/${USER}/.ssh/${USER}.openssh. Please adpat the path below if you use a different one.
+
 
 2. SSH config (C:/Users/${USER}/.ssh/config on Windows, ~/.ssh/config on Linux/Mac)
    Add these blocks once. For every new session ONLY "HostName" and "Port" of
@@ -188,13 +189,13 @@ Everything else on the cluster is NOT visible, also not to agents/extensions sta
     Host ${LOGIN_HOST}
       HostName ${LOGIN_HOST}
       User ${USER}
-      IdentityFile C:/Users/${USER}/.ssh/id_rsa_openssh
+      IdentityFile C:/Users/${USER}/.ssh/${USER}.openssh
 
     Host hpc-ide
       HostName ${NODE}.service
       Port ${CONTAINER_SSH_PORT}
       User ${USER}
-      IdentityFile C:/Users/${USER}/.ssh/id_rsa_openssh
+      IdentityFile C:/Users/${USER}/.ssh/${USER}.openssh
       ProxyJump ${USER}@${LOGIN_HOST}:22
       HostKeyAlias hpc-ide
       StrictHostKeyChecking accept-new
