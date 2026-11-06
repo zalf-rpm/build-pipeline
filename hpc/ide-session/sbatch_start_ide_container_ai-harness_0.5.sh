@@ -73,6 +73,24 @@ if [ ! -s "$AUTH_KEYS" ]; then
     echo "No public key in $AUTH_KEYS - ssh login will not be possible." >&2
 fi
 
+# ssh sessions start in the container home. Let interactive shells (ssh, vscode terminals) change into the
+# project directory of the current session; sshd passes it as IDE_PROJECT_DIR (see SetEnv in sshd_config).
+# The container home is shared by all sessions of the user, so the snippet is only added once.
+if ! grep -qs '# >>> ide-session >>>' "$HOMEDIR/.bashrc"; then
+    cat <<'SNIPPET' >> "$HOMEDIR/.bashrc"
+
+# >>> ide-session >>>
+if [ -n "${IDE_PROJECT_DIR:-}" ] && [ "$PWD" = "$HOME" ] && [ -d "$IDE_PROJECT_DIR" ]; then
+    cd "$IDE_PROJECT_DIR"
+fi
+# <<< ide-session <<<
+SNIPPET
+fi
+# login shells read .bash_profile, make sure it loads .bashrc
+if [ ! -e "$HOMEDIR/.bash_profile" ]; then
+    echo '[ -f ~/.bashrc ] && . ~/.bashrc' > "$HOMEDIR/.bash_profile"
+fi
+
 # workdir that is cleaned up after the session
 WORKDIR=/scratch/${USER}_ide_${SLURM_JOB_ID}
 LAUNCH_FILE=$LAUNCH_DIR/${SLURM_JOB_ID}.rundeck
@@ -149,6 +167,8 @@ PrintMotd no
 ClientAliveInterval 60
 ClientAliveCountMax 5
 Subsystem sftp internal-sftp
+# start directory for shells, evaluated in ~/.bashrc of the container home
+SetEnv IDE_PROJECT_DIR=$PROJECT_DIR
 EOF
 
 END_TIME=$(squeue -h -j "$SLURM_JOB_ID" -o %e 2>/dev/null || echo "unknown")
@@ -157,7 +177,8 @@ END_TIME=$(squeue -h -j "$SLURM_JOB_ID" -o %e 2>/dev/null || echo "unknown")
 # Runs in background, the file is moved into place atomically (rundeck polls for it).
 (
     for i in $(seq 1 60); do
-        if (echo > "/dev/tcp/127.0.0.1/$CONTAINER_SSH_PORT") 2>/dev/null; then
+        # only open the connection, send nothing (sending data makes sshd log "invalid format")
+        if (: > "/dev/tcp/127.0.0.1/$CONTAINER_SSH_PORT") 2>/dev/null; then
             break
         fi
         sleep 1
@@ -202,11 +223,15 @@ Everything else on the cluster is NOT visible, also not to agents/extensions sta
       ServerAliveInterval 60
 
 3. Connect
-   - In VS Code: F1 -> "Remote-SSH: Connect to Host..." -> hpc-ide
-     (or in a terminal: ssh hpc-ide)
+   - Fastest: open your project folder directly from a terminal on your workstation:
+
+         code --remote ssh-remote+hpc-ide ${PROJECT_DIR}
+
+   - Or in VS Code: F1 -> "Remote-SSH: Connect to Host..." -> hpc-ide, then
+     "File -> Open Folder" and choose ${PROJECT_DIR}
+   - A plain terminal login also starts in the project folder: ssh hpc-ide
    - Enter your key passphrase if you have set one (it may ask twice because of the jump host).
    - The first connection installs the vscode-server into ${HOMEDIR}/.vscode-server (takes a minute).
-   - Then "File -> Open Folder" and choose ${PROJECT_DIR}
    - Install extensions in the remote window (they are stored in the container home and stay for the next sessions).
 
 4. End of session
@@ -230,7 +255,7 @@ EOF
 cd "$PROJECT_DIR" || exit 1
 singularity exec $NV --containall \
     -H "$HOMEDIR" \
-    -B "$BINDS" \
+    -B "$BINDS,$SSHD_CONFIG:$SSHD_CONFIG:ro" \
     "$IMAGE_PATH" \
     /usr/sbin/sshd -D -e -p "$CONTAINER_SSH_PORT" -f "$SSHD_CONFIG"
 
