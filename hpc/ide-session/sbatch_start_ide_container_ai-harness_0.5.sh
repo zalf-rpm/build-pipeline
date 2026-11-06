@@ -96,14 +96,33 @@ WORKDIR=/scratch/${USER}_ide_${SLURM_JOB_ID}
 LAUNCH_FILE=$LAUNCH_DIR/${SLURM_JOB_ID}.rundeck
 # function to clean up work directory on exit
 cleanup() {
-    rm -rf "$WORKDIR"
+    echo "cleanup: removing $WORKDIR"
+    # read-only directories created by tools in the container would make rm fail
+    chmod -R u+rwX "$WORKDIR" 2>&1
+    rm -rf "$WORKDIR" 2>&1
     rm -f "$LAUNCH_FILE" "$LAUNCH_FILE.tmp"
-    echo "Workdir directory removed."
+    if [ -e "$WORKDIR" ]; then
+        echo "cleanup: WARNING $WORKDIR could not be removed completely" >&2
+    else
+        echo "Workdir directory removed."
+    fi
 }
-# trap EXIT signal to ensure cleanup is called on job completion,
-# scancel / time limit send SIGTERM: convert it to a normal exit so that the EXIT trap runs
+# trap EXIT signal to ensure cleanup is called on job completion
 trap cleanup EXIT
-trap 'exit 143' TERM INT HUP
+# scancel / time limit send SIGTERM (followed by SIGKILL after KillWait, no cleanup is possible then):
+# stop the container immediately and exit, so that the EXIT trap runs.
+# The container runs in the background (see below), because bash handles traps only after
+# a foreground command has finished, but at once while it is in "wait".
+SING_PID=""
+on_signal() {
+    echo "signal received, stopping container"
+    if [ -n "$SING_PID" ]; then
+        kill -TERM "$SING_PID" 2>/dev/null
+        wait "$SING_PID" 2>/dev/null
+    fi
+    exit 143
+}
+trap on_signal TERM INT HUP
 
 mkdir -p "$WORKDIR/tmp" "$WORKDIR/vartmp" "$WORKDIR/run"
 chmod 700 "$WORKDIR"
@@ -257,6 +276,9 @@ singularity exec $NV --containall \
     -H "$HOMEDIR" \
     -B "$BINDS,$SSHD_CONFIG:$SSHD_CONFIG:ro" \
     "$IMAGE_PATH" \
-    /usr/sbin/sshd -D -e -p "$CONTAINER_SSH_PORT" -f "$SSHD_CONFIG"
-
-printf 'container exited\n' 1>&2
+    /usr/sbin/sshd -D -e -p "$CONTAINER_SSH_PORT" -f "$SSHD_CONFIG" &
+SING_PID=$!
+# wait is interrupted immediately by a signal, the trap above then runs
+wait "$SING_PID"
+RC=$?
+printf 'container exited (rc=%s)\n' "$RC" 1>&2
